@@ -189,9 +189,19 @@ belonged to the retired model.
 3. **Constraints** — never-do / always-do rules, security, runtime hygiene.
 4. **Format** — coding style, diff discipline, error format, response/handoff, glossary.
 
-Richer subtrees (Cognition/process, Communication style, per-language Code rules,
-Notes/docs conventions) are optional library growth, added as nodes once selection +
-save land.
+Additional categories we have in mind, added as the library grows:
+
+5. **Cognition / process** — thinking depth, TE/DI/DF behavior, fast-iteration vs
+   deliberate research, learning-focused mode.
+6. **Communication / style** — directness, Socratic mode, TTS-friendly output, humor,
+   simplicity level.
+7. **Code** — per-language style, stack rules, testing strategy, commit cadence.
+8. **Notes / docs** — README/changelog conventions, dev logs, session notes, human- vs
+   LLM-facing docs.
+
+These are the same *role* axis as the first four (what kind of content), just finer.
+Weight (light vs heavy process), domain (grid), and language (go/rust) are **not**
+categories — they are handled by `include` + `select`, and later `tags`.
 
 ---
 
@@ -261,4 +271,4 @@ Treat this file as the entry point.
 | `docs/examples/DESIGN-SUMMARY.md` | Gen-1 tag-model summary | **superseded** |
 | `docs/thought-experiments/TE-mogent-module-architecture.md` | Gen-1 folders+tags | **superseded** |
 | `docs/examples/AGENTS-style-*.md` | Early notation sketches | reference only |
-| `docs/existing-agents.d/` | 20 real-world `AGENTS.md` samples | reference corpus |
+| `docs/other_repo_agents/` | 17 real-world `AGENTS.md` samples (dev-process + teaching genres) | reference corpus |
