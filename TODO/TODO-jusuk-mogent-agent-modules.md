@@ -120,9 +120,6 @@ shape; remove retired tag code.
 
 - docs/DESIGN.md - **Design of record** (DI-modun). Read first; supersedes the docs below where they disagree.
 - docs/brainstorn.md - Conversation-derived brainstorm notes for category taxonomy, TUI selection/save behavior, and fork import workflow (YAML config section folded into DESIGN.md §3.3-3.4).
-- docs/examples/DESIGN-SUMMARY.md - **Superseded** Gen-1 tag-model summary (kept for history).
-- docs/examples/AGENTS-style-e-hierarchical.md - TOML style reference
-- docs/examples/AGENTS-style-f-slashes.md - Slash notation reference
 - docs/thought-experiments/TE-tavim-mogent-module-reference-model.md - Reference-model TE; block/id-per-node/wikilink framing superseded by DESIGN.md §3.1. Manual handle allocation approved by user because `tools/mint-handle` was unavailable at the approved paths.
 - docs/thought-experiments/TE-bakom-mogent-tui-first-selector.md - TUI-first selector TE. Recommends a Bubble Tea `mogent tui` browser before expanding the module library.
 - docs/thought-experiments/TE-tavim-mogent-module-reference-model.md - Follow-up TE for block references, presets, metadata, render order, and diff model. Manual handle allocation approved by user because `tools/mint-handle` was unavailable at the approved paths.

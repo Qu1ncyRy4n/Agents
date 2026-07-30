@@ -249,11 +249,9 @@ Debt to reconcile code/docs with this design (this pass is docs-only):
 - [ ] Rework `AGENTS.toml` from `[category.*]/blocks` to `library` + `select`/`deselect` + `include` + `[vars]` (§4).
 - [ ] Replace the heavy `agent_module:` YAML comment in modules with the optional
   one-line `<!-- id: … -->` form (§3.1); most nodes drop the comment entirely.
-- [ ] Relabel `examples/DESIGN-SUMMARY.md` and `TE-mogent-module-architecture.md` as superseded.
 - [ ] Reconcile the YAML/templating section of `brainstorn.md` against §3.3–§3.4 / §7.
-- [ ] Remove stray `AGENTS.md.bak`; gitignore backups if wanted.
-- [ ] Delete empty `thought-experiments/archive/`.
 - [ ] Rename `brainstorn.md` → `brainstorm.md`.
+- [x] Removed superseded Gen-1 docs (`examples/`, `TE-mogent-module-architecture.md`), stray `AGENTS.md.bak`, and empty `thought-experiments/archive/`.
 
 ---
 
@@ -268,7 +266,8 @@ Treat this file as the entry point.
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
 | `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | partial — block/id-per-node framing superseded by §3.1 |
 | `docs/brainstorn.md` | Raw brainstorm; taxonomy + fork-import notes | partial — YAML config folded into §3.3–§3.4 |
-| `docs/examples/DESIGN-SUMMARY.md` | Gen-1 tag-model summary | **superseded** |
-| `docs/thought-experiments/TE-mogent-module-architecture.md` | Gen-1 folders+tags | **superseded** |
-| `docs/examples/AGENTS-style-*.md` | Early notation sketches | reference only |
-| `docs/other_repo_agents/` | 17 real-world `AGENTS.md` samples (dev-process + teaching genres) | reference corpus |
+| `docs/other_repo_agents/` | Real-world `AGENTS.md` samples (dev-process + teaching + personal-project genres) | reference corpus |
+
+Gen-1 tag-model docs (`examples/DESIGN-SUMMARY.md`, `examples/AGENTS-style-*.md`,
+`thought-experiments/TE-mogent-module-architecture.md`) were removed as
+stale/conflicting; recover from git history if ever needed.
