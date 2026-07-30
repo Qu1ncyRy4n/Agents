@@ -3,6 +3,7 @@ package manifest
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,8 +16,8 @@ import (
 // Manifest is the complete, repository-local build specification.
 type Manifest struct {
 	Sources map[string]string `yaml:"sources"`
-	Vars    map[string]any    `yaml:"vars"`
-	Output  string            `yaml:"output"`
+	Vars    map[string]any    `yaml:"vars,omitempty"`
+	Output  string            `yaml:"output,omitempty"`
 	Doc     []Entry           `yaml:"doc"`
 }
 
@@ -24,9 +25,9 @@ type Manifest struct {
 // an explicitly nested document outline. Source headings never control output.
 type Entry struct {
 	Heading  string   `yaml:"heading"`
-	From     []string `yaml:"from"`
-	Exclude  []string `yaml:"exclude"`
-	Children []Entry  `yaml:"children"`
+	From     []string `yaml:"from,omitempty"`
+	Exclude  []string `yaml:"exclude,omitempty"`
+	Children []Entry  `yaml:"children,omitempty"`
 }
 
 // UnmarshalYAML accepts both canonical authoring forms and normalizes them to
@@ -73,6 +74,27 @@ func (e *Entry) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 	return nil
+}
+
+// MarshalYAML keeps saved manifests close to the authoring model: single-source
+// entries use compact syntax, while composed or nested entries use explicit
+// fields.
+func (e Entry) MarshalYAML() (any, error) {
+	if len(e.From) == 1 && len(e.Exclude) == 0 && len(e.Children) == 0 {
+		return map[string]string{e.Heading: e.From[0]}, nil
+	}
+	value := struct {
+		Heading  string   `yaml:"heading"`
+		From     []string `yaml:"from,omitempty"`
+		Exclude  []string `yaml:"exclude,omitempty"`
+		Children []Entry  `yaml:"children,omitempty"`
+	}{
+		Heading:  e.Heading,
+		From:     e.From,
+		Exclude:  e.Exclude,
+		Children: e.Children,
+	}
+	return value, nil
 }
 
 func (e *Entry) decodeOptions(options map[string]*yaml.Node) error {
@@ -171,6 +193,91 @@ func Load(path string) (*Manifest, string, error) {
 		return nil, "", fmt.Errorf("resolve manifest path: %w", err)
 	}
 	return &value, abs, nil
+}
+
+// Clone returns an independent manifest draft.
+func (m *Manifest) Clone() *Manifest {
+	clone := &Manifest{
+		Sources: make(map[string]string, len(m.Sources)),
+		Vars:    make(map[string]any, len(m.Vars)),
+		Output:  m.Output,
+		Doc:     cloneEntries(m.Doc),
+	}
+	for key, value := range m.Sources {
+		clone.Sources[key] = value
+	}
+	for key, value := range m.Vars {
+		clone.Vars[key] = value
+	}
+	return clone
+}
+
+func cloneEntries(entries []Entry) []Entry {
+	if len(entries) == 0 {
+		return nil
+	}
+	clone := make([]Entry, len(entries))
+	for index, entry := range entries {
+		clone[index] = Entry{
+			Heading:  entry.Heading,
+			From:     append([]string(nil), entry.From...),
+			Exclude:  append([]string(nil), entry.Exclude...),
+			Children: cloneEntries(entry.Children),
+		}
+	}
+	return clone
+}
+
+// WriteAtomically serializes and replaces agents.yaml only after validation and
+// a successful temporary-file write.
+func WriteAtomically(path string, value *Manifest) error {
+	draft := value.Clone()
+	if err := draft.Validate(); err != nil {
+		return err
+	}
+	var output bytes.Buffer
+	encoder := yaml.NewEncoder(&output)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(draft); err != nil {
+		return fmt.Errorf("serialize manifest: %w", err)
+	}
+	if err := encoder.Close(); err != nil {
+		return fmt.Errorf("finish manifest serialization: %w", err)
+	}
+	directory := filepath.Dir(path)
+	temporary, err := os.CreateTemp(directory, ".mogent-manifest-*")
+	if err != nil {
+		return fmt.Errorf("create temporary manifest: %w", err)
+	}
+	temporaryName := temporary.Name()
+	if _, err := temporary.Write(output.Bytes()); err != nil {
+		return cleanupTemporary(fmt.Errorf("write temporary manifest: %w", err), temporary, temporaryName)
+	}
+	if err := temporary.Chmod(0o644); err != nil {
+		return cleanupTemporary(fmt.Errorf("set manifest permissions: %w", err), temporary, temporaryName)
+	}
+	if err := temporary.Close(); err != nil {
+		if removeErr := os.Remove(temporaryName); removeErr != nil {
+			return errors.Join(fmt.Errorf("close temporary manifest: %w", err), fmt.Errorf("remove temporary manifest: %w", removeErr))
+		}
+		return fmt.Errorf("close temporary manifest: %w", err)
+	}
+	if err := os.Rename(temporaryName, path); err != nil {
+		if removeErr := os.Remove(temporaryName); removeErr != nil {
+			return errors.Join(fmt.Errorf("replace manifest: %w", err), fmt.Errorf("remove temporary manifest: %w", removeErr))
+		}
+		return fmt.Errorf("replace manifest: %w", err)
+	}
+	return nil
+}
+
+func cleanupTemporary(buildErr error, temporary *os.File, path string) error {
+	closeErr := temporary.Close()
+	removeErr := os.Remove(path)
+	if closeErr != nil || removeErr != nil {
+		return errors.Join(buildErr, closeErr, removeErr)
+	}
+	return buildErr
 }
 
 func ensureEOF(decoder *yaml.Decoder) error {

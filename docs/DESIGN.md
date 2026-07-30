@@ -1,6 +1,6 @@
 # Mogent Design (Design of Record)
 
-Status: **active** · Last reconciled: 2026-07-29 · Supersedes: the Gen-1 tag model, the block/id-per-node framing of `TE-tavim`/`DI-lorad`, and the flat select/deselect TOML config of `DI-modun`.
+Status: **active** · Last reconciled: 2026-07-30 · Supersedes: the Gen-1 tag model, the block/id-per-node framing of `TE-tavim`/`DI-lorad`, and the flat select/deselect TOML config of `DI-modun`.
 
 This is the single authoritative description of what mogent is and where it is going.
 When any other doc disagrees with this one, this one wins.
@@ -233,8 +233,10 @@ Other entry points are the same model:
 Rebuild milestones (from scratch; old code removed):
 
 1. Parse manifest → resolve sources → render → validate. (No UI.)
-2. The navigator (init step 2 / `tui`), read-only then toggling.
-3. Save flow: write manifest atomically, dirty/saved state, confirm-read screen.
+2. The navigator (init step 2 / `tui`): tree, rendered-output, and source
+   provenance previews; in-memory draft changes; confirmed atomic save/build.
+   The exact interaction contract is `docs/IMPLEMENTATION-M2.md`.
+3. Copy-on-write editing, direct-edit import, and richer save/history flows.
 
 ---
 

@@ -139,6 +139,15 @@ Intent: Give the new implementation a useful local corpus and keep sensitive lea
 Constraints: Headings are the library tree. Modules must contain no source-specific credentials, absolute paths, identifying research data, or private learner state. `cdint`, `ucd_research`, `personal`, and `nix` boundaries remain provisional under DR-garom.
 Affects: libraries/, docs/codex_eco/README.md, future agents.yaml dogfood manifest
 
+ID: DI-tuvim
+Date: 2026-07-30
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Build the manifest-based `mogent tui` navigator with Bubble Tea, Lip Gloss, and only the needed Bubbles components. On terminals at least 140 columns wide, its default screen has three panes: manifest tree, complete rendered AGENTS.md, and selected-source context. The selected tree node aligns and highlights its output and source text. On narrower terminals, use a tree pane plus one detail pane; the detail pane explicitly switches between Final and Source. Tab moves keyboard focus between visible panes, while 1, 2, and 3 directly select Tree, Final, and Source views. Escape returns to the tree. A later full-view mode may use the same view tabs and navigation. Draft manifest edits are marked `~`; saving manifest selection/order removes it. `L` is reserved for an explicit copy-on-write local override. Save and build write agents.yaml and AGENTS.md after confirmation, but do not change source-library modules.
+Intent: Make provenance, document structure, and rendered output visible together for a convincing and usable first navigator without relying on color or hidden modes.
+Constraints: Text labels and symbols remain meaningful without color. Full Final view shows the entire rendered document and aligns to the selected node. Default Source context shows the selected section, its parent heading, and adjacent siblings, with a later full-file toggle. When a selected node maps to multiple output locations, expose a count and provide cycling rather than claiming one location. An invalid draft preserves the last valid preview and shows the current error. The user must explicitly confirm before writes. Source-library changes require a separate local-override or import action.
+Affects: docs/IMPLEMENTATION-M2.md, docs/DESIGN.md, cmd/mogent/, internal/, TUI tests
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build

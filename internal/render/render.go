@@ -27,7 +27,7 @@ type Result struct {
 // Intent: refuse partial or ambiguous documents before a caller can replace an
 // existing AGENTS.md. Source: DI-vukam, DI-sufok.
 func Build(value *manifest.Manifest, manifestPath string) (*Result, error) {
-	sources, err := loadSources(value, manifestPath)
+	sources, err := LoadSources(value, manifestPath)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,10 @@ func toolVars(user map[string]any, repository string) map[string]any {
 	return vars
 }
 
-func loadSources(value *manifest.Manifest, manifestPath string) (map[string]*library.Index, error) {
+// LoadSources resolves the manifest's named local libraries using the same
+// rules as Build. Interactive callers use it to inspect source provenance
+// before writing anything.
+func LoadSources(value *manifest.Manifest, manifestPath string) (map[string]*library.Index, error) {
 	aliases := make([]string, 0, len(value.Sources))
 	for alias := range value.Sources {
 		aliases = append(aliases, alias)

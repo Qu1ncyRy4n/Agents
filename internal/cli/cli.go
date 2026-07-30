@@ -8,25 +8,34 @@ import (
 	"path/filepath"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
+	"github.com/Qu1ncyRy4n/Agents/internal/navigator"
 	"github.com/Qu1ncyRy4n/Agents/internal/render"
 	"github.com/Qu1ncyRy4n/Agents/internal/state"
 )
 
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [-manifest agents.yaml] [--force]"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [-manifest agents.yaml] [--force]\n       mogent tui [-manifest agents.yaml]"); err != nil {
 			return fmt.Errorf("write usage: %w", err)
 		}
 		return nil
 	}
-	if args[0] != "build" {
-		return fmt.Errorf("unknown command %q; use build", args[0])
+	switch args[0] {
+	case "build":
+		return runBuild(args[1:], stdout, stderr)
+	case "tui":
+		return runTUI(args[1:], stdout, stderr)
+	default:
+		return fmt.Errorf("unknown command %q; use build or tui", args[0])
 	}
+}
+
+func runBuild(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
 	force := flags.Bool("force", false, "replace an untracked or directly edited output")
-	if err := flags.Parse(args[1:]); err != nil {
+	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 {
@@ -63,4 +72,17 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("write success message: %w", err)
 	}
 	return nil
+}
+
+func runTUI(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("tui", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("tui accepts no positional arguments")
+	}
+	return navigator.Run(*manifestFile, stdout)
 }
