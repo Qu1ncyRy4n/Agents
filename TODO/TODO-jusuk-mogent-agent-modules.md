@@ -58,6 +58,15 @@ Intent: The user cannot productively dogfood larger module sets through plain TO
 Constraints: The implementation may add Bubble Tea and Lip Gloss dependencies. Keep the first command isolated from existing build/list behavior. Use `tui` as the command name, `newTUIModel` for model construction, `tuiItem` for selectable rows, and `toggleCurrentItem` for in-memory state changes. Manual handle allocation remains a user-approved exception while `tools/mint-handle` is unavailable.
 Affects: tools/mogent/cmd/root.go, tools/mogent/cmd/tui.go, tools/mogent/go.mod, tools/mogent/go.sum, tests under tools/mogent/
 
+ID: DI-modun
+Date: 2026-07-29 20:20:00
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Reorient mogent onto one tree model, recorded in `docs/DESIGN.md` as the single design of record. Markdown headings are the tree; the selectable unit is a heading plus its subtree (drop the "block" term). Nodes are addressed by heading path with an optional `<!-- id: … -->` escape hatch, never content hashes, never an id forced on every node, never Obsidian `[[path#id]]` syntax. Selection pulls subtrees; a descendant can be deselected as an exception. `include` (local path/URL, last-wins merge) and Go text/template vars are core sharing mechanisms, not future work. Editing is copy-on-write localization into the local `.mogent` library with config repointed. Config is TOML (`library` + `include` + `order` + `select`/`deselect` + `[vars]`). Categories classify by content role only; weight/domain/language are handled by include/select and later tags. Tags are deferred to a future search convenience.
+Intent: Collapse two conflicting doc generations (tag model vs block model) into one coherent, pragmatic model so the library, selector, and diff share one selection unit and the design stops feeling fragmented.
+Constraints: Supersedes the block/id-per-node and wikilink framing of DI-lorad and TE-tavim, and the tag-based DESIGN-SUMMARY/TE-mogent-module-architecture. Docs-only so far; code still reflects the old model and must be reconciled (see Cleanup follow-ups in DESIGN.md §8). Manual handle allocation remains a user-approved exception while `tools/mint-handle` is unavailable.
+Affects: docs/DESIGN.md, tools/mogent/ (reconciliation pending), AGENTS.toml, .mogent/, docs/other_repo_agents/
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -84,11 +93,37 @@ Affects: tools/mogent/cmd/root.go, tools/mogent/cmd/tui.go, tools/mogent/go.mod,
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local modules, shared modules, or rejected drift.
 - [ ] Add tag/conflict support after the block model stabilizes: searchable tags, optional XOR groups, and conflict warnings for incompatible thinking/communication styles.
 
+## Module Extraction Plan (from corpus)
+
+Empirical basis for building the library, derived from the 18 samples in
+`docs/other_repo_agents/`. The corpus splits into tiers that all map onto the four
+content-role categories:
+
+- Tier 1 — universal core (in ~every sample): Project Structure (Identity); Build/Test,
+  TODO, Commit/PR, Workflow (Instructions); Coding Style (Format); Testing
+  (Instructions).
+- Tier 2 — heavy process (ciwg/promisegrid/decomk family, near-verbatim shared text):
+  Decision-First, Thought Experiment Protocol (11-node subtree), DR/DI, Change Review,
+  Comment Preservation (Instructions); Diff Discipline, Error Handling, Glossary
+  (Format); Runtime Artifact Hygiene (Constraints). Heavy repos `select` these; light
+  repos omit them.
+- Tier 3 — domain/genre: Promise Action Minimalism (grid); openai/codex Rust+TUI+lang
+  best-practices; pg_learning teaching agent (Teaching Method/Assessment → Cognition;
+  Communication Contract → Communication; Session Protocol/Obsidian → Notes/docs).
+  These are separate includable libraries / later tags, not categories.
+
+Next build steps: extract Tier 1 + Tier 2 as real modules from the corpus text;
+reconcile `AGENTS.toml` and `.mogent/modules/` to the `library`/`select`/`include`
+shape; remove retired tag code.
+
 ## Design References
 
-- docs/brainstorn.md - Conversation-derived brainstorm notes for category taxonomy, TUI selection/save behavior, and fork import workflow.
-- docs/examples/DESIGN-SUMMARY.md - Final design decisions
+- docs/DESIGN.md - **Design of record** (DI-modun). Read first; supersedes the docs below where they disagree.
+- docs/brainstorn.md - Conversation-derived brainstorm notes for category taxonomy, TUI selection/save behavior, and fork import workflow (YAML config section folded into DESIGN.md §3.3-3.4).
+- docs/examples/DESIGN-SUMMARY.md - **Superseded** Gen-1 tag-model summary (kept for history).
 - docs/examples/AGENTS-style-e-hierarchical.md - TOML style reference
 - docs/examples/AGENTS-style-f-slashes.md - Slash notation reference
+- docs/thought-experiments/TE-tavim-mogent-module-reference-model.md - Reference-model TE; block/id-per-node/wikilink framing superseded by DESIGN.md §3.1. Manual handle allocation approved by user because `tools/mint-handle` was unavailable at the approved paths.
+- docs/thought-experiments/TE-bakom-mogent-tui-first-selector.md - TUI-first selector TE. Recommends a Bubble Tea `mogent tui` browser before expanding the module library.
 - docs/thought-experiments/TE-tavim-mogent-module-reference-model.md - Follow-up TE for block references, presets, metadata, render order, and diff model. Manual handle allocation approved by user because `tools/mint-handle` was unavailable at the approved paths.
 - docs/thought-experiments/TE-bakom-mogent-tui-first-selector.md - TUI-first selector TE. Recommends a Bubble Tea `mogent tui` browser before expanding the module library.
