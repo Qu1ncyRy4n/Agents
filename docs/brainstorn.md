@@ -52,3 +52,91 @@ category:
   `{{ project_name }}` in your .md files to insert its value.
 - Tool can define default variables, such as `repo_name`, `repo_url`,
   etc., that can be used in the templates. 
+
+## Module Category Model
+
+Current compact render order:
+
+1. Identity
+   - agent role and project context
+   - project overview
+   - tech stack
+   - project structure
+2. Instructions
+   - workflow
+   - code changes
+   - testing
+   - commits
+   - decision protocol
+   - thought experiments
+   - DR/DI protocol
+   - comment preservation
+   - TODO tracking
+3. Constraints
+   - never-do rules
+   - always-do rules
+   - security and prohibited actions
+   - runtime artifact hygiene
+   - hard compliance rules
+4. Format
+   - coding style
+   - diff discipline
+   - error handling format
+   - response and handoff format
+   - glossary
+
+Richer module-library categories to explore:
+
+- Cognition / process intent: thinking depth, TE/DI/DF behavior, fast iteration vs deliberate research, learning-focused mode, and "think like a..." rules.
+- Communication / chat style: directness, Socratic mode, TTS-friendly output, whiteboard workflow, humor, and simplicity level.
+- Code: language-specific style, stack rules, testing strategy, commit cadence, security, and developer involvement level.
+- Notes / docs: README conventions, changelog style, dev logs, Obsidian/session notes, human-facing docs vs LLM-only docs, and TODO/DR/DI conventions.
+
+The current generated `AGENTS.md` uses the compact four-section structure. The richer categories should become optional modules, presets, or subtrees once TUI selection and saving are usable.
+
+## TUI Selection Model
+
+Selection without saving is useful as a preview/staging state:
+
+- try combinations without changing repo config,
+- preview what would be included,
+- back out without touching `AGENTS.toml`,
+- later compare the temporary selection against the saved selection.
+
+For normal dogfooding, selection needs save support soon. The intended flow is:
+
+1. Toggle blocks in `mogent tui`.
+2. Show dirty state when the in-memory selection differs from `AGENTS.toml`.
+3. Preview rendered output.
+4. Press `s` to persist selected blocks back to `AGENTS.toml`.
+5. Run or offer `mogent build` to regenerate `AGENTS.md`.
+
+## Fork Import Workflow
+
+Useful changes can be imported from someone else's fork without opening a pull request.
+
+Inspect full branch changes:
+
+```sh
+git remote add theirname https://github.com/theirname/repo.git
+git fetch theirname
+git checkout -b import-their-changes
+git merge theirname/branch-name
+git diff main...HEAD
+```
+
+Import only specific commits:
+
+```sh
+git fetch theirname
+git cherry-pick <commit-sha>
+```
+
+Import one file:
+
+```sh
+git fetch theirname
+git checkout theirname/branch-name -- path/to/file
+```
+
+Before committing imported work, review license/authorship, check for secrets or local machine paths, and test on an import branch.

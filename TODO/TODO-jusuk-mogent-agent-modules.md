@@ -86,6 +86,7 @@ Affects: tools/mogent/cmd/root.go, tools/mogent/cmd/tui.go, tools/mogent/go.mod,
 
 ## Design References
 
+- docs/brainstorn.md - Conversation-derived brainstorm notes for category taxonomy, TUI selection/save behavior, and fork import workflow.
 - docs/examples/DESIGN-SUMMARY.md - Final design decisions
 - docs/examples/AGENTS-style-e-hierarchical.md - TOML style reference
 - docs/examples/AGENTS-style-f-slashes.md - Slash notation reference
