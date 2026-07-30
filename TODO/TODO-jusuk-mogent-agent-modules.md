@@ -76,6 +76,69 @@ Intent: The delta model (flat select/deselect over the library) made the config 
 Constraints: Supersedes the flat select/deselect TOML config portion of DI-modun; the tree model, heading-path identity, id escape hatch, copy-on-write editing, category roles, and fail-loud validation from DI-modun remain in force. Manifest composes from libraries rather than mirroring them — explicit nesting only where a structural choice is made. Exact YAML schema finalizes during rebuild milestone 1. Manual handle allocation remains a user-approved exception while `tools/mint-handle` is unavailable.
 Affects: docs/DESIGN.md, agents.yaml (future), AGENTS.toml (to be replaced), rebuilt codebase (location TBD)
 
+ID: DI-sufok
+Date: 2026-07-29 22:15:00
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: The manifest owns the rendered document headings and outline. Source headings guide init/build suggestions but do not control the output. A manifest may name user-defined sources such as `cdint`, `cclab`, `personal`, or a collaborator name; source aliases have no fixed enum. One manifest node may compose matching source subtrees in declared order. Before confirmation, mogent warns about overlapping descendant paths and offers either one combined section or separate locally named sections. Tree state, collapsed state, and source provenance are always visible in text; color is an early secondary cue, never the sole signal.
+Intent: Let each repository express its own document vocabulary and combine useful libraries without hidden source precedence, while retaining clear provenance and a readable monochrome interface.
+Constraints: Duplicate YAML keys and duplicate source aliases are errors. Source aliases are manifest-local names and may be deliberately renamed with their references. Exact YAML syntax for multi-source composition is finalized in rebuild milestone 1. URL source pinning remains deferred; changed source content must be shown in confirmation before writing output.
+Affects: docs/DESIGN.md, agents.yaml (future), navigator and confirmation UI (future)
+
+ID: DI-venit
+Date: 2026-07-29 22:15:00
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Rewrite this repository's root AGENTS.md as a concise adaptive baseline now. Routine work uses a focused change loop and proportionate validation. Architecture, protocol, irreversible, security, public-specification, cross-repository, or otherwise suspicious work escalates to the full decision-first process. Normal handoffs are concise; the complete decision matrix and runtime-path matrix apply only to fully governed work.
+Intent: Keep normal work easy to execute while preserving deliberate analysis and evidence where an error would have durable or broad consequences.
+Constraints: Documentation-only work receives structural and diff checks. Code changes validate the affected area; Go behavior changes also run gofmt, focused tests, and errcheck from the relevant module. When results, scope, or risk feel uncertain, recommend the wider relevant check before handoff.
+Affects: AGENTS.md, docs/codex_eco/README.md, future shared baseline modules
+
+ID: DI-munet
+Date: 2026-07-29 23:00:00
+Status: superseded by DI-renim
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Begin rebuild milestone one at `tools/mogent/` with a strict, uniform YAML manifest schema. Entries use `heading` plus exactly one of ordered `from` references or `children`; source paths are local Markdown-library directories only. URL fetching, compact scalar syntax, and mixed source/child entries are deferred.
+Intent: Deliver a reliable parse-resolve-render core now while keeping later source fetching and interaction design explicit.
+Constraints: This implements the recommended baseline in TE-vorum at the user's direction to defer questions while work proceeds. It does not settle future URL source, compact syntax, or mixed-entry support.
+Affects: tools/mogent/, agents.yaml examples and tests
+
+ID: DI-renim
+Date: 2026-07-30
+Status: superseded by DI-vukam
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Mogent is a root Go module. Its manifest accepts both the compact
+heading-key YAML syntax shown in DESIGN.md and explicit `heading` object syntax,
+normalizing them to one internal document tree. Sources may be local paths or
+un-pinned HTTP(S) Git URLs now; URL fetches are intentionally fragile until the
+later pinning/lockfile design. `from` and `children` remain mutually exclusive.
+Intent: Keep the manifest concise for ordinary use while allowing richer
+composition, and enable early cross-repository sharing without pretending the
+remote-source safety design is complete.
+Constraints: URL sources must fail loudly, never use an ambient source search
+path, and warn that content may change. Pinning, caching, and changed-content
+confirmation remain follow-up work.
+Affects: go.mod, cmd/mogent/, internal/, agents.yaml parsing and source resolution
+
+ID: DI-vukam
+Date: 2026-07-30
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Milestone one is a root Go module with compact and explicit manifest entries, local source paths only, and mutually exclusive `from` and `children`. Require source-qualified exclusions, strict YAML, non-empty selected nodes, and all template variables. Default output to `AGENTS.md`. Build atomically and retain only a local generated-output hash; refuse to overwrite direct edits unless the user passes `--force`. URL sources, collision choices, and interactive direct-edit import are the next features.
+Intent: Deliver a reliable local renderer without silently fetching mutable remote content, overwriting handwritten instructions, or guessing where a direct edit belongs.
+Constraints: Local paths may be relative, absolute, or home-relative but references cannot escape a source root. Duplicate keys, YAML anchors or aliases, unknown keys, wrong types, unresolved paths, overlap collisions, and empty output are errors. The exact manifest contract is `docs/IMPLEMENTATION-M1.md`.
+Affects: docs/IMPLEMENTATION-M1.md, go.mod, cmd/mogent/, internal/, agents.yaml parsing, source resolution, output state, tests
+Supersedes: DI-renim
+
+ID: DI-voraz
+Date: 2026-07-29 22:45:00
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Seed plain Markdown source libraries at `libraries/` before the renderer is rebuilt. Add reusable, sanitized modules for CDINT baseline/process/Go/PromiseGrid, UCD research/Python with `uv` under dependency management, and independently selectable Nix safety. Do not materialize a personal library until its privacy and source boundary are resolved.
+Intent: Give the new implementation a useful local corpus and keep sensitive learner, vault, and machine details out of reusable source content.
+Constraints: Headings are the library tree. Modules must contain no source-specific credentials, absolute paths, identifying research data, or private learner state. `cdint`, `ucd_research`, `personal`, and `nix` boundaries remain provisional under DR-garom.
+Affects: libraries/, docs/codex_eco/README.md, future agents.yaml dogfood manifest
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -88,6 +151,9 @@ Affects: docs/DESIGN.md, agents.yaml (future), AGENTS.toml (to be replaced), reb
 - [x] jusuk.8 Diff command - Section-aware diff between scopes
 - [x] jusuk.9 List command - List available and active modules
 - [x] jusuk.10 Dogfood - Use mogent on this repo's AGENTS.md
+- [x] jusuk.11 Lock the milestone-one manifest schema, source scope, and rebuilt Go module location (DI-vukam; TE-vorum).
+- [ ] jusuk.12 Revisit source-library boundaries after dogfooding `cdint`, `ucd_research`, `personal`, and `nix` (DR-garom).
+- [x] jusuk.13 Seed sanitized CDINT, UCD research, and Nix source libraries (DI-voraz).
 
 ## Feature Backlog
 

@@ -75,6 +75,18 @@ outline. Each entry either:
   drop, or
 - **nests further entries**, defining document structure explicitly.
 
+The manifest owns the rendered headings. A source node's heading is a useful
+suggestion while selecting content, but a repository may deliberately give the
+same content a different place or name in its document. This avoids treating a
+library's organizational vocabulary as the output document's vocabulary.
+
+A manifest node may also compose multiple source subtrees in a declared order.
+Each source pull remains subtree-inclusive. Before writing output, mogent warns
+when composed sources have overlapping descendant paths and lets the user keep
+one combined section or place the content in separate, locally named sections.
+The exact YAML shape for multi-source composition belongs to milestone 1.
+Source: DI-sufok.
+
 Every user operation is a manifest operation:
 
 | Operation | Manifest meaning |
@@ -91,12 +103,16 @@ small: it only spells out where you've made choices.
 
 ### 3.3 Sources
 
-The manifest names its libraries in a `sources` map: a short name bound to a local
-path or a URL. References are always explicit about provenance (`shared:…`,
-`grid:…`, `local:…`) — no ambient search path, no last-wins guessing.
+The manifest names its libraries in a `sources` map: a user-defined short name
+bound to a local path or a URL. Names such as `cdint`, `cclab`, `personal`, and a
+collaborator name are valid; there is no fixed source-type enum. References are
+always explicit about provenance (`shared:…`, `grid:…`, `local:…`) — no ambient
+search path, no last-wins guessing. A source alias is local to its manifest and
+may be deliberately renamed with every reference.
 
 Sources are untrusted input: safe path resolution (nothing outside the library
-root), and a failed or unreadable source is an error, not a silent skip.
+root), duplicate aliases/keys, and a failed or unreadable source are errors, not
+silent skips. Source: DI-sufok.
 
 ### 3.4 Templates
 
@@ -126,7 +142,8 @@ up to a shared library is a separate, later action.
 **YAML is canonical.** Format follows model: a manifest is a nested, ordered,
 human-read outline — YAML's home turf, and where TOML cannot stay legible. YAML's
 footguns are contained by a **strict schema with loud validation**, quoting values,
-and owning every key.
+and owning every key. `docs/IMPLEMENTATION-M1.md` defines the exact local-source
+grammar and validation rules for the first renderer. Source: DI-vukam.
 
 Sketch (shape is settled; exact schema finalizes during the rebuild):
 
@@ -147,12 +164,19 @@ doc:
   - instructions:
       - workflow: shared:instructions/workflow
       - testing:
-          from: shared:instructions/testing        # subtree pulled in…
-          exclude: [flaky-retries]                 # …minus one deep node
+          from: [shared:instructions/testing]      # subtree pulled in…
+          exclude: [shared:instructions/testing/flaky-retries] # drops deep node
   - constraints: shared:constraints                # whole subtree, one line
   - format:
       - coding-style: grid:lang/go/style           # swapped in from another source
 ```
+
+The navigator and confirmation view always show the document tree, collapsed or
+expanded state, and the source of each entry in text. Color distinguishes state
+and provenance early, but symbols and source labels remain sufficient in a
+monochrome terminal. When a URL source changes before pinning exists, the
+confirmation view shows the changed content before it writes `AGENTS.md`.
+Source: DI-sufok.
 
 ---
 
