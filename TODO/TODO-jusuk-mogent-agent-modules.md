@@ -67,6 +67,15 @@ Intent: Collapse two conflicting doc generations (tag model vs block model) into
 Constraints: Supersedes the block/id-per-node and wikilink framing of DI-lorad and TE-tavim, and the tag-based DESIGN-SUMMARY/TE-mogent-module-architecture. Docs-only so far; code still reflects the old model and must be reconciled (see Cleanup follow-ups in DESIGN.md §8). Manual handle allocation remains a user-approved exception while `tools/mint-handle` is unavailable.
 Affects: docs/DESIGN.md, tools/mogent/ (reconciliation pending), AGENTS.toml, .mogent/, docs/other_repo_agents/
 
+ID: DI-ralik
+Date: 2026-07-29 21:30:00
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Reframe mogent's config as a document manifest, not a delta. The library tree and the document tree are distinct: the manifest (`agents.yaml`) is the output document's nested, ordered outline, where each entry references a source node, pulls a whole subtree (with optional deep excludes), or nests further structure. YAML is the canonical config format with a strict, loudly-validated schema. Named `sources` (local path or URL) replace ambient includes; every reference carries explicit provenance (`shared:`, `grid:`, `local:`). Document order is manifest order. Swap = change one reference; edit = copy-on-write flip to `local:`. One interaction model unifies the CLI — manipulate the manifest, confirm, build — with gh-CLI-style init (choose sources → navigate/toggle/view/edit/swap → confirm read) as the primary flow. Old implementation (`tools/mogent`, `.mogent`) removed for a clean rebuild: milestone 1 parse/resolve/render, milestone 2 navigator, milestone 3 save flow.
+Intent: The delta model (flat select/deselect over the library) made the config illegible as a description of the output and conflated library organization with document structure. The manifest makes the config readable as the document's table of contents, makes swap/exclude/reorder natural operations, and resolves the YAML-vs-TOML question by model fit rather than taste.
+Constraints: Supersedes the flat select/deselect TOML config portion of DI-modun; the tree model, heading-path identity, id escape hatch, copy-on-write editing, category roles, and fail-loud validation from DI-modun remain in force. Manifest composes from libraries rather than mirroring them — explicit nesting only where a structural choice is made. Exact YAML schema finalizes during rebuild milestone 1. Manual handle allocation remains a user-approved exception while `tools/mint-handle` is unavailable.
+Affects: docs/DESIGN.md, agents.yaml (future), AGENTS.toml (to be replaced), rebuilt codebase (location TBD)
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -82,16 +91,18 @@ Affects: docs/DESIGN.md, tools/mogent/ (reconciliation pending), AGENTS.toml, .m
 
 ## Feature Backlog
 
-- [ ] Add TUI save support: persist selected blocks back to `AGENTS.toml`, show dirty/saved state, and avoid silent config rewrites.
-- [ ] Add TUI preview support: show rendered `AGENTS.md` output for the current in-memory selection before saving.
-- [ ] Add TUI diagnostics panel: surface missing files, duplicate IDs, empty selected blocks, unresolved references, and no-extension source hints in one place.
-- [ ] Add generated-output drift detection: warn when `AGENTS.md` was manually changed since the last build and offer an explicit handling path.
-- [ ] Add a richer diff model: compare selected block sets, rendered text, and similar blocks inside the same module instead of only section-level status.
-- [ ] Add presets/templates: save and load reusable selections for learning-heavy, fast-iteration, design-heavy, Nix/devshell, Rust/Godot, Rust/Python ML, and Obsidian/session-log workflows.
-- [ ] Add module library expansion: create reusable modules for tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
-- [ ] Decide local-vs-global module storage: define whether project-specific changes stay in-repo, sync to a shared module library, or become explicit overrides.
-- [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local modules, shared modules, or rejected drift.
-- [ ] Add tag/conflict support after the block model stabilizes: searchable tags, optional XOR groups, and conflict warnings for incompatible thinking/communication styles.
+Rebuild milestones (DI-ralik) come first: 1. manifest parse/resolve/render, 2. navigator, 3. save flow.
+
+- [ ] Add navigator save support: write `agents.yaml` atomically, show dirty/saved state, and avoid silent config rewrites (milestone 3).
+- [ ] Add preview support: show rendered `AGENTS.md` for the current in-memory manifest before saving.
+- [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
+- [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
+- [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.
+- [ ] Add promote-local-to-shared: push a copy-on-write override back up to its source library.
+- [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
+- [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.
+- [ ] Add tags as search/discovery after the core stabilizes: searchable tags, swap-alternative groups (XOR), and conflict warnings for incompatible styles.
+- [x] Local-vs-global storage: resolved by copy-on-write localization (DESIGN.md §3.5) — shared libraries read-only, local overrides explicit in the manifest.
 
 ## Module Extraction Plan (from corpus)
 
@@ -112,9 +123,9 @@ content-role categories:
   Communication Contract → Communication; Session Protocol/Obsidian → Notes/docs).
   These are separate includable libraries / later tags, not categories.
 
-Next build steps: extract Tier 1 + Tier 2 as real modules from the corpus text;
-reconcile `AGENTS.toml` and `.mogent/modules/` to the `library`/`select`/`include`
-shape; remove retired tag code.
+Next build steps: extract Tier 1 + Tier 2 as real library nodes from the corpus
+text; implement rebuild milestone 1 (parse `agents.yaml` manifest → resolve sources →
+render → validate) per DI-ralik; dogfood this repo's `AGENTS.md` through it.
 
 ## Design References
 

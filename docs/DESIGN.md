@@ -1,6 +1,6 @@
 # Mogent Design (Design of Record)
 
-Status: **active** · Last reconciled: 2026-07-29 · Supersedes: `examples/DESIGN-SUMMARY.md`, `thought-experiments/TE-mogent-module-architecture.md`, and the block/tag framing in `TE-tavim` and `DI-lorad`.
+Status: **active** · Last reconciled: 2026-07-29 · Supersedes: the Gen-1 tag model, the block/id-per-node framing of `TE-tavim`/`DI-lorad`, and the flat select/deselect TOML config of `DI-modun`.
 
 This is the single authoritative description of what mogent is and where it is going.
 When any other doc disagrees with this one, this one wins.
@@ -16,45 +16,40 @@ drift apart.
 
 ## 2. Solution
 
-Keep instruction content in a **library organized as a tree**. Markdown headings
-*are* the tree. To produce a repo's `AGENTS.md`, **select a subset of the tree**;
-selecting a node pulls its subtree. Render the selected nodes in order → `AGENTS.md`.
+Two trees, one manifest:
 
-Author once, compose per repo.
+- The **library** is where content lives: Markdown files whose headings form a tree.
+- The **document** (`AGENTS.md`) has its own outline — the manifest.
+- The **manifest** is the config: the document's outline written down, where each
+  node points at a source node in a library. Reading the config *is* reading the
+  table of contents of your `AGENTS.md`.
 
-That's the whole model. Everything below is the minimum needed to make it real.
+Mogent is **a manifest editor with a renderer** — not a bundle of commands. Author
+content once in shared libraries; compose each repo's document by manifest.
 
 Design principles:
 
-- **Markdown-native.** The library is normal Markdown. No invented "block" concept —
-  a heading and its content *is* the unit.
-- **The tree is the model.** Selection, inheritance, and render order all come from
-  the heading hierarchy. No parallel tag namespace, no wikilink graph.
-- **Fail loud.** Missing files, missing paths/ids, empty output are errors, never
-  silent drops.
-- **Deterministic.** Same library + config ⇒ same `AGENTS.md`. Tool-only metadata
-  never appears in the rendered output.
+- **Markdown-native.** Libraries are normal Markdown. A heading and its content *is*
+  the unit — no invented "block" concept.
+- **The manifest is the config.** Document structure, order, and provenance are all
+  visible in one readable file. No hidden merge logic to mentally replay.
+- **Compose, don't mirror.** A one-line subtree reference inherits upstream structure
+  dynamically; explicit nesting appears only where you've made a structural choice.
+- **Fail loud.** Missing sources, missing nodes, ambiguous references, empty output
+  are errors, never silent drops.
+- **Deterministic.** Same libraries + manifest ⇒ same `AGENTS.md`. Tool-only metadata
+  never appears in rendered output.
 
 ---
 
-## 3. The four challenges (and their resolutions)
+## 3. Core model
 
-The core model surfaces exactly four questions. Nothing else is essential.
+### 3.1 Library: heading trees
 
-| # | Challenge | Resolution |
-|---|---|---|
-| 1 | How is a node **named** so config can select it, and the name survives edits? | **Heading path** by default (`instructions/testing`). Optional explicit `id` as a rename-proof escape hatch. Never content hashes. |
-| 2 | How do **selection + inheritance** work? | Select a node → its subtree is included. Optionally deselect a descendant as an exception. Pure tree behavior. |
-| 3 | How is the library **shared across repos** (so "author once" is true)? | `include` a shared library — local path or URL — with last-wins merge. Core, not future. |
-| 4 | How does a shared node avoid being **repo-specific**? | Template variables (`{{ .repo_name }}`) filled at build. Core, not future. |
-
-Challenges 3 and 4 are the point of the tool, not add-ons. Without them mogent is
-just a file concatenator.
-
-### 3.1 Node identity — path, with `id` as escape hatch
-
-A node is addressed by its **heading path**: the slugified chain of headings from the
-file's top down to it, joined with `/`.
+- A library is a directory of Markdown files. Files are organizational containers;
+  each heading plus its descendant content (up to the next heading of equal-or-higher
+  level) is a **node**.
+- A node is addressed by its **heading path** — slugified headings joined with `/`:
 
 ```
 # Instructions        -> instructions
@@ -62,126 +57,109 @@ file's top down to it, joined with `/`.
 ### Flaky retries     -> instructions/testing/flaky-retries
 ```
 
-Paths are readable and greppable. They break only when you **rename or move** a
-heading — a rare, deliberate act, and a plain find-and-replace when it happens.
+- Paths are readable and greppable; they break only on rename/move (rare, deliberate,
+  find-and-replaceable). A node may opt into a rename-proof anchor with a one-line
+  comment — `## Testing  <!-- id: strict-testing -->` — useful for widely-referenced
+  nodes in shared libraries. Most nodes need no id.
+- Never content hashes as identity: a hash changes on every prose edit — the common
+  case — so it breaks references exactly when you improve content. (A hash is fine
+  later as *lockfile* integrity data.)
 
-When you want a name that survives renames (e.g. a widely-referenced node in a shared
-library), a node may opt into a stable `id` via a one-line HTML comment right after
-its heading:
+### 3.2 Manifest: the document outline
 
-```markdown
-## Testing  <!-- id: strict-testing -->
-```
+The manifest (`agents.yaml`) declares the output document as a nested, ordered
+outline. Each entry either:
 
-An `id`, when present, is a valid selection target *in addition to* the path. Most
-nodes need no `id`. IDs are never forced on every node, and never content hashes — a
-hash changes on every prose edit, which is the common case, so it breaks selections
-exactly when you're improving content. (A content hash is fine later as a *lockfile*
-integrity field; it is not an identity.)
+- **references a single node** (`shared:identity/role`),
+- **pulls a whole subtree** in one line, optionally with `exclude` for deep nodes to
+  drop, or
+- **nests further entries**, defining document structure explicitly.
 
-### 3.2 Selection + inheritance
+Every user operation is a manifest operation:
 
-- Selecting a node includes it **and its entire subtree**.
-- A descendant pulled in by a selected ancestor is *inherited*, not separately listed.
-- You may **deselect** a specific descendant as an exception; its own subtree drops
-  with it.
+| Operation | Manifest meaning |
+|---|---|
+| navigate | walk the outline |
+| include / exclude | add / remove an entry (or an `exclude` line under a subtree pull) |
+| **swap** | change one entry's source reference |
+| edit | copy-on-write: node copies into the local library, reference flips to `local:` |
+| reorder | reorder manifest entries — document order *is* manifest order |
 
-`mogent list` / `mogent tui` show this with three markers:
+Because the manifest composes from libraries rather than mirroring them, upstream
+additions inside a pulled subtree flow through automatically, and the manifest stays
+small: it only spells out where you've made choices.
 
-- `+` explicitly selected
-- `|` inherited via a selected ancestor
-- `-` inactive
+### 3.3 Sources
 
-This is the only inheritance concept in mogent. (The old *tag* inheritance —
-`org/acme/team` implies `org/acme` — is retired with tags; see §7.)
+The manifest names its libraries in a `sources` map: a short name bound to a local
+path or a URL. References are always explicit about provenance (`shared:…`,
+`grid:…`, `local:…`) — no ambient search path, no last-wins guessing.
 
-### 3.3 Include + merge (sharing)
-
-`AGENTS.toml` may `include` other libraries before applying local selection:
-
-- an `include` entry is a **local path or a URL**;
-- includes are resolved depth-first; **last definition wins** on conflict;
-- local config always overrides included config;
-- included libraries are untrusted input: paths are resolved safely (no traversal
-  outside the library root), and a failed/unreadable include is an error, not a
-  silent skip.
-
-This is how a shared personal or team library propagates to every repo.
+Sources are untrusted input: safe path resolution (nothing outside the library
+root), and a failed or unreadable source is an error, not a silent skip.
 
 ### 3.4 Templates
 
-Modules are Go `text/template`s rendered at build time.
+Nodes are Go `text/template`s rendered at build:
 
-- Tool-provided vars: `repo_name`, `repo_url`, etc.
-- User-defined vars from `[vars]` in `AGENTS.toml`.
-- Example: a shared identity module says `You are working on {{ .repo_name }}` and
-  fills in per repo, so one node serves every repo without editing prose.
-
-Rendering happens after include-merge and before selection.
+- tool-provided vars (`repo_name`, `repo_url`, …),
+- user vars from the manifest's `vars` section,
+- e.g. a shared identity node says `You are working on {{ .repo_name }}` and serves
+  every repo unedited.
 
 ### 3.5 Editing = copy-on-write localization
 
-Editing a module never mutates a shared/included source in place. When you edit a
-node (`mogent edit`, or an edit through the TUI), mogent:
+Editing never mutates a shared library in place. Editing a node:
 
-1. copies the node's source into the **local** `.mogent` library (under `library`),
-   preserving its tree path, with your modification applied;
-2. rewrites config so that path now resolves to the **local** copy instead of the
-   included/shared original.
+1. copies it into the **local** library (under `.mogent/`), preserving its path, with
+   your modification applied;
+2. flips the manifest reference from the shared source to `local:`.
 
-So the local repo always wins, edits are explicit and diffable, and the shared library
-stays pristine. This is the concrete answer to "local vs global storage": shared
-libraries are read-only inputs; any change becomes a local override that config points
-at. Promoting a local override back up to a shared library is a separate, later action.
+Shared libraries stay read-only inputs; the local library holds exactly your
+overrides; the manifest makes every override visible. Promoting a local override back
+up to a shared library is a separate, later action.
 
 ---
 
-## 4. Configuration: `AGENTS.toml`
+## 4. Configuration: `agents.yaml`
 
-TOML is canonical. (YAML was explored in the brainstorm; the *valuable* idea there was
-`include`, which TOML expresses fine — see §7.)
+**YAML is canonical.** Format follows model: a manifest is a nested, ordered,
+human-read outline — YAML's home turf, and where TOML cannot stay legible. YAML's
+footguns are contained by a **strict schema with loud validation**, quoting values,
+and owning every key.
 
-```toml
-[config]
-library = ".mogent/library"      # local module tree root
+Sketch (shape is settled; exact schema finalizes during the rebuild):
 
-# shared libraries merged in before local selection (local path or URL; last wins)
-include = [
-  "~/.mogent/library",
-]
+```yaml
+sources:
+  shared: ~/.mogent/library
+  grid:   https://github.com/ciwg/agents
 
-# render order of top-level categories
-order = ["identity", "instructions", "constraints", "format"]
+vars:
+  project_name: Agents
 
-# selected nodes (subtree-inclusive). Address by path, or by id for anchored nodes.
-select = [
-  "identity",
-  "instructions/testing",
-  "constraints/security",
-]
+output: AGENTS.md
 
-# exceptions: drop a descendant that a selected ancestor pulled in
-deselect = [
-  "instructions/testing/flaky-retries",
-]
-
-# template variables
-[vars]
-project_name = "Agents"
-
-[output]
-path = "AGENTS.md"
+doc:
+  - identity:
+      - role:     shared:identity/role
+      - overview: local:identity/overview.md      # copy-on-write override
+  - instructions:
+      - workflow: shared:instructions/workflow
+      - testing:
+          from: shared:instructions/testing        # subtree pulled in…
+          exclude: [flaky-retries]                 # …minus one deep node
+  - constraints: shared:constraints                # whole subtree, one line
+  - format:
+      - coding-style: grid:lang/go/style           # swapped in from another source
 ```
 
-Render order = `order` across top-level categories, then document order within each
-subtree. No `[activate] scopes`, no tags, no wikilink/dotted-anchor syntax — those
-belonged to the retired model.
-
 ---
 
-## 5. Default category tree
+## 5. Categories
 
-`mogent init` scaffolds this tree by default:
+Categories are conventional top-level manifest headings — content, not machinery.
+The default four:
 
 1. **Identity** — agent role, project overview, tech stack, project structure.
 2. **Instructions** — workflow, code changes, testing, commits, decision protocol
@@ -199,59 +177,66 @@ Additional categories we have in mind, added as the library grows:
 8. **Notes / docs** — README/changelog conventions, dev logs, session notes, human- vs
    LLM-facing docs.
 
-These are the same *role* axis as the first four (what kind of content), just finer.
-Weight (light vs heavy process), domain (grid), and language (go/rust) are **not**
-categories — they are handled by `include` + `select`, and later `tags`.
+These are the same *role* axis (what kind of content), just finer. Weight (light vs
+heavy process), domain (grid), and language (go/rust) are **not** categories — they
+are separate libraries in `sources`, and later tags.
 
 ---
 
-## 6. CLI surface
+## 6. Workflow
 
-| Command | Purpose |
+One interaction model everywhere: **manipulate the manifest → confirm → build.**
+
+`mogent init` (gh-CLI style, the primary flow):
+
+1. **Choose sources** — detected defaults (`~/.mogent/library`, org URL) plus custom.
+   Writes `sources:`.
+2. **Navigate the tree** — one selector over the merged source trees: toggle
+   include/exclude, `v` view a node's text, `e` edit (copy-on-write, reference
+   repointed automatically), `s` swap (pick a different source node for this slot).
+3. **Confirm read** — show the manifest (optionally the rendered preview). Confirm →
+   write `agents.yaml` → build `AGENTS.md`.
+
+Other entry points are the same model:
+
+| Command | Role in the model |
 |---|---|
-| `mogent init` | Scaffold `AGENTS.toml` + the starter category **tree**; discover existing modules. |
-| `mogent build` | include-merge → template → select subtree → render → validate → write `AGENTS.md`. |
-| `mogent list` | Render the library tree with `+` / `\|` / `-` markers. Width-aware. |
-| `mogent diff` | Compare selected node sets + rendered text. |
-| `mogent edit` | Edit a node; copy-on-write localizes it into the local `.mogent` library and repoints config (§3.5). |
-| `mogent tui` | Bubble Tea selector: browse the tree, toggle selection in memory. |
+| `mogent tui` | re-enter step 2 on an existing manifest |
+| `mogent build` | render the manifest → `AGENTS.md` (validates, fails loud) |
+| `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
+| `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 
-**Scheduled for removal (tag model retired):** `mogent tags`, the `--tags` flags on
-`build`/`list`, and `internal/scope/`. Tracked in §8.
+Rebuild milestones (from scratch; old code removed):
+
+1. Parse manifest → resolve sources → render → validate. (No UI.)
+2. The navigator (init step 2 / `tui`), read-only then toggling.
+3. Save flow: write manifest atomically, dirty/saved state, confirm-read screen.
 
 ---
 
 ## 7. Deferred / future
 
-Real directions, parked so they stop masquerading as current design:
-
-- **Tags** — a *search/discovery convenience* over a large library (find nodes by
-  topic), added on top of the tree once the core is stable. Not a selection model, not
-  an inheritance mechanism.
-- **Presets** — saved reusable selections (fast-iteration, design-heavy, session-log,
-  etc.), expressed as named `select` sets.
-- **Generated index** — internal index over the tree to power fast list/diff/search at
-  scale.
-- **Lockfile** — optional content hashes recorded for reproducible builds (integrity,
-  not identity).
-- **Local-vs-global storage policy**, **manual `AGENTS.md` drift detection**, and
-  **import of hand-edited output** — each needs its own TE.
-- **Promise Grid** — modules addressable by CID; remote/grid `include` sources. The
-  `include` seam is already shaped to allow this.
+- **Pinning / lockfile** — URL sources pinned to commit/tag; optional content hashes
+  as integrity data. Not needed for local-path POC.
+- **Swap alternatives via tags** — tags as a search/discovery layer; mark nodes as
+  alternatives for a slot (the old XOR-group idea). After the core is stable.
+- **Drift detection** — regenerate from manifest, diff against `AGENTS.md` on disk,
+  offer explicit handling.
+- **Promote local → shared** — push a copy-on-write override back up to its library.
+- **Generated index** — fast search over large libraries for the navigator.
+- **Promise Grid** — libraries addressable by CID; grid `sources`. The named-source
+  seam is already shaped for this.
 
 ---
 
 ## 8. Cleanup follow-ups
 
-Debt to reconcile code/docs with this design (this pass is docs-only):
-
-- [ ] Remove tag code: `cmd/tags.go`, `--tags` flags, `internal/scope/` (§6).
-- [ ] Rework `AGENTS.toml` from `[category.*]/blocks` to `library` + `select`/`deselect` + `include` + `[vars]` (§4).
-- [ ] Replace the heavy `agent_module:` YAML comment in modules with the optional
-  one-line `<!-- id: … -->` form (§3.1); most nodes drop the comment entirely.
-- [ ] Reconcile the YAML/templating section of `brainstorn.md` against §3.3–§3.4 / §7.
+- [ ] Replace root `AGENTS.toml` + regenerate `AGENTS.md` via the new manifest path
+  once rebuild milestone 1 lands (they remain as stale dogfood artifacts until then).
+- [ ] Reconcile the YAML section of `brainstorn.md` (its include idea landed here as
+  `sources`; its config sketch is superseded by §4).
 - [ ] Rename `brainstorn.md` → `brainstorm.md`.
-- [x] Removed superseded Gen-1 docs (`examples/`, `TE-mogent-module-architecture.md`), stray `AGENTS.md.bak`, and empty `thought-experiments/archive/`.
+- [x] Removed old code (`tools/mogent`, `.mogent`), superseded Gen-1 docs, stray files.
 
 ---
 
@@ -264,10 +249,9 @@ Treat this file as the entry point.
 | `docs/DESIGN.md` | **This file** — design of record | active |
 | `TODO/TODO-jusuk-mogent-agent-modules.md` | Task tracking + DI log | active |
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
-| `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | partial — block/id-per-node framing superseded by §3.1 |
-| `docs/brainstorn.md` | Raw brainstorm; taxonomy + fork-import notes | partial — YAML config folded into §3.3–§3.4 |
-| `docs/other_repo_agents/` | Real-world `AGENTS.md` samples (dev-process + teaching + personal-project genres) | reference corpus |
+| `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | historical — block/id framing superseded by §3 |
+| `docs/brainstorn.md` | Raw brainstorm; taxonomy + fork-import notes | partial — config section superseded by §4 |
+| `docs/other_repo_agents/` | Real-world `AGENTS.md` samples (untracked, pending review) | reference corpus |
 
-Gen-1 tag-model docs (`examples/DESIGN-SUMMARY.md`, `examples/AGENTS-style-*.md`,
-`thought-experiments/TE-mogent-module-architecture.md`) were removed as
-stale/conflicting; recover from git history if ever needed.
+Gen-1 tag-model docs and the old implementation were removed; recover from git
+history if ever needed.
