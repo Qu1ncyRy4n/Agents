@@ -182,7 +182,8 @@ of that shared core.
 
 - [x] Extract M2 draft/save behavior from `internal/navigator` into a reusable workspace/session package.
 - [x] Add first CLI parity command: `mogent status`.
-- [ ] Add CLI command shapes for source list/coverage, draft/source changes, and later drift/localize.
+- [x] Add first source coverage command: `mogent coverage`.
+- [ ] Add CLI command shapes for source browsing, draft/source changes, and later drift/localize.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.
