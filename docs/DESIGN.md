@@ -263,6 +263,25 @@ writes `AGENTS.md`, using the same generated-output overwrite protection as
 `build`; direct edits must not be overwritten silently. `--force` and optional
 `.mogent` operation logs are future additions.
 
+Dry-run output should offer several review views:
+
+- `--preview=summary` shows the intended manifest operation in compact prose.
+- `--preview=patch` shows the manifest insertion and rendered section addition.
+- `--preview=tree` shows the document tree with the new node marked in place.
+- `--preview=full` shows the complete rendered `AGENTS.md`.
+
+The default should be compact enough for repeated CLI use; full output remains
+available for debugging and careful review.
+
+Localization should preserve upstream provenance without pretending the local
+copy still inherits changes automatically. The exact names remain unsettled:
+avoid over-committing to `local` as a universal concept if `source`, `scope`, or
+location handles describe the model better. A localized node should record where
+it came from, such as source alias, source reference, source URL or path, source
+commit/hash when available, source file, heading path, localization time, and
+original content hash. Updating or reconciling a localized node with upstream
+changes should be a separate explicit workflow.
+
 The TUI is a client of the model, not the product core. Durable behavior lives in
 plain core operations that the CLI, TUI, and future GUI can all call:
 
@@ -301,6 +320,10 @@ Rebuild milestones (from scratch; old code removed):
   offer explicit handling.
 - **Promote local → shared** — push a copy-on-write override back up to its library.
 - **Generated index** — fast search over large libraries for the navigator.
+- **Pinned reference docs** — far-future support for making relevant project,
+  API, design, or dependency docs easy for both humans and agents to find,
+  pin, and cite. This may share source/manifest ideas with AGENTS composition,
+  but should remain light until core prompt composition is stable.
 - **Promise Grid** — libraries addressable by CID; grid `sources`. The named-source
   seam is already shaped for this.
 

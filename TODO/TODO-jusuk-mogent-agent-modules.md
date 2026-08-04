@@ -187,6 +187,7 @@ of that shared core.
 - [x] Add coverage filters: `--source`, `--content-only`, and `--tree`.
 - [x] Add source inspection command: `mogent source show <ref>`.
 - [x] Add first manifest mutation command: `mogent add <ref>` with `--under`, `--append`, `--heading`, `--dry-run`, and `--rebuild`.
+- [ ] Add add-preview modes: `--preview=summary`, `--preview=patch`, `--preview=tree`, and `--preview=full`.
 - [ ] Add CLI command shapes for additional draft/source changes and later drift/localize.
 - [ ] Add optional force/logging for manifest mutations and rebuilds, likely under `.mogent`.
 - [ ] Add remaining coverage filters: `--leaves-only`, `--depth` / `--level`, and later `--tag`.
@@ -195,7 +196,9 @@ of that shared core.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.
-- [ ] Add promote-local-to-shared: push a copy-on-write override back up to its source library.
+- [ ] Design localization/upstream provenance: source/scope/location handles, source reference, URL/path, commit/hash when available, source file, heading path, localization time, and original content hash.
+- [ ] Add promote-local-to-shared: push a localized override back up to its source library.
+- [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.
 - [ ] Add tags as search/discovery after the core stabilizes: searchable tags, swap-alternative groups (XOR), and conflict warnings for incompatible styles.
