@@ -1,0 +1,18 @@
+sources:
+  shared: ../../libraries/cdint
+output: AGENTS.md
+doc:
+  - Identity:
+      - Role: shared:shared-baseline/identity/role
+      - Source Of Truth: shared:shared-baseline/identity/source-of-truth
+  - Instructions:
+      - Focused Change Loop: shared:shared-baseline/instructions/focused-change-loop
+      - Documentation: shared:shared-baseline/instructions/documentation
+      - Git: shared:shared-baseline/instructions/git
+      - Lightweight Escalation: shared:process/lightweight-escalation
+  - Constraints:
+      - Safe Defaults: shared:shared-baseline/constraints/safe-defaults
+      - Runtime Hygiene: shared:shared-baseline/constraints/runtime-hygiene
+  - Format:
+      - Clear Handoff: shared:shared-baseline/format/clear-handoff
+      - Minimal Diff: shared:shared-baseline/format/minimal-diff

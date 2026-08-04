@@ -16,7 +16,7 @@ import (
 
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [-manifest agents.yaml] [--force]\n       mogent status [-manifest agents.yaml]\n       mogent tui [-manifest agents.yaml]"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent tui [--manifest agents.yaml]"); err != nil {
 			return fmt.Errorf("write usage: %w", err)
 		}
 		return nil

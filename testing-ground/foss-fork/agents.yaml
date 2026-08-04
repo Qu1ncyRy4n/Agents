@@ -1,0 +1,20 @@
+sources:
+  shared: ../../libraries/cdint
+  go: ../../libraries/cdint
+output: AGENTS.md
+doc:
+  - Identity:
+      - Role: shared:shared-baseline/identity/role
+      - Source Of Truth: shared:shared-baseline/identity/source-of-truth
+  - Instructions:
+      - Focused Change Loop: shared:shared-baseline/instructions/focused-change-loop
+      - Documentation: shared:shared-baseline/instructions/documentation
+      - Git: shared:shared-baseline/instructions/git
+      - Go Development: go:go/development
+      - Decision First: shared:process/decision-first
+  - Constraints:
+      - Safe Defaults: shared:shared-baseline/constraints/safe-defaults
+      - Public Technical Prose: shared:cdint-and-promisegrid/public-technical-prose
+  - Format:
+      - Clear Handoff: shared:shared-baseline/format/clear-handoff
+      - Minimal Diff: shared:shared-baseline/format/minimal-diff
