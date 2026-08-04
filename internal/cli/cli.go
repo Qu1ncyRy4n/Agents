@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
 	"github.com/Qu1ncyRy4n/Agents/internal/navigator"
@@ -16,7 +17,7 @@ import (
 
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent tui [--manifest agents.yaml]"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent tui [--manifest agents.yaml]"); err != nil {
 			return fmt.Errorf("write usage: %w", err)
 		}
 		return nil
@@ -28,10 +29,12 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		return runStatus(args[1:], stdout, stderr)
 	case "coverage":
 		return runCoverage(args[1:], stdout, stderr)
+	case "source":
+		return runSource(args[1:], stdout, stderr)
 	case "tui":
 		return runTUI(args[1:], stdout, stderr)
 	default:
-		return fmt.Errorf("unknown command %q; use build, status, coverage, or tui", args[0])
+		return fmt.Errorf("unknown command %q; use build, status, coverage, source, or tui", args[0])
 	}
 }
 
@@ -182,6 +185,119 @@ func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage) error {
 		}
 	}
 	return nil
+}
+
+func runSource(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		return fmt.Errorf("source requires a subcommand; use source show")
+	}
+	switch args[0] {
+	case "show":
+		return runSourceShow(args[1:], stdout, stderr)
+	default:
+		return fmt.Errorf("unknown source subcommand %q; use source show", args[0])
+	}
+}
+
+func runSourceShow(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("source show", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	showFile := flags.Bool("file", true, "show source file path")
+	showLine := flags.Bool("line", true, "show source heading line")
+	contentMode := flags.String("content", "full", "content mode: none, snippet, or full")
+	snippetLines := flags.Int("lines", 12, "number of content lines when --content=snippet")
+	args = reorderSourceShowArgs(args)
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 1 {
+		return fmt.Errorf("source show requires exactly one source reference")
+	}
+	session, err := workspace.New(*manifestFile)
+	if err != nil {
+		return err
+	}
+	node, err := session.SourceNode(flags.Arg(0))
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(stdout, "Source: %s\n", node.Alias); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	if _, err := fmt.Fprintf(stdout, "Reference: %s\n", node.Reference); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	if *showFile {
+		if _, err := fmt.Fprintf(stdout, "File: %s\n", node.File); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+	}
+	if *showLine {
+		if _, err := fmt.Fprintf(stdout, "Line: %d\n", node.Line); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+	}
+	if _, err := fmt.Fprintf(stdout, "Heading: %s\n", node.Heading); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	content, err := sourceContentForMode(node.Content, *contentMode, *snippetLines)
+	if err != nil {
+		return err
+	}
+	if content == "" {
+		return nil
+	}
+	if _, err := fmt.Fprintln(stdout); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	if _, err := fmt.Fprintln(stdout, content); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	return nil
+}
+
+func reorderSourceShowArgs(args []string) []string {
+	var flagArgs []string
+	var positional []string
+	valueFlags := map[string]bool{
+		"-manifest":  true,
+		"--manifest": true,
+		"-content":   true,
+		"--content":  true,
+		"-lines":     true,
+		"--lines":    true,
+	}
+	for index := 0; index < len(args); index++ {
+		arg := args[index]
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
+			positional = append(positional, arg)
+			continue
+		}
+		flagArgs = append(flagArgs, arg)
+		name := arg
+		if before, _, found := strings.Cut(arg, "="); found {
+			name = before
+		}
+		if valueFlags[name] && !strings.Contains(arg, "=") && index+1 < len(args) {
+			index++
+			flagArgs = append(flagArgs, args[index])
+		}
+	}
+	return append(flagArgs, positional...)
+}
+
+func sourceContentForMode(content string, mode string, lines int) (string, error) {
+	switch strings.ToLower(mode) {
+	case "none":
+		return "", nil
+	case "snippet":
+		return workspace.Snippet(content, lines), nil
+	case "full":
+		return strings.TrimSpace(content), nil
+	default:
+		return "", fmt.Errorf("unknown content mode %q; use none, snippet, or full", mode)
+	}
 }
 
 func runTUI(args []string, stdout, stderr io.Writer) error {

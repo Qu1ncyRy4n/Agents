@@ -133,3 +133,76 @@ func TestRunCoverageUnusedOnlyReportsCompactList(t *testing.T) {
 		t.Fatalf("unused-only output should not include detailed summary:\n%s", stdout.String())
 	}
 }
+
+func TestRunSourceShowReportsLocationAndContent(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "# Go\n\n## Development\nRun gofmt.\nRun tests.\n\n## Tests\nKeep deterministic.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "go.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Development: shared:go/development\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "show", "shared:go/development", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"Source: shared",
+		"Reference: shared:go/development",
+		"File: " + filepath.Join(libraryPath, "go.md"),
+		"Line: 3",
+		"Heading: Development",
+		"Run gofmt.\nRun tests.",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("source show missing %q:\n%s", expected, stdout.String())
+		}
+	}
+}
+
+func TestRunSourceShowContentFlags(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "go.md"), []byte("# Go\n\n## Development\nOne.\nTwo.\nThree.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Development: shared:go/development\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "show", "shared:go/development", "--manifest", manifestPath, "--file=false", "--line=false", "--content=snippet", "--lines=2"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	for _, unexpected := range []string{"File:", "Line:", "Three."} {
+		if strings.Contains(output, unexpected) {
+			t.Fatalf("source show should not include %q:\n%s", unexpected, output)
+		}
+	}
+	if !strings.Contains(output, "One.\nTwo.") {
+		t.Fatalf("snippet missing expected lines:\n%s", output)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"source", "show", "shared:go/development", "--manifest", manifestPath, "--content=none"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(stdout.String(), "One.") {
+		t.Fatalf("content=none should hide body:\n%s", stdout.String())
+	}
+}

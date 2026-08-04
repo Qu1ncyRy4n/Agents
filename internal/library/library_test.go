@@ -24,4 +24,10 @@ func TestLoadUsesOptionalIDAsAPathSegmentAndOmitsMetadata(t *testing.T) {
 	if node.Body != "Use strict tests.\n" {
 		t.Fatalf("body retained metadata: %q", node.Body)
 	}
+	if node.File != filepath.Join(temporary, "rules.md") {
+		t.Fatalf("file = %q", node.File)
+	}
+	if node.Line != 2 {
+		t.Fatalf("line = %d", node.Line)
+	}
 }

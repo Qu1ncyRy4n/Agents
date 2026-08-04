@@ -184,8 +184,9 @@ of that shared core.
 - [x] Add first CLI parity command: `mogent status`.
 - [x] Add first source coverage command: `mogent coverage`.
 - [x] Add compact unused source output: `mogent coverage --unused-only`.
+- [x] Add source inspection command: `mogent source show <ref>`.
 - [ ] Add CLI command shapes for source browsing, draft/source changes, and later drift/localize.
-- [ ] Add source display flags: file, line number, metadata/tags, TLDR, first N content lines, full content, and future source-vs-local diffs.
+- [ ] Add richer source display: metadata/tags, TLDR fields, content-bearing-only filters, and future source-vs-local diffs.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.

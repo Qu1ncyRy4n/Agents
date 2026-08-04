@@ -159,6 +159,37 @@ func TestSessionCoverageCountsSubtreeAndExclude(t *testing.T) {
 	}
 }
 
+func TestSessionSourceNodeReturnsLocationAndSubtreeContent(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "# Go\n\n## Development\nRun gofmt.\n\n### Errors\nHandle errors.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "go.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	config := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Development: shared:go/development\n"
+	if err := os.WriteFile(manifestPath, []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	session, err := New(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := session.SourceNode("shared:go/development")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if node.File != filepath.Join(libraryPath, "go.md") || node.Line != 3 {
+		t.Fatalf("location = %s:%d", node.File, node.Line)
+	}
+	if !strings.Contains(node.Content, "Run gofmt.") || !strings.Contains(node.Content, "## Errors\n\nHandle errors.") {
+		t.Fatalf("content = %q", node.Content)
+	}
+}
+
 func writeSessionFixture(t *testing.T) (string, string) {
 	t.Helper()
 	temporary := t.TempDir()

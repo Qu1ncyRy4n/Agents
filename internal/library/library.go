@@ -17,6 +17,8 @@ type Node struct {
 	Path     string
 	Heading  string
 	Body     string
+	File     string
+	Line     int
 	Children []*Node
 }
 
@@ -100,7 +102,9 @@ func parseFile(path string) ([]*Node, error) {
 	var current *Node
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 1024), 1024*1024)
+	lineNumber := 0
 	for scanner.Scan() {
+		lineNumber++
 		line := scanner.Text()
 		level, heading, identifier, ok := headingLine(line)
 		if !ok {
@@ -124,7 +128,7 @@ func parseFile(path string) ([]*Node, error) {
 		if slug == "" {
 			return nil, fmt.Errorf("Markdown %q has an empty heading slug", path)
 		}
-		node := &Node{Heading: heading, Path: slug}
+		node := &Node{Heading: heading, Path: slug, File: path, Line: lineNumber}
 		if parentPath != "" {
 			node.Path = parentPath + "/" + slug
 			stack[len(stack)-1].node.Children = append(stack[len(stack)-1].node.Children, node)

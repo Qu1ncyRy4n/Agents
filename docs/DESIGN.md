@@ -229,6 +229,7 @@ Other entry points are the same model:
 | `mogent build` | render the manifest → `AGENTS.md` (validates, fails loud) |
 | `mogent status` | show manifest/output paths, generated-output state, and source counts |
 | `mogent coverage` | show included and unused source nodes for the manifest; `--unused-only` prints a compact unused list |
+| `mogent source show <ref>` | inspect one source node with file, heading line, and optional content |
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 
