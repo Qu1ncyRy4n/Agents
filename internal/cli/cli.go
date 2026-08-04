@@ -17,7 +17,7 @@ import (
 
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent tui [--manifest agents.yaml]"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent add <ref> [--under heading/path | --append]\n       mogent tui [--manifest agents.yaml]"); err != nil {
 			return fmt.Errorf("write usage: %w", err)
 		}
 		return nil
@@ -31,10 +31,12 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		return runCoverage(args[1:], stdout, stderr)
 	case "source":
 		return runSource(args[1:], stdout, stderr)
+	case "add":
+		return runAdd(args[1:], stdout, stderr)
 	case "tui":
 		return runTUI(args[1:], stdout, stderr)
 	default:
-		return fmt.Errorf("unknown command %q; use build, status, coverage, source, or tui", args[0])
+		return fmt.Errorf("unknown command %q; use build, status, coverage, source, add, or tui", args[0])
 	}
 }
 
@@ -271,7 +273,14 @@ func runSourceShow(args []string, stdout, stderr io.Writer) error {
 	showLine := flags.Bool("line", true, "show source heading line")
 	contentMode := flags.String("content", "full", "content mode: none, snippet, or full")
 	snippetLines := flags.Int("lines", 12, "number of content lines when --content=snippet")
-	args = reorderSourceShowArgs(args)
+	args = reorderArgs(args, map[string]bool{
+		"-manifest":  true,
+		"--manifest": true,
+		"-content":   true,
+		"--content":  true,
+		"-lines":     true,
+		"--lines":    true,
+	})
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -321,17 +330,9 @@ func runSourceShow(args []string, stdout, stderr io.Writer) error {
 	return nil
 }
 
-func reorderSourceShowArgs(args []string) []string {
+func reorderArgs(args []string, valueFlags map[string]bool) []string {
 	var flagArgs []string
 	var positional []string
-	valueFlags := map[string]bool{
-		"-manifest":  true,
-		"--manifest": true,
-		"-content":   true,
-		"--content":  true,
-		"-lines":     true,
-		"--lines":    true,
-	}
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
 		if !strings.HasPrefix(arg, "-") || arg == "-" {
@@ -362,6 +363,86 @@ func sourceContentForMode(content string, mode string, lines int) (string, error
 	default:
 		return "", fmt.Errorf("unknown content mode %q; use none, snippet, or full", mode)
 	}
+}
+
+func runAdd(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("add", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	under := flags.String("under", "", "manifest heading path to append under")
+	appendRoot := flags.Bool("append", false, "append to the end of the document")
+	heading := flags.String("heading", "", "rendered heading to use in the manifest")
+	dryRun := flags.Bool("dry-run", false, "preview the change without writing")
+	rebuild := flags.Bool("rebuild", false, "also rebuild the generated AGENTS.md")
+	args = reorderArgs(args, map[string]bool{
+		"-manifest":  true,
+		"--manifest": true,
+		"-under":     true,
+		"--under":    true,
+		"-heading":   true,
+		"--heading":  true,
+	})
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 1 {
+		return fmt.Errorf("add requires exactly one source reference")
+	}
+	session, err := workspace.New(*manifestFile)
+	if err != nil {
+		return err
+	}
+	result, err := session.AddSource(workspace.AddOptions{
+		Reference: flags.Arg(0),
+		Under:     *under,
+		Append:    *appendRoot,
+		Heading:   *heading,
+		Rebuild:   *rebuild,
+	}, *dryRun)
+	if err != nil {
+		return err
+	}
+	if *dryRun {
+		if _, err := fmt.Fprintln(stdout, "Dry run: no files written"); err != nil {
+			return fmt.Errorf("write add result: %w", err)
+		}
+	} else if result.Rebuilt {
+		if _, err := fmt.Fprintln(stdout, "Wrote manifest and rebuilt output"); err != nil {
+			return fmt.Errorf("write add result: %w", err)
+		}
+	} else if result.WroteManifest {
+		if _, err := fmt.Fprintln(stdout, "Wrote manifest"); err != nil {
+			return fmt.Errorf("write add result: %w", err)
+		}
+	}
+	if _, err := fmt.Fprintf(stdout, "Added: %s\n", result.Heading); err != nil {
+		return fmt.Errorf("write add result: %w", err)
+	}
+	if _, err := fmt.Fprintf(stdout, "From: %s\n", result.Reference); err != nil {
+		return fmt.Errorf("write add result: %w", err)
+	}
+	if _, err := fmt.Fprintf(stdout, "Under: %s\n", parentLabelForOutput(result.ParentPath)); err != nil {
+		return fmt.Errorf("write add result: %w", err)
+	}
+	if *dryRun {
+		if _, err := fmt.Fprintln(stdout); err != nil {
+			return fmt.Errorf("write add result: %w", err)
+		}
+		if _, err := fmt.Fprintln(stdout, "Rendered preview:"); err != nil {
+			return fmt.Errorf("write add result: %w", err)
+		}
+		if _, err := fmt.Fprintln(stdout, result.Preview); err != nil {
+			return fmt.Errorf("write add result: %w", err)
+		}
+	}
+	return nil
+}
+
+func parentLabelForOutput(path string) string {
+	if path == "" {
+		return "document root"
+	}
+	return path
 }
 
 func runTUI(args []string, stdout, stderr io.Writer) error {

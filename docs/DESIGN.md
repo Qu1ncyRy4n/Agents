@@ -230,6 +230,7 @@ Other entry points are the same model:
 | `mogent status` | show manifest/output paths, generated-output state, and source counts |
 | `mogent coverage` | show included and unused source nodes for the manifest; `--unused-only` prints a compact unused list |
 | `mogent source show <ref>` | inspect one source node with file, heading line, and optional content |
+| `mogent add <ref>` | add a source node to the manifest; writes the manifest by default, `--dry-run` previews only, `--rebuild` also rebuilds output through normal overwrite protection |
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 
@@ -255,6 +256,12 @@ underlying model:
 Source inspection should stay separate from coverage. `source show <ref>` owns
 file paths, heading line numbers, metadata/tags, TLDR fields, first-N-line
 snippets, full content, and later source-vs-local diffs.
+
+Manifest mutation commands write `agents.yaml` by default because that is the
+primary authored state. `--dry-run` previews without writing. `--rebuild` also
+writes `AGENTS.md`, using the same generated-output overwrite protection as
+`build`; direct edits must not be overwritten silently. `--force` and optional
+`.mogent` operation logs are future additions.
 
 The TUI is a client of the model, not the product core. Durable behavior lives in
 plain core operations that the CLI, TUI, and future GUI can all call:

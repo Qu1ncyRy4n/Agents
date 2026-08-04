@@ -274,3 +274,64 @@ func TestRunSourceShowContentFlags(t *testing.T) {
 		t.Fatalf("content=none should hide body:\n%s", stdout.String())
 	}
 }
+
+func TestRunAddWritesManifestByDefault(t *testing.T) {
+	_, manifestPath := writeAddCLIFixture(t)
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instructions"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Wrote manifest") || !strings.Contains(stdout.String(), "Added: Testing") {
+		t.Fatalf("add output =\n%s", stdout.String())
+	}
+	manifestContents, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(manifestContents), "Testing: shared:instructions/testing") {
+		t.Fatalf("manifest missing added entry:\n%s", manifestContents)
+	}
+}
+
+func TestRunAddDryRunDoesNotWrite(t *testing.T) {
+	_, manifestPath := writeAddCLIFixture(t)
+	original, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instructions", "--heading", "Tests", "--dry-run"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "## Tests") {
+		t.Fatalf("dry-run output =\n%s", stdout.String())
+	}
+	after, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(original) {
+		t.Fatalf("dry run changed manifest:\n%s", after)
+	}
+}
+
+func writeAddCLIFixture(t *testing.T) (string, string) {
+	t.Helper()
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "# Identity\nHello.\n\n# Instructions\n\n## Workflow\nWork carefully.\n\n## Testing\nTest deterministically.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "core.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Identity: shared:identity\n  - heading: Instructions\n    children:\n      - Workflow: shared:instructions/workflow\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return temporary, manifestPath
+}

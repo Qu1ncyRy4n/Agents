@@ -186,7 +186,9 @@ of that shared core.
 - [x] Add compact unused source output: `mogent coverage --unused-only`.
 - [x] Add coverage filters: `--source`, `--content-only`, and `--tree`.
 - [x] Add source inspection command: `mogent source show <ref>`.
-- [ ] Add CLI command shapes for source browsing, draft/source changes, and later drift/localize.
+- [x] Add first manifest mutation command: `mogent add <ref>` with `--under`, `--append`, `--heading`, `--dry-run`, and `--rebuild`.
+- [ ] Add CLI command shapes for additional draft/source changes and later drift/localize.
+- [ ] Add optional force/logging for manifest mutations and rebuilds, likely under `.mogent`.
 - [ ] Add remaining coverage filters: `--leaves-only`, `--depth` / `--level`, and later `--tag`.
 - [ ] Add richer source display: metadata/tags, TLDR fields, and future source-vs-local diffs.
 - [ ] Decide raw Markdown/no-manifest command behavior; default commands remain manifest-based and use `agents.yaml` unless `--manifest` points elsewhere.
