@@ -74,6 +74,44 @@ func TestSessionSaveAndBuildWritesManifestAndOutput(t *testing.T) {
 	}
 }
 
+func TestSessionStatusReportsOutputAndSources(t *testing.T) {
+	_, manifestPath := writeSessionFixture(t)
+	session, err := New(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, err := session.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Output != StatusMissing {
+		t.Fatalf("initial output status = %s", status.Output)
+	}
+	if len(status.Sources) != 1 || status.Sources[0].Alias != "shared" || status.Sources[0].Nodes != 2 {
+		t.Fatalf("sources = %#v", status.Sources)
+	}
+	if err := session.SaveAndBuild(); err != nil {
+		t.Fatal(err)
+	}
+	status, err = session.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Output != StatusUpToDate {
+		t.Fatalf("saved output status = %s", status.Output)
+	}
+	if err := os.WriteFile(status.OutputPath, []byte("direct edit\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	status, err = session.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Output != StatusDirectEdits {
+		t.Fatalf("edited output status = %s", status.Output)
+	}
+}
+
 func writeSessionFixture(t *testing.T) (string, string) {
 	t.Helper()
 	temporary := t.TempDir()

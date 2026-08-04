@@ -227,6 +227,7 @@ Other entry points are the same model:
 |---|---|
 | `mogent tui` | re-enter step 2 on an existing manifest |
 | `mogent build` | render the manifest → `AGENTS.md` (validates, fails loud) |
+| `mogent status` | show manifest/output paths, generated-output state, and source counts |
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 

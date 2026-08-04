@@ -180,8 +180,9 @@ navigator proof of concept, 3. extract reusable workspace operations, 4. add
 copy-on-write localization, source browsing, drift/import, and URL pinning on top
 of that shared core.
 
-- [ ] Extract M2 draft/save behavior from `internal/navigator` into a reusable workspace/session package.
-- [ ] Add CLI command shapes for core operations: status, source list/coverage, draft/source changes, and later drift/localize.
+- [x] Extract M2 draft/save behavior from `internal/navigator` into a reusable workspace/session package.
+- [x] Add first CLI parity command: `mogent status`.
+- [ ] Add CLI command shapes for source list/coverage, draft/source changes, and later drift/localize.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.

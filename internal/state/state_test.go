@@ -32,3 +32,50 @@ func TestCheckOverwriteProtectsUntrackedAndEditedOutput(t *testing.T) {
 		t.Fatalf("force error = %v", err)
 	}
 }
+
+func TestInspectReportsOutputState(t *testing.T) {
+	temporary := t.TempDir()
+	outputPath := filepath.Join(temporary, "AGENTS.md")
+	statePath := filepath.Join(temporary, ".mogent", "state.json")
+
+	got, err := state.Inspect(outputPath, statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != state.OutputMissing {
+		t.Fatalf("missing state = %s", got)
+	}
+
+	if err := os.WriteFile(outputPath, []byte("handwritten\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err = state.Inspect(outputPath, statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != state.OutputUntracked {
+		t.Fatalf("untracked state = %s", got)
+	}
+
+	if err := state.Write(statePath, "handwritten\n"); err != nil {
+		t.Fatal(err)
+	}
+	got, err = state.Inspect(outputPath, statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != state.OutputClean {
+		t.Fatalf("clean state = %s", got)
+	}
+
+	if err := os.WriteFile(outputPath, []byte("edited\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err = state.Inspect(outputPath, statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != state.OutputModified {
+		t.Fatalf("modified state = %s", got)
+	}
+}

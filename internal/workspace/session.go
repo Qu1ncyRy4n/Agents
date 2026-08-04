@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
@@ -78,11 +77,8 @@ func (s *Session) SaveAndBuild() error {
 	if err != nil {
 		return err
 	}
-	outputPath := s.Draft.Output
-	if !filepath.IsAbs(outputPath) {
-		outputPath = filepath.Join(filepath.Dir(s.ManifestPath), outputPath)
-	}
-	statePath := filepath.Join(filepath.Dir(s.ManifestPath), ".mogent", "state.json")
+	outputPath := s.OutputPath()
+	statePath := s.StatePath()
 	if err := state.CheckOverwrite(outputPath, statePath, false); err != nil {
 		return err
 	}
