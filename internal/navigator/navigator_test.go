@@ -123,14 +123,14 @@ func TestModelDraftAddSaveWritesManifestAndOutput(t *testing.T) {
 	moved, _ := model.Update(tea.KeyMsg{Type: tea.KeyDown})
 	added, _ := moved.(Model).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
 	draft := added.(Model)
-	if !draft.dirty {
+	if !draft.session.Dirty {
 		t.Fatal("expected draft to be dirty after add")
 	}
 	if !strings.Contains(draft.View(), "state: ~ draft") {
 		t.Fatalf("view missing dirty state:\n%s", draft.View())
 	}
-	if !strings.Contains(draft.output, "## Testing") {
-		t.Fatalf("draft output missing Testing:\n%s", draft.output)
+	if !strings.Contains(draft.session.Output, "## Testing") {
+		t.Fatalf("draft output missing Testing:\n%s", draft.session.Output)
 	}
 
 	pending, _ := draft.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
@@ -139,7 +139,7 @@ func TestModelDraftAddSaveWritesManifestAndOutput(t *testing.T) {
 	if saved.err != "" {
 		t.Fatalf("save failed: %s", saved.err)
 	}
-	if saved.dirty {
+	if saved.session.Dirty {
 		t.Fatal("expected clean state after save")
 	}
 	manifestContents, err := os.ReadFile(manifestPath)
@@ -173,11 +173,11 @@ func TestModelCancelledDraftDoesNotWriteFiles(t *testing.T) {
 	pending, _ := added.(Model).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
 	cancelled, _ := pending.(Model).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
 	draft := cancelled.(Model)
-	if draft.dirty {
+	if draft.session.Dirty {
 		t.Fatal("cancel should discard the unsaved draft")
 	}
-	if strings.Contains(draft.output, "## Testing") {
-		t.Fatalf("cancelled draft output still contains Testing:\n%s", draft.output)
+	if strings.Contains(draft.session.Output, "## Testing") {
+		t.Fatalf("cancelled draft output still contains Testing:\n%s", draft.session.Output)
 	}
 	after, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -234,17 +234,17 @@ func TestModelDraftRemoveAndReorder(t *testing.T) {
 	moved, _ = moved.(Model).Update(tea.KeyMsg{Type: tea.KeyDown})
 	reordered, _ := moved.(Model).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'D'}})
 	draft := reordered.(Model)
-	parent := entryAt(draft.draft.Doc, []int{1})
+	parent := entryAt(draft.session.Draft.Doc, []int{1})
 	if got := parent.Children[1].Heading; got != "Workflow" {
 		t.Fatalf("expected Workflow to move after Testing, got %q", got)
 	}
 	removed, _ := draft.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
 	draft = removed.(Model)
-	parent = entryAt(draft.draft.Doc, []int{1})
+	parent = entryAt(draft.session.Draft.Doc, []int{1})
 	if len(parent.Children) != 1 || parent.Children[0].Heading != "Testing" {
 		t.Fatalf("expected Workflow removed, children=%v", parent.Children)
 	}
-	if !draft.dirty {
+	if !draft.session.Dirty {
 		t.Fatal("expected dirty draft after remove")
 	}
 }

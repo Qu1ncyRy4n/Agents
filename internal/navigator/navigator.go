@@ -2,10 +2,8 @@
 package navigator
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,10 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
-	"github.com/Qu1ncyRy4n/Agents/internal/render"
-	"github.com/Qu1ncyRy4n/Agents/internal/state"
+	"github.com/Qu1ncyRy4n/Agents/internal/workspace"
 )
 
 type focus int
@@ -50,49 +46,32 @@ type candidate struct {
 // Model is the Bubble Tea state for browsing and drafting changes to one
 // manifest.
 type Model struct {
-	manifestPath string
-	saved        *manifest.Manifest
-	draft        *manifest.Manifest
-	sources      map[string]*library.Index
-	output       string
-	rows         []row
-	selected     int
-	collapsed    map[string]bool
-	focus        focus
-	detail       detailMode
-	width        int
-	height       int
-	err          string
-	message      string
-	confirmSave  bool
-	dirty        bool
+	session     *workspace.Session
+	rows        []row
+	selected    int
+	collapsed   map[string]bool
+	focus       focus
+	detail      detailMode
+	width       int
+	height      int
+	err         string
+	message     string
+	confirmSave bool
 }
 
 // New loads a manifest and prepares an in-memory draft.
 func New(manifestPath string) (Model, error) {
-	value, loadedPath, err := manifest.Load(manifestPath)
-	if err != nil {
-		return Model{}, err
-	}
-	result, err := render.Build(value, loadedPath)
-	if err != nil {
-		return Model{}, err
-	}
-	sources, err := render.LoadSources(value, loadedPath)
+	session, err := workspace.New(manifestPath)
 	if err != nil {
 		return Model{}, err
 	}
 	model := Model{
-		manifestPath: loadedPath,
-		saved:        value,
-		draft:        value.Clone(),
-		sources:      sources,
-		output:       result.Content,
-		collapsed:    make(map[string]bool),
-		focus:        focusTree,
-		detail:       detailFinal,
-		width:        100,
-		height:       30,
+		session:   session,
+		collapsed: make(map[string]bool),
+		focus:     focusTree,
+		detail:    detailFinal,
+		width:     100,
+		height:    30,
 	}
 	model.refreshRows()
 	return model, nil
@@ -125,14 +104,13 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y":
 				m.confirmSave = false
-				if err := m.saveAndBuild(); err != nil {
+				if err := m.session.SaveAndBuild(); err != nil {
 					m.err = err.Error()
 					m.message = ""
 				} else {
 					m.err = ""
 					m.message = "saved and built"
-					m.saved = m.draft.Clone()
-					m.dirty = false
+					m.refreshRows()
 				}
 			case "n", "esc":
 				m.confirmSave = false
@@ -237,11 +215,11 @@ func (m Model) View() string {
 
 func (m Model) statusLine(width int) string {
 	stateText := "state: saved"
-	if m.dirty {
+	if m.session.Dirty {
 		stateText = "state: ~ draft"
 	}
 	parts := []string{
-		fmt.Sprintf("manifest: %s", filepath.Base(m.manifestPath)),
+		fmt.Sprintf("manifest: %s", filepath.Base(m.session.ManifestPath)),
 		stateText,
 		"keys: up/down move, a add, d remove, U/D reorder, tab focus, 1/2/3 views, v detail, s save, q quit",
 	}
@@ -255,65 +233,6 @@ func (m Model) statusLine(width int) string {
 		parts = append(parts, "error: "+m.err)
 	}
 	return truncate(strings.Join(parts, " | "), width)
-}
-
-func (m Model) saveAndBuild() error {
-	result, err := render.Build(m.draft, m.manifestPath)
-	if err != nil {
-		return err
-	}
-	outputPath := m.draft.Output
-	if !filepath.IsAbs(outputPath) {
-		outputPath = filepath.Join(filepath.Dir(m.manifestPath), outputPath)
-	}
-	statePath := filepath.Join(filepath.Dir(m.manifestPath), ".mogent", "state.json")
-	if err := state.CheckOverwrite(outputPath, statePath, false); err != nil {
-		return err
-	}
-	originalManifest, err := os.ReadFile(m.manifestPath)
-	if err != nil {
-		return fmt.Errorf("read existing manifest before save: %w", err)
-	}
-	originalOutput, outputExisted, err := readOptional(outputPath)
-	if err != nil {
-		return err
-	}
-	if err := manifest.WriteAtomically(m.manifestPath, m.draft); err != nil {
-		return err
-	}
-	if err := render.WriteAtomically(outputPath, result.Content); err != nil {
-		return rollbackSave(err, m.manifestPath, originalManifest, outputPath, originalOutput, outputExisted)
-	}
-	if err := state.Write(statePath, result.Content); err != nil {
-		return rollbackSave(err, m.manifestPath, originalManifest, outputPath, originalOutput, outputExisted)
-	}
-	return nil
-}
-
-func readOptional(path string) ([]byte, bool, error) {
-	contents, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("read existing output before save: %w", err)
-	}
-	return contents, true, nil
-}
-
-func rollbackSave(saveErr error, manifestPath string, originalManifest []byte, outputPath string, originalOutput []byte, outputExisted bool) error {
-	var rollbackErrs []error
-	if err := render.WriteAtomically(manifestPath, string(originalManifest)); err != nil {
-		rollbackErrs = append(rollbackErrs, fmt.Errorf("restore manifest: %w", err))
-	}
-	if outputExisted {
-		if err := render.WriteAtomically(outputPath, string(originalOutput)); err != nil {
-			rollbackErrs = append(rollbackErrs, fmt.Errorf("restore output: %w", err))
-		}
-	} else if err := os.Remove(outputPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		rollbackErrs = append(rollbackErrs, fmt.Errorf("remove new output after failed save: %w", err))
-	}
-	return errors.Join(append([]error{saveErr}, rollbackErrs...)...)
 }
 
 func (m Model) pane(title, content string, width, height int, active bool) string {
@@ -332,8 +251,8 @@ func (m Model) pane(title, content string, width, height int, active bool) strin
 
 func (m *Model) refreshRows() {
 	m.rows = nil
-	for index := range m.draft.Doc {
-		m.appendEntry(&m.draft.Doc[index], 0, []int{index}, nil)
+	for index := range m.session.Draft.Doc {
+		m.appendEntry(&m.session.Draft.Doc[index], 0, []int{index}, nil)
 	}
 	if m.selected >= len(m.rows) {
 		m.selected = max(len(m.rows)-1, 0)
@@ -384,7 +303,7 @@ func (m Model) treeView(width, height int) string {
 
 func (m Model) finalView(width, height int) string {
 	current := m.rows[m.selected].Entry.Heading
-	lines := strings.Split(strings.TrimRight(m.output, "\n"), "\n")
+	lines := strings.Split(strings.TrimRight(m.session.Output, "\n"), "\n")
 	for index, line := range lines {
 		if strings.TrimLeft(line, "# ") == current && strings.HasPrefix(line, "#") {
 			lines[index] = "> " + line
@@ -423,7 +342,7 @@ func (m Model) sourceView(width, height int) string {
 			lines = append(lines, "Invalid reference: "+reference)
 			continue
 		}
-		index, found := m.sources[alias]
+		index, found := m.session.Sources[alias]
 		if !found {
 			lines = append(lines, "Missing source: "+alias)
 			continue
@@ -456,7 +375,7 @@ func (m *Model) addCandidate() {
 		m.message = "no source child available to add"
 		return
 	}
-	entry := entryAt(m.draft.Doc, selected.Index)
+	entry := entryAt(m.session.Draft.Doc, selected.Index)
 	if entry == nil || len(entry.From) > 0 {
 		m.message = "select a manifest section with children before adding"
 		return
@@ -478,7 +397,7 @@ func (m *Model) removeSelected() {
 		m.message = "top-level entries are not removed in this slice"
 		return
 	}
-	parent := entryAt(m.draft.Doc, selected.Index[:len(selected.Index)-1])
+	parent := entryAt(m.session.Draft.Doc, selected.Index[:len(selected.Index)-1])
 	if parent == nil || len(parent.Children) <= 1 {
 		m.message = "cannot leave a section with no children"
 		return
@@ -498,9 +417,9 @@ func (m *Model) moveSelected(delta int) {
 	if len(selected.Index) == 0 {
 		return
 	}
-	siblings := &m.draft.Doc
+	siblings := &m.session.Draft.Doc
 	if len(selected.Index) > 1 {
-		parent := entryAt(m.draft.Doc, selected.Index[:len(selected.Index)-1])
+		parent := entryAt(m.session.Draft.Doc, selected.Index[:len(selected.Index)-1])
 		if parent == nil {
 			return
 		}
@@ -518,24 +437,19 @@ func (m *Model) moveSelected(delta int) {
 }
 
 func (m *Model) afterDraftChange(message string) {
-	m.dirty = true
 	m.message = message
 	m.err = ""
-	if result, err := render.Build(m.draft, m.manifestPath); err != nil {
+	if err := m.session.MarkDraftChanged(); err != nil {
 		m.err = err.Error()
-	} else {
-		m.output = result.Content
 	}
 	m.refreshRows()
 }
 
 func (m *Model) discardDraft(message string) {
-	m.draft = m.saved.Clone()
-	m.dirty = false
 	m.err = ""
 	m.message = message
-	if result, err := render.Build(m.draft, m.manifestPath); err == nil {
-		m.output = result.Content
+	if err := m.session.DiscardDraft(); err != nil {
+		m.err = err.Error()
 	}
 	m.refreshRows()
 }
@@ -560,7 +474,7 @@ func (m Model) candidatesFor(selected row) []candidate {
 		if err != nil {
 			continue
 		}
-		index, found := m.sources[alias]
+		index, found := m.session.Sources[alias]
 		if !found {
 			continue
 		}

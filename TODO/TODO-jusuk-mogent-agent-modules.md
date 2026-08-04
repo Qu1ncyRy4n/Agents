@@ -148,6 +148,15 @@ Intent: Make provenance, document structure, and rendered output visible togethe
 Constraints: Text labels and symbols remain meaningful without color. Full Final view shows the entire rendered document and aligns to the selected node. Default Source context shows the selected section, its parent heading, and adjacent siblings, with a later full-file toggle. When a selected node maps to multiple output locations, expose a count and provide cycling rather than claiming one location. An invalid draft preserves the last valid preview and shows the current error. The user must explicitly confirm before writes. Source-library changes require a separate local-override or import action.
 Affects: docs/IMPLEMENTATION-M2.md, docs/DESIGN.md, cmd/mogent/, internal/, TUI tests
 
+ID: DI-vasel
+Date: 2026-08-04
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Keep mogent core-first. The TUI remains an important demonstration and editing surface, but durable behavior belongs in reusable workspace operations that can also back CLI commands and future UI clients. Every TUI action that changes a manifest, local override, source selection, or drift decision should have a matching core operation and a noninteractive command shape when useful.
+Intent: Make mogent usable by humans, agents, and scripts without trapping product behavior inside a terminal UI. This also makes future GUI work less risky because it can reuse the same load/draft/preview/save/source/drift operations.
+Constraints: Do not roll back the M2 TUI. Extract behavior incrementally: preserve the current navigator behavior while moving save, preview, dirty state, source inspection, source coverage, copy-on-write, and drift/import decisions into reusable packages.
+Affects: docs/DESIGN.md, internal/workspace/ or equivalent core package, internal/navigator/, internal/cli/, future M3+
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -166,10 +175,13 @@ Affects: docs/IMPLEMENTATION-M2.md, docs/DESIGN.md, cmd/mogent/, internal/, TUI 
 
 ## Feature Backlog
 
-Rebuild milestones (DI-ralik) come first: 1. manifest parse/resolve/render, 2. navigator, 3. save flow.
+Rebuild milestones now proceed core-first: 1. manifest parse/resolve/render, 2.
+navigator proof of concept, 3. extract reusable workspace operations, 4. add
+copy-on-write localization, source browsing, drift/import, and URL pinning on top
+of that shared core.
 
-- [ ] Add navigator save support: write `agents.yaml` atomically, show dirty/saved state, and avoid silent config rewrites (milestone 3).
-- [ ] Add preview support: show rendered `AGENTS.md` for the current in-memory manifest before saving.
+- [ ] Extract M2 draft/save behavior from `internal/navigator` into a reusable workspace/session package.
+- [ ] Add CLI command shapes for core operations: status, source list/coverage, draft/source changes, and later drift/localize.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.

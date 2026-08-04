@@ -230,13 +230,31 @@ Other entry points are the same model:
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 
+The TUI is a client of the model, not the product core. Durable behavior lives in
+plain core operations that the CLI, TUI, and future GUI can all call:
+
+- load a workspace from `agents.yaml`,
+- list sources and source nodes,
+- draft manifest changes,
+- rebuild preview text,
+- save `agents.yaml` and `AGENTS.md` through the same safety checks,
+- inspect drift and import or reject local edits.
+
+Rule of thumb: if the TUI can make a durable change, there should be a matching
+noninteractive operation or command shape for agents and scripts. A polished TUI
+still matters, but it should present decisions rather than hide the actual
+workflow inside key bindings. Source: DI-vasel.
+
 Rebuild milestones (from scratch; old code removed):
 
 1. Parse manifest → resolve sources → render → validate. (No UI.)
 2. The navigator (init step 2 / `tui`): tree, rendered-output, and source
    provenance previews; in-memory draft changes; confirmed atomic save/build.
    The exact interaction contract is `docs/IMPLEMENTATION-M2.md`.
-3. Copy-on-write editing, direct-edit import, and richer save/history flows.
+3. Extract reusable workspace operations from the navigator and add CLI-facing
+   command shapes for the same actions.
+4. Copy-on-write editing, direct-edit import, source browsing, and richer
+   save/history flows.
 
 ---
 
