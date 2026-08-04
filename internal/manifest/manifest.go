@@ -235,9 +235,14 @@ func WriteAtomically(path string, value *Manifest) error {
 	if err := draft.Validate(); err != nil {
 		return err
 	}
-	contents, err := Marshal(draft)
-	if err != nil {
-		return err
+	var output bytes.Buffer
+	encoder := yaml.NewEncoder(&output)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(draft); err != nil {
+		return fmt.Errorf("serialize manifest: %w", err)
+	}
+	if err := encoder.Close(); err != nil {
+		return fmt.Errorf("finish manifest serialization: %w", err)
 	}
 	directory := filepath.Dir(path)
 	temporary, err := os.CreateTemp(directory, ".mogent-manifest-*")
@@ -245,7 +250,7 @@ func WriteAtomically(path string, value *Manifest) error {
 		return fmt.Errorf("create temporary manifest: %w", err)
 	}
 	temporaryName := temporary.Name()
-	if _, err := temporary.Write(contents); err != nil {
+	if _, err := temporary.Write(output.Bytes()); err != nil {
 		return cleanupTemporary(fmt.Errorf("write temporary manifest: %w", err), temporary, temporaryName)
 	}
 	if err := temporary.Chmod(0o644); err != nil {
@@ -264,24 +269,6 @@ func WriteAtomically(path string, value *Manifest) error {
 		return fmt.Errorf("replace manifest: %w", err)
 	}
 	return nil
-}
-
-// Marshal serializes a validated manifest draft.
-func Marshal(value *Manifest) ([]byte, error) {
-	draft := value.Clone()
-	if err := draft.Validate(); err != nil {
-		return nil, err
-	}
-	var output bytes.Buffer
-	encoder := yaml.NewEncoder(&output)
-	encoder.SetIndent(2)
-	if err := encoder.Encode(draft); err != nil {
-		return nil, fmt.Errorf("serialize manifest: %w", err)
-	}
-	if err := encoder.Close(); err != nil {
-		return nil, fmt.Errorf("finish manifest serialization: %w", err)
-	}
-	return output.Bytes(), nil
 }
 
 func cleanupTemporary(buildErr error, temporary *os.File, path string) error {

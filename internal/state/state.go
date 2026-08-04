@@ -42,43 +42,6 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 	return nil
 }
 
-// Changed reports whether the current output differs from the last generated
-// hash. Missing output or missing state means there is no tracked drift yet.
-func Changed(outputPath, statePath string) (bool, error) {
-	output, err := os.ReadFile(outputPath)
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("read existing output: %w", err)
-	}
-	contents, err := os.ReadFile(statePath)
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("read generated-output state: %w", err)
-	}
-	var previous generated
-	if err := json.Unmarshal(contents, &previous); err != nil || previous.SHA256 == "" {
-		return false, fmt.Errorf("read generated-output state: invalid state file")
-	}
-	return Hash(output) != previous.SHA256, nil
-}
-
-// OutputPath resolves a manifest output path beside the manifest when needed.
-func OutputPath(manifestPath, output string) string {
-	if filepath.IsAbs(output) {
-		return output
-	}
-	return filepath.Join(filepath.Dir(manifestPath), output)
-}
-
-// StatePath resolves the local generated-output state path for a manifest.
-func StatePath(manifestPath string) string {
-	return filepath.Join(filepath.Dir(manifestPath), ".mogent", "state.json")
-}
-
 // Write records exactly the content just written to the generated output.
 func Write(statePath, output string) error {
 	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {

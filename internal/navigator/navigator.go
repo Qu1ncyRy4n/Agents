@@ -50,27 +50,22 @@ type candidate struct {
 // Model is the Bubble Tea state for browsing and drafting changes to one
 // manifest.
 type Model struct {
-	manifestPath  string
-	saved         *manifest.Manifest
-	draft         *manifest.Manifest
-	sources       map[string]*library.Index
-	overrides     map[string]string
-	output        string
-	rows          []row
-	selected      int
-	collapsed     map[string]bool
-	focus         focus
-	detail        detailMode
-	width         int
-	height        int
-	err           string
-	message       string
-	review        string
-	confirmSave   bool
-	confirmReject bool
-	dirty         bool
-	drift         bool
-	importedDrift bool
+	manifestPath string
+	saved        *manifest.Manifest
+	draft        *manifest.Manifest
+	sources      map[string]*library.Index
+	output       string
+	rows         []row
+	selected     int
+	collapsed    map[string]bool
+	focus        focus
+	detail       detailMode
+	width        int
+	height       int
+	err          string
+	message      string
+	confirmSave  bool
+	dirty        bool
 }
 
 // New loads a manifest and prepares an in-memory draft.
@@ -92,18 +87,12 @@ func New(manifestPath string) (Model, error) {
 		saved:        value,
 		draft:        value.Clone(),
 		sources:      sources,
-		overrides:    make(map[string]string),
 		output:       result.Content,
 		collapsed:    make(map[string]bool),
 		focus:        focusTree,
 		detail:       detailFinal,
 		width:        100,
 		height:       30,
-	}
-	if changed, err := state.Changed(state.OutputPath(loadedPath, value.Output), state.StatePath(loadedPath)); err != nil {
-		model.err = err.Error()
-	} else {
-		model.drift = changed
 	}
 	model.refreshRows()
 	return model, nil
@@ -136,7 +125,7 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "y":
 				m.confirmSave = false
-				if err := m.saveAndBuild(false); err != nil {
+				if err := m.saveAndBuild(); err != nil {
 					m.err = err.Error()
 					m.message = ""
 				} else {
@@ -144,40 +133,10 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					m.message = "saved and built"
 					m.saved = m.draft.Clone()
 					m.dirty = false
-					m.drift = false
-					m.importedDrift = false
-					m.overrides = make(map[string]string)
-					if sources, err := render.LoadSources(m.saved, m.manifestPath); err == nil {
-						m.sources = sources
-					}
 				}
 			case "n", "esc":
 				m.confirmSave = false
 				m.discardDraft("save cancelled; draft discarded")
-			case "ctrl+c", "q":
-				m.discardDraft("")
-				return m, tea.Quit
-			}
-			return m, nil
-		}
-		if m.confirmReject {
-			switch msg.String() {
-			case "y":
-				m.confirmReject = false
-				if err := m.saveAndBuild(true); err != nil {
-					m.err = err.Error()
-					m.message = ""
-				} else {
-					m.err = ""
-					m.message = "direct edit rejected; rebuilt from manifest"
-					m.drift = false
-					m.importedDrift = false
-					m.saved = m.draft.Clone()
-					m.dirty = false
-				}
-			case "n", "esc":
-				m.confirmReject = false
-				m.message = "reject cancelled"
 			case "ctrl+c", "q":
 				m.discardDraft("")
 				return m, tea.Quit
@@ -204,21 +163,6 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.addCandidate()
 		case "d":
 			m.removeSelected()
-		case "e":
-			m.localizeSelected()
-		case "i":
-			m.importDriftIntoSelected()
-		case "r":
-			if m.drift {
-				m.err = ""
-				m.review = m.saveReview()
-				m.message = "reject direct edit and rebuild AGENTS.md? y/n"
-				m.confirmReject = true
-			}
-		case "K":
-			if m.drift {
-				m.discardDraft("kept direct edit; no files written")
-			}
 		case "U":
 			m.moveSelected(-1)
 		case "D":
@@ -245,7 +189,6 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "s":
 			m.err = ""
-			m.review = m.saveReview()
 			m.message = "save current manifest and build AGENTS.md? y/n"
 			m.confirmSave = true
 		}
@@ -300,16 +243,10 @@ func (m Model) statusLine(width int) string {
 	parts := []string{
 		fmt.Sprintf("manifest: %s", filepath.Base(m.manifestPath)),
 		stateText,
-		"keys: up/down move, a add, d remove, e localize, i import drift, r reject drift, K keep drift, s save, q quit",
+		"keys: up/down move, a add, d remove, U/D reorder, tab focus, 1/2/3 views, v detail, s save, q quit",
 	}
 	if m.confirmSave {
 		parts = append(parts, "confirm: y/n")
-	}
-	if m.confirmReject {
-		parts = append(parts, "confirm reject: y/n")
-	}
-	if m.drift {
-		parts = append(parts, "drift: direct AGENTS.md edits detected")
 	}
 	if m.message != "" {
 		parts = append(parts, m.message)
@@ -320,14 +257,17 @@ func (m Model) statusLine(width int) string {
 	return truncate(strings.Join(parts, " | "), width)
 }
 
-func (m Model) saveAndBuild(forceOutput bool) error {
-	result, err := render.BuildWithSources(m.draft, m.manifestPath, m.sources)
+func (m Model) saveAndBuild() error {
+	result, err := render.Build(m.draft, m.manifestPath)
 	if err != nil {
 		return err
 	}
-	outputPath := state.OutputPath(m.manifestPath, m.draft.Output)
-	statePath := state.StatePath(m.manifestPath)
-	if err := state.CheckOverwrite(outputPath, statePath, forceOutput || m.importedDrift); err != nil {
+	outputPath := m.draft.Output
+	if !filepath.IsAbs(outputPath) {
+		outputPath = filepath.Join(filepath.Dir(m.manifestPath), outputPath)
+	}
+	statePath := filepath.Join(filepath.Dir(m.manifestPath), ".mogent", "state.json")
+	if err := state.CheckOverwrite(outputPath, statePath, false); err != nil {
 		return err
 	}
 	originalManifest, err := os.ReadFile(m.manifestPath)
@@ -336,9 +276,6 @@ func (m Model) saveAndBuild(forceOutput bool) error {
 	}
 	originalOutput, outputExisted, err := readOptional(outputPath)
 	if err != nil {
-		return err
-	}
-	if err := m.writeOverrides(); err != nil {
 		return err
 	}
 	if err := manifest.WriteAtomically(m.manifestPath, m.draft); err != nil {
@@ -435,15 +372,11 @@ func (m Model) treeView(width, height int) string {
 				collapse = "+"
 			}
 		}
-		marker := "[x]"
 		provenance := "children"
 		if len(row.From) > 0 {
 			provenance = strings.Join(row.From, ", ")
-			if hasLocalReference(row.From) {
-				marker = "[L]"
-			}
 		}
-		line := fmt.Sprintf("%s%s%s%s %s  <%s>", prefix, strings.Repeat("  ", row.Depth), collapse, marker, row.Entry.Heading, provenance)
+		line := fmt.Sprintf("%s%s%s[x] %s  <%s>", prefix, strings.Repeat("  ", row.Depth), collapse, row.Entry.Heading, provenance)
 		lines = append(lines, truncate(line, width))
 	}
 	return visibleWindow(lines, m.selected, height)
@@ -464,9 +397,6 @@ func (m Model) finalView(width, height int) string {
 }
 
 func (m Model) sourceView(width, height int) string {
-	if m.confirmSave || m.confirmReject {
-		return truncateLines(strings.Split(m.review, "\n"), width, height)
-	}
 	selected := m.rows[m.selected]
 	if len(selected.From) == 0 {
 		var lines []string
@@ -539,106 +469,6 @@ func (m *Model) addCandidate() {
 	m.afterDraftChange("added " + next.Heading)
 }
 
-func (m *Model) localizeSelected() {
-	if len(m.rows) == 0 {
-		return
-	}
-	selected := m.rows[m.selected]
-	if len(selected.From) != 1 {
-		m.message = "select one shared source node before localizing"
-		return
-	}
-	alias, path, err := manifest.SplitReference(selected.From[0])
-	if err != nil {
-		m.err = err.Error()
-		return
-	}
-	if alias == "local" {
-		m.message = "selected node is already local"
-		return
-	}
-	index, found := m.sources[alias]
-	if !found {
-		m.err = fmt.Sprintf("source %q is unavailable", alias)
-		return
-	}
-	node, found := index.ByPath[path]
-	if !found {
-		m.err = fmt.Sprintf("source %q has no heading path %q", alias, path)
-		return
-	}
-	entry := entryAt(m.draft.Doc, selected.Index)
-	if entry == nil {
-		return
-	}
-	content, localNode := localOverrideMarkdown(index, node)
-	if m.draft.Sources == nil {
-		m.draft.Sources = make(map[string]string)
-	}
-	if _, exists := m.draft.Sources["local"]; !exists {
-		m.draft.Sources["local"] = ".mogent/library"
-	}
-	entry.From = []string{"local:" + path}
-	m.overrides[path+".md"] = content
-	m.addLocalNode(localNode)
-	m.afterDraftChange("localized " + selected.Entry.Heading)
-}
-
-func (m *Model) importDriftIntoSelected() {
-	if !m.drift {
-		m.message = "no direct AGENTS.md drift detected"
-		return
-	}
-	if len(m.rows) == 0 {
-		return
-	}
-	selected := m.rows[m.selected]
-	if len(selected.From) != 1 {
-		m.message = "select one source node before importing drift"
-		return
-	}
-	alias, path, err := manifest.SplitReference(selected.From[0])
-	if err != nil {
-		m.err = err.Error()
-		return
-	}
-	if alias == "local" {
-		m.message = "selected node is already local"
-		return
-	}
-	section, err := extractOutputSection(state.OutputPath(m.manifestPath, m.draft.Output), selected.Entry.Heading, selected.Depth+1)
-	if err != nil {
-		m.err = err.Error()
-		return
-	}
-	index, found := m.sources[alias]
-	if !found {
-		m.err = fmt.Sprintf("source %q is unavailable", alias)
-		return
-	}
-	node, found := index.ByPath[path]
-	if !found {
-		m.err = fmt.Sprintf("source %q has no heading path %q", alias, path)
-		return
-	}
-	entry := entryAt(m.draft.Doc, selected.Index)
-	if entry == nil {
-		return
-	}
-	content, localNode := localOverrideMarkdownWithBody(index, node, section)
-	if m.draft.Sources == nil {
-		m.draft.Sources = make(map[string]string)
-	}
-	if _, exists := m.draft.Sources["local"]; !exists {
-		m.draft.Sources["local"] = ".mogent/library"
-	}
-	entry.From = []string{"local:" + path}
-	m.overrides[path+".md"] = content
-	m.addLocalNode(localNode)
-	m.importedDrift = true
-	m.afterDraftChange("imported direct edit into " + selected.Entry.Heading)
-}
-
 func (m *Model) removeSelected() {
 	if len(m.rows) == 0 {
 		return
@@ -691,7 +521,7 @@ func (m *Model) afterDraftChange(message string) {
 	m.dirty = true
 	m.message = message
 	m.err = ""
-	if result, err := render.BuildWithSources(m.draft, m.manifestPath, m.sources); err != nil {
+	if result, err := render.Build(m.draft, m.manifestPath); err != nil {
 		m.err = err.Error()
 	} else {
 		m.output = result.Content
@@ -701,281 +531,13 @@ func (m *Model) afterDraftChange(message string) {
 
 func (m *Model) discardDraft(message string) {
 	m.draft = m.saved.Clone()
-	m.overrides = make(map[string]string)
 	m.dirty = false
 	m.err = ""
 	m.message = message
-	m.review = ""
-	if sources, err := render.LoadSources(m.draft, m.manifestPath); err == nil {
-		m.sources = sources
-	}
-	if result, err := render.BuildWithSources(m.draft, m.manifestPath, m.sources); err == nil {
+	if result, err := render.Build(m.draft, m.manifestPath); err == nil {
 		m.output = result.Content
 	}
 	m.refreshRows()
-}
-
-func (m *Model) addLocalNode(node *library.Node) {
-	index, found := m.sources["local"]
-	if !found {
-		index = &library.Index{ByPath: make(map[string]*library.Node)}
-		m.sources["local"] = index
-	}
-	index.ByPath[node.Path] = node
-	if !containsRoot(index.Roots, node.Path) {
-		index.Roots = append(index.Roots, node)
-	}
-}
-
-func (m Model) writeOverrides() error {
-	if len(m.overrides) == 0 {
-		return nil
-	}
-	root := m.draft.Sources["local"]
-	if root == "" {
-		return fmt.Errorf("local source is missing")
-	}
-	if !filepath.IsAbs(root) {
-		root = filepath.Join(filepath.Dir(m.manifestPath), root)
-	}
-	for relative, content := range m.overrides {
-		path := filepath.Join(root, filepath.FromSlash(relative))
-		if !strings.HasPrefix(filepath.Clean(path), filepath.Clean(root)+string(os.PathSeparator)) {
-			return fmt.Errorf("local override path escapes local library: %s", relative)
-		}
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return fmt.Errorf("create local override directory: %w", err)
-		}
-		if err := render.WriteAtomically(path, content); err != nil {
-			return fmt.Errorf("write local override %q: %w", relative, err)
-		}
-	}
-	return nil
-}
-
-func (m Model) saveReview() string {
-	result, err := render.BuildWithSources(m.draft, m.manifestPath, m.sources)
-	if err != nil {
-		return "Save review unavailable: " + err.Error()
-	}
-	var lines []string
-	lines = append(lines, "Save review")
-	lines = append(lines, "")
-	lines = append(lines, "agents.yaml:")
-	currentManifest, readErr := os.ReadFile(m.manifestPath)
-	nextManifest, marshalErr := manifest.Marshal(m.draft)
-	if readErr != nil {
-		lines = append(lines, "  read current manifest: "+readErr.Error())
-	} else if marshalErr != nil {
-		lines = append(lines, "  render draft manifest: "+marshalErr.Error())
-	} else {
-		lines = append(lines, simpleDiff(string(currentManifest), string(nextManifest), 8)...)
-	}
-	lines = append(lines, "")
-	lines = append(lines, m.draft.Output+":")
-	outputPath := state.OutputPath(m.manifestPath, m.draft.Output)
-	currentOutput, readErr := os.ReadFile(outputPath)
-	if errors.Is(readErr, os.ErrNotExist) {
-		currentOutput = nil
-		readErr = nil
-	}
-	if readErr != nil {
-		lines = append(lines, "  read current output: "+readErr.Error())
-	} else {
-		lines = append(lines, simpleDiff(string(currentOutput), result.Content, 10)...)
-	}
-	lines = append(lines, "")
-	lines = append(lines, "local override files:")
-	if len(m.overrides) == 0 {
-		lines = append(lines, "  none")
-	} else {
-		for _, path := range sortedOverridePaths(m.overrides) {
-			lines = append(lines, "  .mogent/library/"+path)
-		}
-	}
-	return strings.Join(lines, "\n")
-}
-
-func simpleDiff(before, after string, limit int) []string {
-	if before == after {
-		return []string{"  no changes"}
-	}
-	beforeLines := strings.Split(strings.TrimRight(before, "\n"), "\n")
-	afterLines := strings.Split(strings.TrimRight(after, "\n"), "\n")
-	var lines []string
-	maxLines := max(len(beforeLines), len(afterLines))
-	for index := 0; index < maxLines && len(lines) < limit; index++ {
-		var oldLine, newLine string
-		if index < len(beforeLines) {
-			oldLine = beforeLines[index]
-		}
-		if index < len(afterLines) {
-			newLine = afterLines[index]
-		}
-		if oldLine == newLine {
-			continue
-		}
-		if index < len(beforeLines) {
-			lines = append(lines, "- "+oldLine)
-		}
-		if len(lines) >= limit {
-			break
-		}
-		if index < len(afterLines) {
-			lines = append(lines, "+ "+newLine)
-		}
-	}
-	if len(lines) == 0 {
-		return []string{"  changed"}
-	}
-	if maxLines > len(lines) {
-		lines = append(lines, "  ...")
-	}
-	return lines
-}
-
-func sortedOverridePaths(overrides map[string]string) []string {
-	paths := make([]string, 0, len(overrides))
-	for path := range overrides {
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
-	return paths
-}
-
-func localOverrideMarkdown(index *library.Index, node *library.Node) (string, *library.Node) {
-	return localOverrideMarkdownWithBody(index, node, strings.TrimSpace(node.Body))
-}
-
-func localOverrideMarkdownWithBody(index *library.Index, node *library.Node, body string) (string, *library.Node) {
-	ancestors := ancestorsFor(index, node.Path)
-	var output strings.Builder
-	for level, ancestor := range ancestors {
-		output.WriteString(strings.Repeat("#", level+1))
-		output.WriteByte(' ')
-		output.WriteString(ancestor.Heading)
-		output.WriteString("\n\n")
-		if ancestor.Path == node.Path {
-			if body := strings.TrimSpace(body); body != "" {
-				output.WriteString(body)
-				output.WriteString("\n\n")
-			}
-			if strings.TrimSpace(body) == strings.TrimSpace(node.Body) {
-				for _, child := range ancestor.Children {
-					output.WriteString(strings.Repeat("#", level+2))
-					output.WriteByte(' ')
-					output.WriteString(child.Heading)
-					output.WriteString("\n\n")
-					writeNodeMarkdown(&output, child, level+2)
-				}
-			}
-		}
-	}
-	localNode := cloneNode(node)
-	localNode.Body = strings.TrimSpace(body) + "\n"
-	if strings.TrimSpace(body) != strings.TrimSpace(node.Body) {
-		localNode.Children = nil
-	}
-	return strings.TrimSpace(output.String()) + "\n", localNode
-}
-
-func writeNodeMarkdown(output *strings.Builder, node *library.Node, level int) {
-	if body := strings.TrimSpace(node.Body); body != "" {
-		output.WriteString(body)
-		output.WriteString("\n\n")
-	}
-	for _, child := range node.Children {
-		output.WriteString(strings.Repeat("#", level+1))
-		output.WriteByte(' ')
-		output.WriteString(child.Heading)
-		output.WriteString("\n\n")
-		writeNodeMarkdown(output, child, level+1)
-	}
-}
-
-func ancestorsFor(index *library.Index, path string) []*library.Node {
-	parts := strings.Split(path, "/")
-	ancestors := make([]*library.Node, 0, len(parts))
-	for i := range parts {
-		ancestorPath := strings.Join(parts[:i+1], "/")
-		if node, found := index.ByPath[ancestorPath]; found {
-			ancestors = append(ancestors, node)
-		}
-	}
-	return ancestors
-}
-
-func cloneNode(node *library.Node) *library.Node {
-	clone := &library.Node{
-		Path:    node.Path,
-		Heading: node.Heading,
-		Body:    node.Body,
-	}
-	for _, child := range node.Children {
-		clone.Children = append(clone.Children, cloneNode(child))
-	}
-	return clone
-}
-
-func containsRoot(nodes []*library.Node, path string) bool {
-	for _, node := range nodes {
-		if node.Path == path {
-			return true
-		}
-	}
-	return false
-}
-
-func hasLocalReference(references []string) bool {
-	for _, reference := range references {
-		alias, _, err := manifest.SplitReference(reference)
-		if err == nil && alias == "local" {
-			return true
-		}
-	}
-	return false
-}
-
-func extractOutputSection(path, heading string, level int) (string, error) {
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("read edited output: %w", err)
-	}
-	lines := strings.Split(string(contents), "\n")
-	start := -1
-	for index, line := range lines {
-		lineLevel, lineHeading, ok := markdownHeading(line)
-		if ok && lineLevel == level && lineHeading == heading {
-			start = index + 1
-			break
-		}
-	}
-	if start < 0 {
-		return "", fmt.Errorf("direct edit import could not find heading %q in AGENTS.md", heading)
-	}
-	end := len(lines)
-	for index := start; index < len(lines); index++ {
-		lineLevel, _, ok := markdownHeading(lines[index])
-		if ok && lineLevel <= level {
-			end = index
-			break
-		}
-	}
-	return strings.TrimSpace(strings.Join(lines[start:end], "\n")) + "\n", nil
-}
-
-func markdownHeading(line string) (int, string, bool) {
-	if !strings.HasPrefix(line, "#") {
-		return 0, "", false
-	}
-	level := 0
-	for level < len(line) && line[level] == '#' {
-		level++
-	}
-	if level == 0 || level > 6 || level == len(line) || line[level] != ' ' {
-		return 0, "", false
-	}
-	return level, strings.TrimSpace(line[level:]), true
 }
 
 func (m Model) candidatesFor(selected row) []candidate {
