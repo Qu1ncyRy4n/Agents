@@ -100,3 +100,36 @@ func TestRunCoverageReportsUnusedSourceNodes(t *testing.T) {
 		}
 	}
 }
+
+func TestRunCoverageUnusedOnlyReportsCompactList(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "core.md"), []byte("# Identity\nHello.\n\n# Instructions\n\n## Workflow\nWork.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Identity: shared:identity\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath, "--unused-only"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"shared  library  unused 2/3",
+		"  shared:instructions  Instructions",
+		"  shared:instructions/workflow  Workflow",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("unused coverage missing %q:\n%s", expected, stdout.String())
+		}
+	}
+	if strings.Contains(stdout.String(), "Included:") {
+		t.Fatalf("unused-only output should not include detailed summary:\n%s", stdout.String())
+	}
+}

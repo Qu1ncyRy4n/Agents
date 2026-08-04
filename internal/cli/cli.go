@@ -121,6 +121,7 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("coverage", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	unusedOnly := flags.Bool("unused-only", false, "show only unused source references")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -132,6 +133,9 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	coverage := session.Coverage()
+	if *unusedOnly {
+		return writeUnusedCoverage(stdout, coverage)
+	}
 	for _, source := range coverage.Sources {
 		if _, err := fmt.Fprintf(stdout, "Source %s: %s\n", source.Alias, source.Path); err != nil {
 			return fmt.Errorf("write coverage: %w", err)
@@ -151,6 +155,26 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 				if _, err := fmt.Fprintf(stdout, "- %s  %s:%s\n", node.Heading, source.Alias, node.Path); err != nil {
 					return fmt.Errorf("write coverage: %w", err)
 				}
+			}
+		}
+		if _, err := fmt.Fprintln(stdout); err != nil {
+			return fmt.Errorf("write coverage: %w", err)
+		}
+	}
+	return nil
+}
+
+func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage) error {
+	for _, source := range coverage.Sources {
+		if len(source.Unused) == 0 {
+			continue
+		}
+		if _, err := fmt.Fprintf(stdout, "%s  %s  unused %d/%d\n", source.Alias, source.Path, len(source.Unused), source.Total); err != nil {
+			return fmt.Errorf("write coverage: %w", err)
+		}
+		for _, node := range source.Unused {
+			if _, err := fmt.Fprintf(stdout, "  %s  %s\n", source.Alias+":"+node.Path, node.Heading); err != nil {
+				return fmt.Errorf("write coverage: %w", err)
 			}
 		}
 		if _, err := fmt.Fprintln(stdout); err != nil {
