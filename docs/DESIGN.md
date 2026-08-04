@@ -236,7 +236,9 @@ Rebuild milestones (from scratch; old code removed):
 2. The navigator (init step 2 / `tui`): tree, rendered-output, and source
    provenance previews; in-memory draft changes; confirmed atomic save/build.
    The exact interaction contract is `docs/IMPLEMENTATION-M2.md`.
-3. Copy-on-write editing, direct-edit import, and richer save/history flows.
+3. Localization and drift: copy-on-write editing, direct-edit import, and
+   richer save/history flows. The exact scope contract is
+   `docs/IMPLEMENTATION-M3.md`.
 
 ---
 
@@ -273,6 +275,9 @@ Treat this file as the entry point.
 | Doc | Role | Status |
 |---|---|---|
 | `docs/DESIGN.md` | **This file** — design of record | active |
+| `docs/IMPLEMENTATION-M1.md` | First renderer contract | active |
+| `docs/IMPLEMENTATION-M2.md` | Navigator contract | active |
+| `docs/IMPLEMENTATION-M3.md` | Localization and drift contract | planned |
 | `TODO/TODO-jusuk-mogent-agent-modules.md` | Task tracking + DI log | active |
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
 | `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | historical — block/id framing superseded by §3 |

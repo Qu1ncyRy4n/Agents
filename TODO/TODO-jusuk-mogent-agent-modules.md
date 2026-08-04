@@ -148,6 +148,15 @@ Intent: Make provenance, document structure, and rendered output visible togethe
 Constraints: Text labels and symbols remain meaningful without color. Full Final view shows the entire rendered document and aligns to the selected node. Default Source context shows the selected section, its parent heading, and adjacent siblings, with a later full-file toggle. When a selected node maps to multiple output locations, expose a count and provide cycling rather than claiming one location. An invalid draft preserves the last valid preview and shows the current error. The user must explicitly confirm before writes. Source-library changes require a separate local-override or import action.
 Affects: docs/IMPLEMENTATION-M2.md, docs/DESIGN.md, cmd/mogent/, internal/, TUI tests
 
+ID: DI-sovar
+Date: 2026-07-30
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Make rebuild milestone three the localization and drift milestone. Implement it in slices: first copy-on-write local editing, then direct `AGENTS.md` drift import, then richer save/history support. Copy-on-write editing copies a selected shared source node into the local `.mogent/library`, changes the manifest reference to `local:`, and leaves shared source libraries unchanged. Drift import detects direct edits to generated `AGENTS.md` and offers explicit keep/reject/localize choices instead of overwriting or guessing. Richer save/history adds clearer diffs and recovery around manifest/output writes.
+Intent: Complete the local-override workflow before adding URL sources or larger library mechanics, so users can safely adapt shared modules without losing provenance.
+Constraints: The existing milestone-two navigator remains the main interaction surface. Source-library files are read-only unless the user later runs a separate promote-local-to-shared action. M3 does not add URL fetching, pinning, tags, generated indexes, or shared-library promotion.
+Affects: docs/IMPLEMENTATION-M3.md, docs/DESIGN.md, internal/navigator/, internal/manifest/, internal/render/, local `.mogent/library` behavior
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -166,13 +175,15 @@ Affects: docs/IMPLEMENTATION-M2.md, docs/DESIGN.md, cmd/mogent/, internal/, TUI 
 
 ## Feature Backlog
 
-Rebuild milestones (DI-ralik) come first: 1. manifest parse/resolve/render, 2. navigator, 3. save flow.
+Rebuild milestones (DI-ralik, DI-sovar) come first: 1. manifest parse/resolve/render, 2. navigator, 3. localization and drift.
 
-- [ ] Add navigator save support: write `agents.yaml` atomically, show dirty/saved state, and avoid silent config rewrites (milestone 3).
-- [ ] Add preview support: show rendered `AGENTS.md` for the current in-memory manifest before saving.
+- [ ] Add copy-on-write local editing: copy selected shared nodes into `.mogent/library`, change the manifest reference to `local:`, and mark the tree with `L` (milestone 3).
+- [ ] Add direct-edit drift import: detect manual `AGENTS.md` edits and offer explicit keep/reject/localize choices (milestone 3).
+- [ ] Add richer save/history support: show clearer diffs before write and improve recovery around manifest/output writes (milestone 3).
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.
+- [ ] Resolve source-stack include-all, metadata, coverage, and adjustment-file design (DR-source-stack-metadata-coverage).
 - [ ] Add promote-local-to-shared: push a copy-on-write override back up to its source library.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.

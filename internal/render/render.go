@@ -31,6 +31,12 @@ func Build(value *manifest.Manifest, manifestPath string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	return BuildWithSources(value, manifestPath, sources)
+}
+
+// BuildWithSources renders using caller-provided indexes. The navigator uses
+// this for in-memory draft previews that include pending local overrides.
+func BuildWithSources(value *manifest.Manifest, manifestPath string, sources map[string]*library.Index) (*Result, error) {
 	result := &Result{}
 	vars := toolVars(value.Vars, filepath.Dir(manifestPath))
 	var output strings.Builder
