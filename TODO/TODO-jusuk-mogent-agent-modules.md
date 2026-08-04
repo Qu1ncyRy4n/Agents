@@ -184,9 +184,12 @@ of that shared core.
 - [x] Add first CLI parity command: `mogent status`.
 - [x] Add first source coverage command: `mogent coverage`.
 - [x] Add compact unused source output: `mogent coverage --unused-only`.
+- [x] Add coverage filters: `--source`, `--content-only`, and `--tree`.
 - [x] Add source inspection command: `mogent source show <ref>`.
 - [ ] Add CLI command shapes for source browsing, draft/source changes, and later drift/localize.
-- [ ] Add richer source display: metadata/tags, TLDR fields, content-bearing-only filters, and future source-vs-local diffs.
+- [ ] Add remaining coverage filters: `--leaves-only`, `--depth` / `--level`, and later `--tag`.
+- [ ] Add richer source display: metadata/tags, TLDR fields, and future source-vs-local diffs.
+- [ ] Decide raw Markdown/no-manifest command behavior; default commands remain manifest-based and use `agents.yaml` unless `--manifest` points elsewhere.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.

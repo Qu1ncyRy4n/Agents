@@ -124,7 +124,10 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("coverage", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	sourceAlias := flags.String("source", "", "show only one source alias")
+	contentOnly := flags.Bool("content-only", false, "hide source nodes without body content")
 	unusedOnly := flags.Bool("unused-only", false, "show only unused source references")
+	tree := flags.Bool("tree", false, "show unused source references as an ASCII tree")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -135,7 +138,16 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	coverage := session.Coverage()
+	coverage := session.CoverageWithOptions(workspace.CoverageOptions{
+		SourceAlias: *sourceAlias,
+		ContentOnly: *contentOnly,
+	})
+	if *sourceAlias != "" && len(coverage.Sources) == 0 {
+		return fmt.Errorf("source %q is not declared in manifest", *sourceAlias)
+	}
+	if *tree {
+		return writeTreeCoverage(stdout, coverage)
+	}
 	if *unusedOnly {
 		return writeUnusedCoverage(stdout, coverage)
 	}
@@ -165,6 +177,58 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 		}
 	}
 	return nil
+}
+
+func writeTreeCoverage(stdout io.Writer, coverage workspace.Coverage) error {
+	for _, source := range coverage.Sources {
+		if _, err := fmt.Fprintf(stdout, "%s  %s  unused %d/%d\n", source.Alias, source.Path, len(source.Unused), source.Total); err != nil {
+			return fmt.Errorf("write coverage: %w", err)
+		}
+		if len(source.Unused) == 0 {
+			if _, err := fmt.Fprintln(stdout, "  (none)"); err != nil {
+				return fmt.Errorf("write coverage: %w", err)
+			}
+		}
+		for index, node := range source.Unused {
+			depth := visibleDepth(source.Unused, index)
+			connector := "`-- "
+			if hasNextAtDepth(source.Unused, index, depth) {
+				connector = "|-- "
+			}
+			indent := strings.Repeat("|   ", depth)
+			if _, err := fmt.Fprintf(stdout, "%s%s%s  %s:%s\n", indent, connector, node.Heading, source.Alias, node.Path); err != nil {
+				return fmt.Errorf("write coverage: %w", err)
+			}
+		}
+		if _, err := fmt.Fprintln(stdout); err != nil {
+			return fmt.Errorf("write coverage: %w", err)
+		}
+	}
+	return nil
+}
+
+func visibleDepth(nodes []workspace.CoverageNode, index int) int {
+	depth := 0
+	path := nodes[index].Path
+	for previous := 0; previous < index; previous++ {
+		prefix := nodes[previous].Path + "/"
+		if strings.HasPrefix(path, prefix) {
+			depth++
+		}
+	}
+	return depth
+}
+
+func hasNextAtDepth(nodes []workspace.CoverageNode, index int, depth int) bool {
+	for next := index + 1; next < len(nodes); next++ {
+		if visibleDepth(nodes, next) == depth {
+			return true
+		}
+		if visibleDepth(nodes, next) < depth {
+			return false
+		}
+	}
+	return false
 }
 
 func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage) error {

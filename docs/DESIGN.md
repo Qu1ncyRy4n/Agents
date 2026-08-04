@@ -233,6 +233,29 @@ Other entry points are the same model:
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 
+Commands default to manifest mode. If no manifest flag is provided, mogent looks
+for `agents.yaml` in the current directory. `--manifest <path>` only points the
+command at a non-default manifest location; it does not opt into a separate mode.
+Future commands that intentionally inspect or transform raw Markdown without a
+manifest should use explicit command names or a clear `--no-manifest` style flag
+only when that behavior is genuinely useful.
+
+Source discovery should support several output shapes without changing the
+underlying model:
+
+- `coverage --source <alias>` filters to one source.
+- `coverage --unused-only` prints a compact list of unused references.
+- `coverage --content-only` hides empty organizational headings.
+- `coverage --leaves-only` hides parent nodes and shows only terminal nodes.
+- `coverage --depth <n>` / `--level <n>` limits the displayed tree depth in a
+  later slice.
+- `coverage --tree` renders an ASCII hierarchy rather than a flat list.
+- `coverage --tag <tag>` filters once metadata tags exist.
+
+Source inspection should stay separate from coverage. `source show <ref>` owns
+file paths, heading line numbers, metadata/tags, TLDR fields, first-N-line
+snippets, full content, and later source-vs-local diffs.
+
 The TUI is a client of the model, not the product core. Durable behavior lives in
 plain core operations that the CLI, TUI, and future GUI can all call:
 

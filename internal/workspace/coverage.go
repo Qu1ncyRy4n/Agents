@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
@@ -9,6 +10,11 @@ import (
 
 type Coverage struct {
 	Sources []SourceCoverage
+}
+
+type CoverageOptions struct {
+	SourceAlias string
+	ContentOnly bool
 }
 
 type SourceCoverage struct {
@@ -22,11 +28,16 @@ type SourceCoverage struct {
 type CoverageNode struct {
 	Path    string
 	Heading string
+	Depth   int
 }
 
 // Coverage reports which source nodes are included by the current draft and
 // which source nodes are available but unused.
 func (s *Session) Coverage() Coverage {
+	return s.CoverageWithOptions(CoverageOptions{})
+}
+
+func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 	included := make(map[string]bool)
 	markEntries(s.Draft.Doc, s.Sources, included)
 
@@ -38,6 +49,9 @@ func (s *Session) Coverage() Coverage {
 
 	result := Coverage{Sources: make([]SourceCoverage, 0, len(aliases))}
 	for _, alias := range aliases {
+		if options.SourceAlias != "" && alias != options.SourceAlias {
+			continue
+		}
 		index := s.Sources[alias]
 		paths := sortedPaths(index)
 		source := SourceCoverage{
@@ -47,6 +61,9 @@ func (s *Session) Coverage() Coverage {
 		}
 		for _, path := range paths {
 			node := index.ByPath[path]
+			if options.ContentOnly && strings.TrimSpace(node.Body) == "" {
+				continue
+			}
 			if included[alias+":"+path] {
 				source.Included++
 				continue
@@ -54,6 +71,7 @@ func (s *Session) Coverage() Coverage {
 			source.Unused = append(source.Unused, CoverageNode{
 				Path:    path,
 				Heading: node.Heading,
+				Depth:   pathDepth(path),
 			})
 		}
 		result.Sources = append(result.Sources, source)
@@ -112,4 +130,14 @@ func sortedPaths(index *library.Index) []string {
 	}
 	sort.Strings(paths)
 	return paths
+}
+
+func pathDepth(path string) int {
+	depth := 0
+	for _, char := range path {
+		if char == '/' {
+			depth++
+		}
+	}
+	return depth
 }

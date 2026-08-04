@@ -134,6 +134,74 @@ func TestRunCoverageUnusedOnlyReportsCompactList(t *testing.T) {
 	}
 }
 
+func TestRunCoverageFiltersSourceAndContentOnly(t *testing.T) {
+	temporary := t.TempDir()
+	firstLibrary := filepath.Join(temporary, "first")
+	secondLibrary := filepath.Join(temporary, "second")
+	if err := os.Mkdir(firstLibrary, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(secondLibrary, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(firstLibrary, "core.md"), []byte("# Parent\n\n## Child\nBody.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(secondLibrary, "core.md"), []byte("# Other\nBody.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  first: first\n  second: second\noutput: AGENTS.md\ndoc:\n  - Other: second:other\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath, "--source", "first", "--content-only", "--unused-only"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	if strings.Contains(output, "second") {
+		t.Fatalf("coverage should not include filtered source:\n%s", output)
+	}
+	if strings.Contains(output, "first:parent  Parent") {
+		t.Fatalf("content-only should hide empty parent:\n%s", output)
+	}
+	if !strings.Contains(output, "first:parent/child  Child") {
+		t.Fatalf("coverage should include content-bearing child:\n%s", output)
+	}
+}
+
+func TestRunCoverageTreeOutput(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "core.md"), []byte("# Identity\nHello.\n\n# Instructions\n\n## Workflow\nWork.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Identity: shared:identity\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath, "--tree"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"shared  library  unused 2/3",
+		"`-- Instructions  shared:instructions",
+		"|   `-- Workflow  shared:instructions/workflow",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("tree coverage missing %q:\n%s", expected, stdout.String())
+		}
+	}
+}
+
 func TestRunSourceShowReportsLocationAndContent(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
