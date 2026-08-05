@@ -200,6 +200,8 @@ of that shared core.
 - [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.
 - [ ] Design localization/upstream provenance: source/scope/location handles, source reference, URL/path, commit/hash when available, source file, heading path, localization time, and original content hash.
 - [ ] Add promote-local-to-shared: push a localized override back up to its source library.
+- [ ] Resolve TE-kavam: hierarchical tags, declared alternative families, meaningful conflict warnings, and atomic-file library shape.
+- [ ] Add split/import workflow: turn a complete hand-written `AGENTS.md` into a draft atomic module library for review.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.

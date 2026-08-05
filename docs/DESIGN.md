@@ -274,10 +274,18 @@ conflicts_with: [shared:testing/fast-only]
 ---
 ```
 
-`coverage --tag <tag>` matches exact tag strings. `source show --metadata <ref>`
-shows metadata alongside file, line, heading, and content controls. For now,
-`conflicts_with` is a human-visible note only; automatic conflict warnings need
-more real-world use before they become behavior.
+`coverage --tag <tag>` currently matches exact tag strings. Hierarchical tags
+using slash paths, such as `lang/go`, `scope/org`, `risk/security`, and
+`testing/unit`, are the preferred direction because they support both exact
+filtering and later prefix-style browsing. Keep the syntax light: tags should
+help users find modules, not become a second manifest.
+
+`source show --metadata <ref>` shows metadata alongside file, line, heading, and
+content controls. For now, `conflicts_with` is a human-visible note only.
+Automatic conflict warnings are only likely to be meaningful for exact source
+references or declared alternative families. A source file cannot reliably judge
+semantic conflicts across arbitrary unrelated libraries, so mogent should not
+pretend it can. See `docs/thought-experiments/TE-kavam-metadata-tags-and-library-shape.md`.
 
 Manifest mutation commands write `agents.yaml` by default because that is the
 primary authored state. `--dry-run` previews without writing. `--rebuild` also
@@ -343,6 +351,11 @@ Rebuild milestones (from scratch; old code removed):
   as integrity data. Not needed for local-path POC.
 - **Swap alternatives via tags** — tags as a search/discovery layer; mark nodes as
   alternatives for a slot (the old XOR-group idea). After the core is stable.
+- **Split/import AGENTS.md into a library** — take a complete hand-written
+  `AGENTS.md`, split it into a draft directory of atomic module files, and let
+  the user review names, metadata, and hierarchy before using it as a source.
+  Shared libraries should prefer one reusable module per file, but the renderer
+  should continue to accept normal multi-heading Markdown files.
 - **Drift detection** — regenerate from manifest, diff against `AGENTS.md` on disk,
   offer explicit handling.
 - **Promote local → shared** — push a copy-on-write override back up to its library.
