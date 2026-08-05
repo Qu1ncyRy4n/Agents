@@ -3,7 +3,7 @@ tags: [risk/security, policy/security/loose]
 tldr: Permit low-friction local changes.
 priority: 0.2
 scope: personal
-conflicts_with: [shared:tight-security]
+conflicts_with: [shared:security/tight-security]
 ---
 # Loose Security
 

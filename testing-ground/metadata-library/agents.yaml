@@ -3,9 +3,9 @@ sources:
 output: AGENTS.md
 doc:
   - Identity:
-      - Role: shared:role
+      - Role: shared:identity/role
   - Instructions:
-      - Workflow: shared:workflow
-      - Go Testing: shared:testing
+      - Workflow: shared:instructions/workflow
+      - Go Testing: shared:lang/go/testing
   - Constraints:
-      - Security Tight: shared:tight-security
+      - Security Tight: shared:security/tight-security

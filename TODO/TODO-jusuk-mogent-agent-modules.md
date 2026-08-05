@@ -202,7 +202,7 @@ of that shared core.
 - [ ] Design localization/upstream provenance: source/scope/location handles, source reference, URL/path, commit/hash when available, source file, heading path, localization time, and original content hash.
 - [ ] Add promote-local-to-shared: push a localized override back up to its source library.
 - [ ] Resolve TE-kavam: hierarchical tags, declared alternative families, meaningful conflict warnings, and atomic-file library shape.
-- [ ] Decide whether atomic library directory paths remain organizational only or contribute to source reference paths.
+- [x] Decide whether atomic library directory paths remain organizational only or contribute to source reference paths: directories contribute, filenames do not.
 - [ ] Add split/import workflow: turn a complete hand-written `AGENTS.md` into a draft atomic module library for review.
 - [ ] Design global source cache for init: remember known local/remote sources for visible reuse without ambient source resolution.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.

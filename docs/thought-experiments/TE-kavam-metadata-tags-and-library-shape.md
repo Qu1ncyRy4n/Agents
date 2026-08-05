@@ -164,18 +164,16 @@ Each file can hold:
 That makes browsing and selection easier. It also makes source provenance easier:
 file path, heading path, tags, TLDR, and priority all describe one thing.
 
-There is an important unresolved path question. In the current renderer, source
-references come from Markdown heading paths only; directories are organizational
-containers. That means `library/identity/role.md` with `# Role` resolves as
-`shared:role`, not `shared:identity/role`. If atomic files become the preferred
-library shape, mogent may need either:
+Decision update: directory paths should contribute to source reference paths.
+Filenames should not. That means `library/identity/role.md` with `# Role`
+resolves as `shared:identity/role`, while renaming `role.md` inside the same
+directory does not change the reference.
 
-- a split/import tool that writes headings matching the desired hierarchy, or
-- a deliberate design change where directory path can contribute to source
-  reference paths.
-
-Do not change this accidentally. Directory-derived references would make atomic
-libraries nicer, but they also change the meaning of moving a file.
+This makes atomic libraries nicer, but it also changes the meaning of moving a
+file. Moving `library/security/tight.md` to `library/policy/security/tight.md`
+changes the source reference from `shared:security/tight-security` to
+`shared:policy/security/tight-security`. Treat directory moves as reference
+changes.
 
 Complete `AGENTS.md`-style documents are still useful as imports, examples, and
 human-authored starting points. They are less ideal as shared libraries because

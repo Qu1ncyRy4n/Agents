@@ -49,16 +49,20 @@ Design principles:
 - A library is a directory of Markdown files. Files are organizational containers;
   each heading plus its descendant content (up to the next heading of equal-or-higher
   level) is a **node**.
-- A node is addressed by its **heading path** — slugified headings joined with `/`:
+- A node is addressed by its **source path**: the source-relative directory path,
+  plus the Markdown heading path. Filenames are organizational and do not
+  contribute. This makes atomic module directories readable without forcing
+  every file to repeat its whole hierarchy in headings.
 
 ```
-# Instructions        -> instructions
-## Testing            -> instructions/testing
-### Flaky retries     -> instructions/testing/flaky-retries
+library/instructions/testing.md
+# Testing            -> instructions/testing
+## Flaky retries     -> instructions/testing/flaky-retries
 ```
 
 - Paths are readable and greppable; they break only on rename/move (rare, deliberate,
-  find-and-replaceable). A node may opt into a rename-proof anchor with a one-line
+  find-and-replaceable). Moving a file between directories changes its source
+  path; renaming a file inside the same directory does not. A node may opt into a rename-proof anchor with a one-line
   comment — `## Testing  <!-- id: strict-testing -->` — useful for widely-referenced
   nodes in shared libraries. Most nodes need no id.
 - Never content hashes as identity: a hash changes on every prose edit — the common

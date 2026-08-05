@@ -3,7 +3,7 @@ tags: [lang/go, testing/unit]
 tldr: Prefer focused Go tests and table tests.
 priority: 0.9
 scope: project
-requires: [shared:workflow]
+requires: [shared:instructions/workflow]
 ---
 # Testing
 

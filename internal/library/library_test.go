@@ -84,6 +84,31 @@ Use table tests.
 	}
 }
 
+func TestLoadUsesDirectoryPathAsHeadingPrefix(t *testing.T) {
+	temporary := t.TempDir()
+	sourceDir := filepath.Join(temporary, "lang", "go")
+	if err := os.MkdirAll(sourceDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDir, "testing.md"), []byte("# Testing\nUse Go tests.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	index, err := library.Load(temporary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	node := index.ByPath["lang/go/testing"]
+	if node == nil {
+		t.Fatalf("missing directory-prefixed node: %#v", index.ByPath)
+	}
+	if node.Heading != "Testing" {
+		t.Fatalf("heading = %q", node.Heading)
+	}
+	if _, found := index.ByPath["testing"]; found {
+		t.Fatalf("unexpected unprefixed node path: %#v", index.ByPath)
+	}
+}
+
 func TestLoadRejectsInvalidFrontmatterMetadata(t *testing.T) {
 	temporary := t.TempDir()
 	source := "---\npriority: 1.5\n---\n# Go\nBody.\n"

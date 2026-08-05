@@ -76,7 +76,7 @@ func Load(root string) (*Index, error) {
 	}
 	index := &Index{ByPath: make(map[string]*Node)}
 	for _, path := range files {
-		roots, err := parseFile(path)
+		roots, err := parseFile(root, path)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ type parsedNode struct {
 	level int
 }
 
-func parseFile(path string) ([]*Node, error) {
+func parseFile(root string, path string) ([]*Node, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open Markdown %q: %w", path, err)
@@ -195,12 +195,39 @@ func parseFile(path string) ([]*Node, error) {
 	if len(roots) == 0 {
 		return nil, fmt.Errorf("Markdown %q contains no headings", path)
 	}
+	prefix, err := directoryPrefix(root, path)
+	if err != nil {
+		return nil, err
+	}
 	for _, root := range roots {
-		if err := applyIDs(root, ""); err != nil {
+		if err := applyIDs(root, prefix); err != nil {
 			return nil, fmt.Errorf("Markdown %q: %w", path, err)
 		}
 	}
 	return roots, nil
+}
+
+func directoryPrefix(root string, path string) (string, error) {
+	relative, err := filepath.Rel(root, filepath.Dir(path))
+	if err != nil {
+		return "", fmt.Errorf("resolve Markdown path %q under source %q: %w", path, root, err)
+	}
+	if relative == "." {
+		return "", nil
+	}
+	parts := strings.Split(filepath.ToSlash(relative), "/")
+	slugs := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part == "." || part == "" {
+			continue
+		}
+		slug := Slug(part)
+		if slug == "" {
+			return "", fmt.Errorf("Markdown %q has an empty directory slug for %q", path, part)
+		}
+		slugs = append(slugs, slug)
+	}
+	return strings.Join(slugs, "/"), nil
 }
 
 func parseFrontmatter(contents []byte, path string) (Metadata, error) {
