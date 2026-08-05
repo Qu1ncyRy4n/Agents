@@ -268,7 +268,9 @@ Dry-run output should offer several review views:
 - `--preview=summary` shows the intended manifest operation in compact prose.
 - `--preview=patch` shows the manifest insertion and rendered section addition
   in standard unified-diff style.
-- `--preview=tree` shows the document tree with the new node marked in place.
+- `--preview=tree` shows the full document tree with the new node marked in
+  place. CLI tree output defaults to ASCII pipes with a row-level `+` marker;
+  Unicode tree characters can be a later display option.
 - `--preview=full` shows the complete rendered `AGENTS.md`.
 
 The default should be compact enough for repeated CLI use; full output remains

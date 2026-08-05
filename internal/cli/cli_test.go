@@ -372,8 +372,10 @@ func TestRunAddDryRunPreviewModes(t *testing.T) {
 	for _, expected := range []string{
 		"--- agents.yaml",
 		"+++ agents.yaml",
-		"+  - Tests: shared:instructions/testing",
+		"@@ -8,0 +9,1 @@",
+		"+      - Tests: shared:instructions/testing",
 		"--- AGENTS.md",
+		"@@ -9,0 +10,4 @@",
 		"+## Tests",
 		"+Test deterministically.",
 	} {
@@ -389,8 +391,9 @@ func TestRunAddDryRunPreviewModes(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"Document tree:",
-		"  Instructions",
-		"  + Testing  <shared:instructions/testing>",
+		"  `- Instructions",
+		"     |- Workflow  <shared:instructions/workflow>",
+		"+    `- Testing  <shared:instructions/testing>",
 	} {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("tree preview missing %q:\n%s", expected, stdout.String())

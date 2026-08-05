@@ -23,13 +23,28 @@ type AddResult struct {
 	Preview       string
 	Section       string
 	Tree          string
+	ManifestHunk  DiffHunk
+	OutputHunk    DiffHunk
 	WroteManifest bool
 	Rebuilt       bool
+}
+
+type DiffHunk struct {
+	OldStart int
+	OldCount int
+	NewStart int
+	NewCount int
+	Lines    []string
 }
 
 // AddSource appends one source reference to the draft, validates the rendered
 // preview, and optionally writes the manifest and generated output.
 func (s *Session) AddSource(options AddOptions, dryRun bool) (*AddResult, error) {
+	oldOutput := s.Output
+	oldManifest, err := manifest.Marshal(s.Draft)
+	if err != nil {
+		return nil, err
+	}
 	sourceNode, err := s.SourceNode(options.Reference)
 	if err != nil {
 		return nil, err
@@ -55,13 +70,19 @@ func (s *Session) AddSource(options AddOptions, dryRun bool) (*AddResult, error)
 	if err := s.MarkDraftChanged(); err != nil {
 		return nil, err
 	}
+	newManifest, err := manifest.Marshal(s.Draft)
+	if err != nil {
+		return nil, err
+	}
 	result := &AddResult{
-		Heading:    heading,
-		Reference:  sourceNode.Reference,
-		ParentPath: parentPath,
-		Preview:    s.Output,
-		Section:    addedSection(heading, sourceNode.Content, parentPath),
-		Tree:       manifestTree(s.Draft.Doc, heading, sourceNode.Reference),
+		Heading:      heading,
+		Reference:    sourceNode.Reference,
+		ParentPath:   parentPath,
+		Preview:      s.Output,
+		Section:      addedSection(heading, sourceNode.Content, parentPath),
+		Tree:         manifestTree(s.Draft.Doc, heading, sourceNode.Reference),
+		ManifestHunk: addedHunk(string(oldManifest), string(newManifest)),
+		OutputHunk:   addedHunk(oldOutput, s.Output),
 	}
 	if dryRun {
 		return result, nil
@@ -181,18 +202,24 @@ func addedSection(heading string, content string, parentPath string) string {
 
 func manifestTree(entries []manifest.Entry, addedHeading string, addedReference string) string {
 	var output strings.Builder
-	writeManifestTree(&output, entries, 0, addedHeading, addedReference)
+	writeManifestTree(&output, entries, "", addedHeading, addedReference)
 	return strings.TrimRight(output.String(), "\n")
 }
 
-func writeManifestTree(output *strings.Builder, entries []manifest.Entry, depth int, addedHeading string, addedReference string) {
-	for _, entry := range entries {
+func writeManifestTree(output *strings.Builder, entries []manifest.Entry, prefix string, addedHeading string, addedReference string) {
+	for index, entry := range entries {
+		last := index == len(entries)-1
 		marker := "  "
 		if entry.Heading == addedHeading && len(entry.From) == 1 && entry.From[0] == addedReference {
 			marker = "+ "
 		}
-		output.WriteString(strings.Repeat("  ", depth))
 		output.WriteString(marker)
+		output.WriteString(prefix)
+		if last {
+			output.WriteString("`- ")
+		} else {
+			output.WriteString("|- ")
+		}
 		output.WriteString(entry.Heading)
 		if len(entry.From) > 0 {
 			output.WriteString("  <")
@@ -200,6 +227,50 @@ func writeManifestTree(output *strings.Builder, entries []manifest.Entry, depth 
 			output.WriteString(">")
 		}
 		output.WriteByte('\n')
-		writeManifestTree(output, entry.Children, depth+1, addedHeading, addedReference)
+		nextPrefix := prefix
+		if last {
+			nextPrefix += "   "
+		} else {
+			nextPrefix += "|  "
+		}
+		writeManifestTree(output, entry.Children, nextPrefix, addedHeading, addedReference)
 	}
+}
+
+func addedHunk(oldText string, newText string) DiffHunk {
+	oldLines := splitPatchLines(oldText)
+	newLines := splitPatchLines(newText)
+	prefix := 0
+	for prefix < len(oldLines) && prefix < len(newLines) && oldLines[prefix] == newLines[prefix] {
+		prefix++
+	}
+	suffix := 0
+	for suffix < len(oldLines)-prefix && suffix < len(newLines)-prefix &&
+		oldLines[len(oldLines)-1-suffix] == newLines[len(newLines)-1-suffix] {
+		suffix++
+	}
+	oldCount := len(oldLines) - prefix - suffix
+	newCount := len(newLines) - prefix - suffix
+	return DiffHunk{
+		OldStart: hunkOldStart(prefix, oldCount),
+		OldCount: oldCount,
+		NewStart: prefix + 1,
+		NewCount: newCount,
+		Lines:    append([]string(nil), newLines[prefix:prefix+newCount]...),
+	}
+}
+
+func splitPatchLines(text string) []string {
+	trimmed := strings.TrimRight(text, "\n")
+	if trimmed == "" {
+		return nil
+	}
+	return strings.Split(trimmed, "\n")
+}
+
+func hunkOldStart(prefix int, oldCount int) int {
+	if oldCount == 0 {
+		return prefix
+	}
+	return prefix + 1
 }

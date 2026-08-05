@@ -480,11 +480,8 @@ func writeAddPatch(stdout io.Writer, result *workspace.AddResult) error {
 	if _, err := fmt.Fprintln(stdout, "+++ agents.yaml"); err != nil {
 		return fmt.Errorf("write add preview: %w", err)
 	}
-	if _, err := fmt.Fprintln(stdout, "@@"); err != nil {
-		return fmt.Errorf("write add preview: %w", err)
-	}
-	if _, err := fmt.Fprintf(stdout, "+  - %s: %s\n", result.Heading, result.Reference); err != nil {
-		return fmt.Errorf("write add preview: %w", err)
+	if err := writeAddHunk(stdout, result.ManifestHunk); err != nil {
+		return err
 	}
 	if _, err := fmt.Fprintln(stdout, "--- AGENTS.md"); err != nil {
 		return fmt.Errorf("write add preview: %w", err)
@@ -492,10 +489,17 @@ func writeAddPatch(stdout io.Writer, result *workspace.AddResult) error {
 	if _, err := fmt.Fprintln(stdout, "+++ AGENTS.md"); err != nil {
 		return fmt.Errorf("write add preview: %w", err)
 	}
-	if _, err := fmt.Fprintln(stdout, "@@"); err != nil {
+	if err := writeAddHunk(stdout, result.OutputHunk); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeAddHunk(stdout io.Writer, hunk workspace.DiffHunk) error {
+	if _, err := fmt.Fprintf(stdout, "@@ -%d,%d +%d,%d @@\n", hunk.OldStart, hunk.OldCount, hunk.NewStart, hunk.NewCount); err != nil {
 		return fmt.Errorf("write add preview: %w", err)
 	}
-	for _, line := range strings.Split(strings.TrimRight(result.Section, "\n"), "\n") {
+	for _, line := range hunk.Lines {
 		if _, err := fmt.Fprintln(stdout, "+"+line); err != nil {
 			return fmt.Errorf("write add preview: %w", err)
 		}
