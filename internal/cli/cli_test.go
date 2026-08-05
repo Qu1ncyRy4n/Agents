@@ -305,8 +305,11 @@ func TestRunAddDryRunDoesNotWrite(t *testing.T) {
 	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instructions", "--heading", "Tests", "--dry-run"}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "## Tests") {
+	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "Add: Instructions / Tests") {
 		t.Fatalf("dry-run output =\n%s", stdout.String())
+	}
+	if strings.Contains(stdout.String(), "Rendered preview:") {
+		t.Fatalf("default dry-run should not show full preview:\n%s", stdout.String())
 	}
 	after, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -314,6 +317,51 @@ func TestRunAddDryRunDoesNotWrite(t *testing.T) {
 	}
 	if string(after) != string(original) {
 		t.Fatalf("dry run changed manifest:\n%s", after)
+	}
+}
+
+func TestRunAddDryRunPreviewModes(t *testing.T) {
+	_, manifestPath := writeAddCLIFixture(t)
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instructions", "--heading", "Tests", "--dry-run", "--preview=patch"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"--- agents.yaml",
+		"+++ agents.yaml",
+		"+  - Tests: shared:instructions/testing",
+		"--- AGENTS.md",
+		"+## Tests",
+		"+Test deterministically.",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("patch preview missing %q:\n%s", expected, stdout.String())
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instructions", "--dry-run", "--preview=tree"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"Document tree:",
+		"  Instructions",
+		"  + Testing  <shared:instructions/testing>",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("tree preview missing %q:\n%s", expected, stdout.String())
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instructions", "--heading", "Tests", "--dry-run", "--preview=full"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Rendered preview:") || !strings.Contains(stdout.String(), "## Tests") {
+		t.Fatalf("full preview missing rendered content:\n%s", stdout.String())
 	}
 }
 

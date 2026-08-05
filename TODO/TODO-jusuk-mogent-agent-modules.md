@@ -187,7 +187,7 @@ of that shared core.
 - [x] Add coverage filters: `--source`, `--content-only`, and `--tree`.
 - [x] Add source inspection command: `mogent source show <ref>`.
 - [x] Add first manifest mutation command: `mogent add <ref>` with `--under`, `--append`, `--heading`, `--dry-run`, and `--rebuild`.
-- [ ] Add add-preview modes: `--preview=summary`, `--preview=patch`, `--preview=tree`, and `--preview=full`.
+- [x] Add add-preview modes: `--preview=summary`, `--preview=patch`, `--preview=tree`, and `--preview=full`.
 - [ ] Add CLI command shapes for additional draft/source changes and later drift/localize.
 - [ ] Add optional force/logging for manifest mutations and rebuilds, likely under `.mogent`.
 - [ ] Add remaining coverage filters: `--leaves-only`, `--depth` / `--level`, and later `--tag`.

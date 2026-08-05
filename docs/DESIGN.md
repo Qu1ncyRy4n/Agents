@@ -266,7 +266,8 @@ writes `AGENTS.md`, using the same generated-output overwrite protection as
 Dry-run output should offer several review views:
 
 - `--preview=summary` shows the intended manifest operation in compact prose.
-- `--preview=patch` shows the manifest insertion and rendered section addition.
+- `--preview=patch` shows the manifest insertion and rendered section addition
+  in standard unified-diff style.
 - `--preview=tree` shows the document tree with the new node marked in place.
 - `--preview=full` shows the complete rendered `AGENTS.md`.
 
@@ -280,7 +281,9 @@ location handles describe the model better. A localized node should record where
 it came from, such as source alias, source reference, source URL or path, source
 commit/hash when available, source file, heading path, localization time, and
 original content hash. Updating or reconciling a localized node with upstream
-changes should be a separate explicit workflow.
+changes should be a separate explicit workflow. Avoid assuming a top-level
+`local` command; localized content may fit better under source, override, edit,
+or another command family once the storage model is clearer.
 
 The TUI is a client of the model, not the product core. Durable behavior lives in
 plain core operations that the CLI, TUI, and future GUI can all call:

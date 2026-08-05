@@ -21,6 +21,8 @@ type AddResult struct {
 	Reference     string
 	ParentPath    string
 	Preview       string
+	Section       string
+	Tree          string
 	WroteManifest bool
 	Rebuilt       bool
 }
@@ -58,6 +60,8 @@ func (s *Session) AddSource(options AddOptions, dryRun bool) (*AddResult, error)
 		Reference:  sourceNode.Reference,
 		ParentPath: parentPath,
 		Preview:    s.Output,
+		Section:    addedSection(heading, sourceNode.Content, parentPath),
+		Tree:       manifestTree(s.Draft.Doc, heading, sourceNode.Reference),
 	}
 	if dryRun {
 		return result, nil
@@ -156,4 +160,46 @@ func parentLabel(path string) string {
 		return "document root"
 	}
 	return path
+}
+
+func addedSection(heading string, content string, parentPath string) string {
+	var output strings.Builder
+	level := 1
+	if parentPath != "" {
+		level = len(splitManifestPath(parentPath)) + 1
+	}
+	output.WriteString(strings.Repeat("#", level))
+	output.WriteByte(' ')
+	output.WriteString(heading)
+	output.WriteString("\n\n")
+	if body := strings.TrimSpace(content); body != "" {
+		output.WriteString(body)
+		output.WriteString("\n")
+	}
+	return output.String()
+}
+
+func manifestTree(entries []manifest.Entry, addedHeading string, addedReference string) string {
+	var output strings.Builder
+	writeManifestTree(&output, entries, 0, addedHeading, addedReference)
+	return strings.TrimRight(output.String(), "\n")
+}
+
+func writeManifestTree(output *strings.Builder, entries []manifest.Entry, depth int, addedHeading string, addedReference string) {
+	for _, entry := range entries {
+		marker := "  "
+		if entry.Heading == addedHeading && len(entry.From) == 1 && entry.From[0] == addedReference {
+			marker = "+ "
+		}
+		output.WriteString(strings.Repeat("  ", depth))
+		output.WriteString(marker)
+		output.WriteString(entry.Heading)
+		if len(entry.From) > 0 {
+			output.WriteString("  <")
+			output.WriteString(strings.Join(entry.From, ", "))
+			output.WriteString(">")
+		}
+		output.WriteByte('\n')
+		writeManifestTree(output, entry.Children, depth+1, addedHeading, addedReference)
+	}
 }
