@@ -172,6 +172,39 @@ func TestRunCoverageFiltersSourceAndContentOnly(t *testing.T) {
 	}
 }
 
+func TestRunCoverageFiltersByTag(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	tagged := "---\ntags: [go, testing]\n---\n# Go\n\n## Testing\nTest.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "go.md"), []byte(tagged), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	untagged := "# Docs\nDocument.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "docs.md"), []byte(untagged), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Docs: shared:docs\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath, "--tag", "testing", "--unused-only"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "shared:go/testing  Testing") {
+		t.Fatalf("tagged node missing:\n%s", output)
+	}
+	if strings.Contains(output, "shared:docs") {
+		t.Fatalf("untagged node should be hidden:\n%s", output)
+	}
+}
+
 func TestRunCoverageTreeOutput(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
@@ -314,6 +347,41 @@ func TestRunSourceShowContentFlags(t *testing.T) {
 	}
 	if strings.Contains(stdout.String(), "One.") {
 		t.Fatalf("content=none should hide body:\n%s", stdout.String())
+	}
+}
+
+func TestRunSourceShowMetadata(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "---\ntags: [go, testing]\ntldr: Prefer deterministic Go tests.\npriority: 0.75\nscope: team\nrequires: [shared:workflow]\nconflicts_with: [shared:testing/fast-only]\n---\n# Go\n\n## Development\nRun gofmt.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "go.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Development: shared:go/development\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "show", "shared:go/development", "--manifest", manifestPath, "--metadata", "--content=none"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"Metadata:",
+		"TLDR: Prefer deterministic Go tests.",
+		"Tags: go, testing",
+		"Priority: 0.75",
+		"Scope: team",
+		"Requires: shared:workflow",
+		"Conflicts with: shared:testing/fast-only",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("metadata output missing %q:\n%s", expected, stdout.String())
+		}
 	}
 }
 

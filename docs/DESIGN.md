@@ -257,6 +257,28 @@ Source inspection should stay separate from coverage. `source show <ref>` owns
 file paths, heading line numbers, metadata/tags, TLDR fields, first-N-line
 snippets, full content, and later source-vs-local diffs.
 
+For the first metadata slice, mogent reads YAML frontmatter only at the beginning
+of a source Markdown file. That file-level metadata applies to every heading node
+in the file until heading-level metadata is designed. Metadata is tool-only: it
+is used for browsing, filtering, and later recommendations, but it is stripped
+from rendered `AGENTS.md` output. Supported fields:
+
+```yaml
+---
+tags: [go, testing]
+tldr: Prefer deterministic Go tests.
+priority: 0.8       # 0.0 low through 1.0 high
+scope: team
+requires: [shared:instructions/workflow]
+conflicts_with: [shared:testing/fast-only]
+---
+```
+
+`coverage --tag <tag>` matches exact tag strings. `source show --metadata <ref>`
+shows metadata alongside file, line, heading, and content controls. For now,
+`conflicts_with` is a human-visible note only; automatic conflict warnings need
+more real-world use before they become behavior.
+
 Manifest mutation commands write `agents.yaml` by default because that is the
 primary authored state. `--dry-run` previews without writing. `--rebuild` also
 writes `AGENTS.md`, using the same generated-output overwrite protection as

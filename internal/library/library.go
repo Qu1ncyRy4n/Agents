@@ -3,13 +3,17 @@ package library
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"unicode"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Node is one Markdown heading and the plain content directly beneath it.
@@ -19,7 +23,19 @@ type Node struct {
 	Body     string
 	File     string
 	Line     int
+	Metadata Metadata
 	Children []*Node
+}
+
+// Metadata is tool-only source metadata. It is useful for browsing and
+// filtering source modules, but is never rendered into AGENTS.md.
+type Metadata struct {
+	Tags          []string `yaml:"tags"`
+	TLDR          string   `yaml:"tldr"`
+	Priority      *float64 `yaml:"priority"`
+	Scope         string   `yaml:"scope"`
+	Requires      []string `yaml:"requires"`
+	ConflictsWith []string `yaml:"conflicts_with"`
 }
 
 // Index permits exact heading-path lookup within one library.
@@ -97,6 +113,10 @@ func parseFile(path string) ([]*Node, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open Markdown %q: %w", path, err)
 	}
+	metadata := Metadata{}
+	inFrontmatter := false
+	frontmatterClosed := false
+	var frontmatter bytes.Buffer
 	var roots []*Node
 	var stack []*parsedNode
 	var current *Node
@@ -106,6 +126,25 @@ func parseFile(path string) ([]*Node, error) {
 	for scanner.Scan() {
 		lineNumber++
 		line := scanner.Text()
+		if lineNumber == 1 && strings.TrimSpace(line) == "---" {
+			inFrontmatter = true
+			continue
+		}
+		if inFrontmatter {
+			if strings.TrimSpace(line) == "---" {
+				frontmatterClosed = true
+				inFrontmatter = false
+				parsed, err := parseFrontmatter(frontmatter.Bytes(), path)
+				if err != nil {
+					return nil, err
+				}
+				metadata = parsed
+				continue
+			}
+			frontmatter.WriteString(line)
+			frontmatter.WriteByte('\n')
+			continue
+		}
 		level, heading, identifier, ok := headingLine(line)
 		if !ok {
 			if current != nil {
@@ -128,7 +167,7 @@ func parseFile(path string) ([]*Node, error) {
 		if slug == "" {
 			return nil, fmt.Errorf("Markdown %q has an empty heading slug", path)
 		}
-		node := &Node{Heading: heading, Path: slug, File: path, Line: lineNumber}
+		node := &Node{Heading: heading, Path: slug, File: path, Line: lineNumber, Metadata: metadata}
 		if parentPath != "" {
 			node.Path = parentPath + "/" + slug
 			stack[len(stack)-1].node.Children = append(stack[len(stack)-1].node.Children, node)
@@ -144,6 +183,12 @@ func parseFile(path string) ([]*Node, error) {
 		}
 		return nil, fmt.Errorf("read Markdown %q: %w", path, err)
 	}
+	if inFrontmatter || (lineNumber > 0 && !frontmatterClosed && frontmatter.Len() > 0) {
+		if closeErr := file.Close(); closeErr != nil {
+			return nil, errors.Join(fmt.Errorf("Markdown %q has unclosed YAML frontmatter", path), fmt.Errorf("close Markdown %q: %w", path, closeErr))
+		}
+		return nil, fmt.Errorf("Markdown %q has unclosed YAML frontmatter", path)
+	}
 	if err := file.Close(); err != nil {
 		return nil, fmt.Errorf("close Markdown %q: %w", path, err)
 	}
@@ -156,6 +201,46 @@ func parseFile(path string) ([]*Node, error) {
 		}
 	}
 	return roots, nil
+}
+
+func parseFrontmatter(contents []byte, path string) (Metadata, error) {
+	if len(bytes.TrimSpace(contents)) == 0 {
+		return Metadata{}, nil
+	}
+	var metadata Metadata
+	decoder := yaml.NewDecoder(bytes.NewReader(contents))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&metadata); err != nil {
+		return Metadata{}, fmt.Errorf("parse metadata in %q: %w", path, err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != nil && !errors.Is(err, io.EOF) {
+		return Metadata{}, fmt.Errorf("parse metadata in %q: %w", path, err)
+	} else if err == nil {
+		return Metadata{}, fmt.Errorf("parse metadata in %q: frontmatter must contain one YAML document", path)
+	}
+	if metadata.Priority != nil && (*metadata.Priority < 0 || *metadata.Priority > 1) {
+		return Metadata{}, fmt.Errorf("parse metadata in %q: priority must be between 0.0 and 1.0", path)
+	}
+	if err := validateMetadataStrings(path, metadata); err != nil {
+		return Metadata{}, err
+	}
+	return metadata, nil
+}
+
+func validateMetadataStrings(path string, metadata Metadata) error {
+	for name, values := range map[string][]string{
+		"tags":           metadata.Tags,
+		"requires":       metadata.Requires,
+		"conflicts_with": metadata.ConflictsWith,
+	} {
+		for _, value := range values {
+			if strings.TrimSpace(value) == "" {
+				return fmt.Errorf("parse metadata in %q: %s contains an empty value", path, name)
+			}
+		}
+	}
+	return nil
 }
 
 // applyIDs propagates already-parsed inline IDs into complete heading paths.

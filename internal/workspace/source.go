@@ -14,6 +14,7 @@ type SourceNode struct {
 	File      string
 	Line      int
 	Heading   string
+	Metadata  library.Metadata
 	Content   string
 }
 
@@ -37,6 +38,7 @@ func (s *Session) SourceNode(reference string) (*SourceNode, error) {
 		File:      node.File,
 		Line:      node.Line,
 		Heading:   node.Heading,
+		Metadata:  node.Metadata,
 		Content:   sourceContent(node),
 	}, nil
 }

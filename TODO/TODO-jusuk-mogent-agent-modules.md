@@ -189,10 +189,11 @@ of that shared core.
 - [x] Add source inspection command: `mogent source show <ref>`.
 - [x] Add first manifest mutation command: `mogent add <ref>` with `--under`, `--append`, `--heading`, `--dry-run`, and `--rebuild`.
 - [x] Add add-preview modes: `--preview=summary`, `--preview=patch`, `--preview=tree`, and `--preview=full`.
+- [x] Add first file-level source metadata: YAML frontmatter with `tags`, `tldr`, `priority`, `scope`, `requires`, and soft `conflicts_with`.
+- [x] Add metadata-aware source browsing and tag filtering: `source show --metadata` and `coverage --tag`.
 - [ ] Add CLI command shapes for additional draft/source changes and later drift/localize.
 - [ ] Add optional force/logging for manifest mutations and rebuilds, likely under `.mogent`.
-- [ ] Add tag-based coverage filtering once metadata tags exist.
-- [ ] Add richer source display: metadata/tags, TLDR fields, and future source-vs-local diffs.
+- [ ] Add richer source display: source-vs-local diffs and optional metadata-driven summaries.
 - [ ] Decide raw Markdown/no-manifest command behavior; default commands remain manifest-based and use `agents.yaml` unless `--manifest` points elsewhere.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.

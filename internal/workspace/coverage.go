@@ -14,6 +14,7 @@ type Coverage struct {
 
 type CoverageOptions struct {
 	SourceAlias string
+	Tag         string
 	ContentOnly bool
 	LeavesOnly  bool
 	LimitDepth  bool
@@ -68,6 +69,9 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 			if options.ContentOnly && strings.TrimSpace(node.Body) == "" {
 				continue
 			}
+			if options.Tag != "" && !hasTag(node.Metadata.Tags, options.Tag) {
+				continue
+			}
 			if options.LeavesOnly && len(node.Children) > 0 {
 				continue
 			}
@@ -87,6 +91,15 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 		result.Sources = append(result.Sources, source)
 	}
 	return result
+}
+
+func hasTag(tags []string, target string) bool {
+	for _, tag := range tags {
+		if tag == target {
+			return true
+		}
+	}
+	return false
 }
 
 func markEntries(entries []manifest.Entry, sources map[string]*library.Index, included map[string]bool) {

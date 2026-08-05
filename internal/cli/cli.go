@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
 	"github.com/Qu1ncyRy4n/Agents/internal/navigator"
 	"github.com/Qu1ncyRy4n/Agents/internal/render"
@@ -127,6 +128,7 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
 	sourceAlias := flags.String("source", "", "show only one source alias")
+	tag := flags.String("tag", "", "show only source nodes with this metadata tag")
 	contentOnly := flags.Bool("content-only", false, "hide source nodes without body content")
 	leavesOnly := flags.Bool("leaves-only", false, "show only terminal source nodes")
 	depth := flags.Int("depth", -1, "maximum source-tree depth to show; root headings are depth 0")
@@ -144,6 +146,7 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	}
 	coverage := session.CoverageWithOptions(workspace.CoverageOptions{
 		SourceAlias: *sourceAlias,
+		Tag:         *tag,
 		ContentOnly: *contentOnly,
 		LeavesOnly:  *leavesOnly,
 		LimitDepth:  *depth >= 0,
@@ -276,6 +279,7 @@ func runSourceShow(args []string, stdout, stderr io.Writer) error {
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
 	showFile := flags.Bool("file", true, "show source file path")
 	showLine := flags.Bool("line", true, "show source heading line")
+	showMetadata := flags.Bool("metadata", false, "show source metadata")
 	contentMode := flags.String("content", "full", "content mode: none, snippet, or full")
 	snippetLines := flags.Int("lines", 12, "number of content lines when --content=snippet")
 	args = reorderArgs(args, map[string]bool{
@@ -319,6 +323,11 @@ func runSourceShow(args []string, stdout, stderr io.Writer) error {
 	if _, err := fmt.Fprintf(stdout, "Heading: %s\n", node.Heading); err != nil {
 		return fmt.Errorf("write source: %w", err)
 	}
+	if *showMetadata {
+		if err := writeSourceMetadata(stdout, node.Metadata); err != nil {
+			return err
+		}
+	}
 	content, err := sourceContentForMode(node.Content, *contentMode, *snippetLines)
 	if err != nil {
 		return err
@@ -331,6 +340,49 @@ func runSourceShow(args []string, stdout, stderr io.Writer) error {
 	}
 	if _, err := fmt.Fprintln(stdout, content); err != nil {
 		return fmt.Errorf("write source: %w", err)
+	}
+	return nil
+}
+
+func writeSourceMetadata(stdout io.Writer, metadata library.Metadata) error {
+	if metadata.TLDR == "" && len(metadata.Tags) == 0 && metadata.Priority == nil && metadata.Scope == "" && len(metadata.Requires) == 0 && len(metadata.ConflictsWith) == 0 {
+		if _, err := fmt.Fprintln(stdout, "Metadata: none"); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+		return nil
+	}
+	if _, err := fmt.Fprintln(stdout, "Metadata:"); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	if metadata.TLDR != "" {
+		if _, err := fmt.Fprintf(stdout, "  TLDR: %s\n", metadata.TLDR); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+	}
+	if len(metadata.Tags) > 0 {
+		if _, err := fmt.Fprintf(stdout, "  Tags: %s\n", strings.Join(metadata.Tags, ", ")); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+	}
+	if metadata.Priority != nil {
+		if _, err := fmt.Fprintf(stdout, "  Priority: %.2f\n", *metadata.Priority); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+	}
+	if metadata.Scope != "" {
+		if _, err := fmt.Fprintf(stdout, "  Scope: %s\n", metadata.Scope); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+	}
+	if len(metadata.Requires) > 0 {
+		if _, err := fmt.Fprintf(stdout, "  Requires: %s\n", strings.Join(metadata.Requires, ", ")); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
+	}
+	if len(metadata.ConflictsWith) > 0 {
+		if _, err := fmt.Fprintf(stdout, "  Conflicts with: %s\n", strings.Join(metadata.ConflictsWith, ", ")); err != nil {
+			return fmt.Errorf("write source: %w", err)
+		}
 	}
 	return nil
 }
