@@ -205,6 +205,7 @@ of that shared core.
 - [x] Decide whether atomic library directory paths remain organizational only or contribute to source reference paths: directories contribute, filenames do not.
 - [ ] Add split/import workflow: turn a complete hand-written `AGENTS.md` into a draft atomic module library for review.
 - [ ] Design global source cache for init: remember known local/remote sources for visible reuse without ambient source resolution.
+- [ ] Design agent-file aliases: optional symlink or generated alias support for `CLAUDE.md`, `GEMINI.md`, `.codex/AGENTS.md`, and similar entrypoints.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.

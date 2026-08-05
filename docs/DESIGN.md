@@ -243,6 +243,12 @@ Other entry points are the same model:
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 
+Current implementation status: mogent is ready for basic local usage with
+local-path source libraries, strict manifests, deterministic rendering, source
+browsing, coverage, metadata filters, dry-run add previews, and conservative
+overwrite checks. It is not yet ready for remote URL sources, pinning,
+copy-on-write local overrides, drift import, or full conflict resolution.
+
 Commands default to manifest mode. If no manifest flag is provided, mogent looks
 for `agents.yaml` in the current directory. `--manifest <path>` only points the
 command at a non-default manifest location; it does not opt into a separate mode.
@@ -381,6 +387,10 @@ Rebuild milestones (from scratch; old code removed):
   should continue to accept normal multi-heading Markdown files.
 - **Drift detection** — regenerate from manifest, diff against `AGENTS.md` on disk,
   offer explicit handling.
+- **Agent-file aliases** — optionally create symlinks or generated alias files
+  for other agent entrypoints such as `CLAUDE.md`, `GEMINI.md`, or
+  `.codex/AGENTS.md`. This should be explicit and reviewable because different
+  tools may attach different meanings to similarly named files.
 - **Promote local → shared** — push a copy-on-write override back up to its library.
 - **Generated index** — fast search over large libraries for the navigator.
 - **Pinned reference docs** — far-future support for making relevant project,
