@@ -15,6 +15,9 @@ type Coverage struct {
 type CoverageOptions struct {
 	SourceAlias string
 	ContentOnly bool
+	LeavesOnly  bool
+	LimitDepth  bool
+	MaxDepth    int
 }
 
 type SourceCoverage struct {
@@ -61,7 +64,14 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 		}
 		for _, path := range paths {
 			node := index.ByPath[path]
+			depth := pathDepth(path)
 			if options.ContentOnly && strings.TrimSpace(node.Body) == "" {
+				continue
+			}
+			if options.LeavesOnly && len(node.Children) > 0 {
+				continue
+			}
+			if options.LimitDepth && depth > options.MaxDepth {
 				continue
 			}
 			if included[alias+":"+path] {
@@ -71,7 +81,7 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 			source.Unused = append(source.Unused, CoverageNode{
 				Path:    path,
 				Heading: node.Heading,
-				Depth:   pathDepth(path),
+				Depth:   depth,
 			})
 		}
 		result.Sources = append(result.Sources, source)

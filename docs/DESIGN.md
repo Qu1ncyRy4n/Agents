@@ -248,8 +248,8 @@ underlying model:
 - `coverage --unused-only` prints a compact list of unused references.
 - `coverage --content-only` hides empty organizational headings.
 - `coverage --leaves-only` hides parent nodes and shows only terminal nodes.
-- `coverage --depth <n>` / `--level <n>` limits the displayed tree depth in a
-  later slice.
+- `coverage --depth <n>` limits displayed source-tree depth; root headings are
+  depth 0.
 - `coverage --tree` renders an ASCII hierarchy rather than a flat list.
 - `coverage --tag <tag>` filters once metadata tags exist.
 

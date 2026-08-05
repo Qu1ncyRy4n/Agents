@@ -202,6 +202,48 @@ func TestRunCoverageTreeOutput(t *testing.T) {
 	}
 }
 
+func TestRunCoverageLeavesOnlyAndDepth(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "# Root\n\n## Branch\n\n### Leaf\nLeaf body.\n\n# Other\nOther body.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "core.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Other: shared:other\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath, "--leaves-only", "--unused-only"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	if strings.Contains(output, "shared:root  Root") || strings.Contains(output, "shared:root/branch  Branch") {
+		t.Fatalf("leaves-only should hide parent nodes:\n%s", output)
+	}
+	if !strings.Contains(output, "shared:root/branch/leaf  Leaf") {
+		t.Fatalf("leaves-only should include terminal leaf:\n%s", output)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath, "--depth", "1", "--unused-only"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output = stdout.String()
+	if !strings.Contains(output, "shared:root  Root") || !strings.Contains(output, "shared:root/branch  Branch") {
+		t.Fatalf("depth should include root and first child:\n%s", output)
+	}
+	if strings.Contains(output, "shared:root/branch/leaf  Leaf") {
+		t.Fatalf("depth should hide deeper leaf:\n%s", output)
+	}
+}
+
 func TestRunSourceShowReportsLocationAndContent(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

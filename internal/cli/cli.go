@@ -128,6 +128,8 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
 	sourceAlias := flags.String("source", "", "show only one source alias")
 	contentOnly := flags.Bool("content-only", false, "hide source nodes without body content")
+	leavesOnly := flags.Bool("leaves-only", false, "show only terminal source nodes")
+	depth := flags.Int("depth", -1, "maximum source-tree depth to show; root headings are depth 0")
 	unusedOnly := flags.Bool("unused-only", false, "show only unused source references")
 	tree := flags.Bool("tree", false, "show unused source references as an ASCII tree")
 	if err := flags.Parse(args); err != nil {
@@ -143,6 +145,9 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	coverage := session.CoverageWithOptions(workspace.CoverageOptions{
 		SourceAlias: *sourceAlias,
 		ContentOnly: *contentOnly,
+		LeavesOnly:  *leavesOnly,
+		LimitDepth:  *depth >= 0,
+		MaxDepth:    *depth,
 	})
 	if *sourceAlias != "" && len(coverage.Sources) == 0 {
 		return fmt.Errorf("source %q is not declared in manifest", *sourceAlias)
