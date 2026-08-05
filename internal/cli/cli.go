@@ -18,7 +18,7 @@ import (
 
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent add <ref> [--under heading/path | --append]\n       mogent tui [--manifest agents.yaml]"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source list [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent add <ref> [--under heading/path | --append]\n       mogent tui [--manifest agents.yaml]"); err != nil {
 			return fmt.Errorf("write usage: %w", err)
 		}
 		return nil
@@ -263,14 +263,128 @@ func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage) error {
 
 func runSource(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("source requires a subcommand; use source show")
+		return fmt.Errorf("source requires a subcommand; use source list or source show")
 	}
 	switch args[0] {
+	case "list":
+		return runSourceList(args[1:], stdout, stderr)
 	case "show":
 		return runSourceShow(args[1:], stdout, stderr)
 	default:
-		return fmt.Errorf("unknown source subcommand %q; use source show", args[0])
+		return fmt.Errorf("unknown source subcommand %q; use source list or source show", args[0])
 	}
+}
+
+func runSourceList(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("source list", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	sourceAlias := flags.String("source", "", "show only one source alias")
+	tag := flags.String("tag", "", "show only source nodes with this exact metadata tag")
+	tagSearch := flags.String("tag-search", "", "show only source nodes whose tags contain this text")
+	sortMode := flags.String("sort", "path", "sort mode: path or priority")
+	showMetadata := flags.Bool("metadata", false, "show source metadata on separate lines")
+	showFile := flags.Bool("file", false, "show source file path")
+	showLine := flags.Bool("line", false, "show source heading line")
+	args = reorderArgs(args, map[string]bool{
+		"-manifest":    true,
+		"--manifest":   true,
+		"-source":      true,
+		"--source":     true,
+		"-tag":         true,
+		"--tag":        true,
+		"-tag-search":  true,
+		"--tag-search": true,
+		"-sort":        true,
+		"--sort":       true,
+	})
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("source list accepts no positional arguments")
+	}
+	session, err := workspace.New(*manifestFile)
+	if err != nil {
+		return err
+	}
+	nodes, err := session.SourceNodes(workspace.SourceListOptions{
+		SourceAlias: *sourceAlias,
+		Tag:         *tag,
+		TagSearch:   *tagSearch,
+		Sort:        *sortMode,
+	})
+	if err != nil {
+		return err
+	}
+	if len(nodes) == 0 {
+		if _, err := fmt.Fprintln(stdout, "No source nodes matched."); err != nil {
+			return fmt.Errorf("write source list: %w", err)
+		}
+		return nil
+	}
+	for _, node := range nodes {
+		if err := writeSourceListNode(stdout, node, *showMetadata, *showFile, *showLine); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeSourceListNode(stdout io.Writer, node workspace.SourceNode, showMetadata bool, showFile bool, showLine bool) error {
+	if _, err := fmt.Fprintf(stdout, "%s  %s", node.Reference, node.Heading); err != nil {
+		return fmt.Errorf("write source list: %w", err)
+	}
+	if len(node.Metadata.Tags) > 0 {
+		if _, err := fmt.Fprintf(stdout, "  [%s]", strings.Join(node.Metadata.Tags, ", ")); err != nil {
+			return fmt.Errorf("write source list: %w", err)
+		}
+	}
+	if node.Metadata.Priority != nil {
+		if _, err := fmt.Fprintf(stdout, "  p=%.2f", *node.Metadata.Priority); err != nil {
+			return fmt.Errorf("write source list: %w", err)
+		}
+	}
+	if node.Metadata.TLDR != "" {
+		if _, err := fmt.Fprintf(stdout, "  - %s", node.Metadata.TLDR); err != nil {
+			return fmt.Errorf("write source list: %w", err)
+		}
+	}
+	if showFile {
+		if _, err := fmt.Fprintf(stdout, "  %s", node.File); err != nil {
+			return fmt.Errorf("write source list: %w", err)
+		}
+	}
+	if showLine {
+		if _, err := fmt.Fprintf(stdout, ":%d", node.Line); err != nil {
+			return fmt.Errorf("write source list: %w", err)
+		}
+	}
+	if _, err := fmt.Fprintln(stdout); err != nil {
+		return fmt.Errorf("write source list: %w", err)
+	}
+	if showMetadata {
+		if err := writeIndentedSourceMetadata(stdout, node.Metadata); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeIndentedSourceMetadata(stdout io.Writer, metadata library.Metadata) error {
+	if metadata.TLDR == "" && len(metadata.Tags) == 0 && metadata.Priority == nil && metadata.Scope == "" && len(metadata.Requires) == 0 && len(metadata.ConflictsWith) == 0 {
+		if _, err := fmt.Fprintln(stdout, "  Metadata: none"); err != nil {
+			return fmt.Errorf("write source list: %w", err)
+		}
+		return nil
+	}
+	if _, err := fmt.Fprintln(stdout, "  Metadata:"); err != nil {
+		return fmt.Errorf("write source list: %w", err)
+	}
+	if err := writeMetadataFields(stdout, metadata, "    "); err != nil {
+		return fmt.Errorf("write source list: %w", err)
+	}
+	return nil
 }
 
 func runSourceShow(args []string, stdout, stderr io.Writer) error {
@@ -354,34 +468,41 @@ func writeSourceMetadata(stdout io.Writer, metadata library.Metadata) error {
 	if _, err := fmt.Fprintln(stdout, "Metadata:"); err != nil {
 		return fmt.Errorf("write source: %w", err)
 	}
+	if err := writeMetadataFields(stdout, metadata, "  "); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	return nil
+}
+
+func writeMetadataFields(stdout io.Writer, metadata library.Metadata, indent string) error {
 	if metadata.TLDR != "" {
-		if _, err := fmt.Fprintf(stdout, "  TLDR: %s\n", metadata.TLDR); err != nil {
-			return fmt.Errorf("write source: %w", err)
+		if _, err := fmt.Fprintf(stdout, "%sTLDR: %s\n", indent, metadata.TLDR); err != nil {
+			return err
 		}
 	}
 	if len(metadata.Tags) > 0 {
-		if _, err := fmt.Fprintf(stdout, "  Tags: %s\n", strings.Join(metadata.Tags, ", ")); err != nil {
-			return fmt.Errorf("write source: %w", err)
+		if _, err := fmt.Fprintf(stdout, "%sTags: %s\n", indent, strings.Join(metadata.Tags, ", ")); err != nil {
+			return err
 		}
 	}
 	if metadata.Priority != nil {
-		if _, err := fmt.Fprintf(stdout, "  Priority: %.2f\n", *metadata.Priority); err != nil {
-			return fmt.Errorf("write source: %w", err)
+		if _, err := fmt.Fprintf(stdout, "%sPriority: %.2f\n", indent, *metadata.Priority); err != nil {
+			return err
 		}
 	}
 	if metadata.Scope != "" {
-		if _, err := fmt.Fprintf(stdout, "  Scope: %s\n", metadata.Scope); err != nil {
-			return fmt.Errorf("write source: %w", err)
+		if _, err := fmt.Fprintf(stdout, "%sScope: %s\n", indent, metadata.Scope); err != nil {
+			return err
 		}
 	}
 	if len(metadata.Requires) > 0 {
-		if _, err := fmt.Fprintf(stdout, "  Requires: %s\n", strings.Join(metadata.Requires, ", ")); err != nil {
-			return fmt.Errorf("write source: %w", err)
+		if _, err := fmt.Fprintf(stdout, "%sRequires: %s\n", indent, strings.Join(metadata.Requires, ", ")); err != nil {
+			return err
 		}
 	}
 	if len(metadata.ConflictsWith) > 0 {
-		if _, err := fmt.Fprintf(stdout, "  Conflicts with: %s\n", strings.Join(metadata.ConflictsWith, ", ")); err != nil {
-			return fmt.Errorf("write source: %w", err)
+		if _, err := fmt.Fprintf(stdout, "%sConflicts with: %s\n", indent, strings.Join(metadata.ConflictsWith, ", ")); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -205,6 +205,11 @@ These are the same *role* axis (what kind of content), just finer. Weight (light
 heavy process), domain (grid), and language (go/rust) are **not** categories — they
 are separate libraries in `sources`, and later tags.
 
+These categories are a starting vocabulary, not hardwired product structure.
+Mogent should let teams discover their own library organization through use. The
+tool can recommend clear source trees, tags, and metadata, but it should not
+force every org into one canonical taxonomy.
+
 ---
 
 ## 6. Workflow
@@ -241,9 +246,23 @@ Future commands that intentionally inspect or transform raw Markdown without a
 manifest should use explicit command names or a clear `--no-manifest` style flag
 only when that behavior is genuinely useful.
 
+A future global source cache can make init easier by remembering local paths and
+remote URLs that the user has already chosen. It should be visible and opt-in at
+selection time: "use this known source?" The manifest still writes explicit
+`sources:` aliases and locations. The cache must not become an ambient lookup
+path that silently changes how a repo resolves `shared:` or `org:`.
+
 Source discovery should support several output shapes without changing the
 underlying model:
 
+- `source list` lists available source nodes for the manifest's declared
+  sources. It is the main "what can I include?" command outside the TUI.
+- `source list --source <alias>` filters to one source.
+- `source list --tag <tag>` filters by exact tag.
+- `source list --tag-search <text>` searches within tag strings, so a query like
+  `go` can match `lang/go`.
+- `source list --metadata` shows the full metadata block for each listed node.
+- `source list --sort path|priority` controls source browsing order.
 - `coverage --source <alias>` filters to one source.
 - `coverage --unused-only` prints a compact list of unused references.
 - `coverage --content-only` hides empty organizational headings.

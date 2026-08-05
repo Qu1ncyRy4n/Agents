@@ -191,6 +191,7 @@ of that shared core.
 - [x] Add add-preview modes: `--preview=summary`, `--preview=patch`, `--preview=tree`, and `--preview=full`.
 - [x] Add first file-level source metadata: YAML frontmatter with `tags`, `tldr`, `priority`, `scope`, `requires`, and soft `conflicts_with`.
 - [x] Add metadata-aware source browsing and tag filtering: `source show --metadata` and `coverage --tag`.
+- [x] Add source browsing command: `source list` with source, exact tag, tag-search, metadata, and sort options.
 - [ ] Add CLI command shapes for additional draft/source changes and later drift/localize.
 - [ ] Add optional force/logging for manifest mutations and rebuilds, likely under `.mogent`.
 - [ ] Add richer source display: source-vs-local diffs and optional metadata-driven summaries.
@@ -201,7 +202,9 @@ of that shared core.
 - [ ] Design localization/upstream provenance: source/scope/location handles, source reference, URL/path, commit/hash when available, source file, heading path, localization time, and original content hash.
 - [ ] Add promote-local-to-shared: push a localized override back up to its source library.
 - [ ] Resolve TE-kavam: hierarchical tags, declared alternative families, meaningful conflict warnings, and atomic-file library shape.
+- [ ] Decide whether atomic library directory paths remain organizational only or contribute to source reference paths.
 - [ ] Add split/import workflow: turn a complete hand-written `AGENTS.md` into a draft atomic module library for review.
+- [ ] Design global source cache for init: remember known local/remote sources for visible reuse without ambient source resolution.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.

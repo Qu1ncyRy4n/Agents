@@ -311,6 +311,76 @@ func TestRunSourceShowReportsLocationAndContent(t *testing.T) {
 	}
 }
 
+func TestRunSourceListShowsCompactRowsAndFilters(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	goSource := "---\ntags: [lang/go, testing/unit]\ntldr: Prefer table tests.\npriority: 0.9\n---\n# Go\n\n## Testing\nTest.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "go.md"), []byte(goSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	docsSource := "---\ntags: [docs/readme]\ntldr: Keep docs current.\npriority: 0.3\n---\n# Docs\nDocument.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "docs.md"), []byte(docsSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Docs: shared:docs\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "list", "--manifest", manifestPath, "--tag-search", "go", "--sort", "priority"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "shared:go/testing  Testing  [lang/go, testing/unit]  p=0.90  - Prefer table tests.") {
+		t.Fatalf("source list missing tagged row:\n%s", output)
+	}
+	if strings.Contains(output, "shared:docs") {
+		t.Fatalf("tag-search should hide docs node:\n%s", output)
+	}
+}
+
+func TestRunSourceListShowsMetadataAndLocation(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "---\ntags: [risk/security]\ntldr: Lock down dangerous changes.\npriority: 1.0\nscope: org\nrequires: [shared:workflow]\nconflicts_with: [shared:security/loose]\n---\n# Security\nBody.\n"
+	sourcePath := filepath.Join(libraryPath, "security.md")
+	if err := os.WriteFile(sourcePath, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Security: shared:security\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "list", "--manifest", manifestPath, "--metadata", "--file", "--line"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"shared:security  Security  [risk/security]  p=1.00  - Lock down dangerous changes.  " + sourcePath + ":9",
+		"  Metadata:",
+		"    TLDR: Lock down dangerous changes.",
+		"    Tags: risk/security",
+		"    Priority: 1.00",
+		"    Scope: org",
+		"    Requires: shared:workflow",
+		"    Conflicts with: shared:security/loose",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("source list metadata missing %q:\n%s", expected, stdout.String())
+		}
+	}
+}
+
 func TestRunSourceShowContentFlags(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
