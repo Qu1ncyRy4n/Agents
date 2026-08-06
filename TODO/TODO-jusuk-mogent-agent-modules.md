@@ -207,7 +207,9 @@ of that shared core.
 - [ ] Design global source cache for init: remember known local/remote sources for visible reuse without ambient source resolution.
 - [ ] Design multiple agent outputs: optional symlink/mirror or tool-specific rendered files for `CLAUDE.md`, `GEMINI.md`, `.codex/AGENTS.md`, and similar entrypoints.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
+- [x] Split initial checked-in libraries into atomic metadata-bearing modules.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
+- [ ] Design cross-file subtree behavior, or keep explicit manifest grouping as the standard for atomic modules.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.
 - [ ] Add tags as search/discovery after the core stabilizes: searchable tags, swap-alternative groups (XOR), and conflict warnings for incompatible styles.
 - [x] Local-vs-global storage: resolved by copy-on-write localization (DESIGN.md §3.5) — shared libraries read-only, local overrides explicit in the manifest.

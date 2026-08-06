@@ -65,6 +65,10 @@ library/instructions/testing.md
   path; renaming a file inside the same directory does not. A node may opt into a rename-proof anchor with a one-line
   comment — `## Testing  <!-- id: strict-testing -->` — useful for widely-referenced
   nodes in shared libraries. Most nodes need no id.
+- Atomic files are not currently stitched into one implicit cross-file subtree.
+  If a document wants several atomic modules under one local heading, the
+  manifest should group those entries explicitly. This keeps the authored
+  document outline visible while cross-file subtree behavior remains unsettled.
 - Never content hashes as identity: a hash changes on every prose edit — the common
   case — so it breaks references exactly when you improve content. (A hash is fine
   later as *lockfile* integrity data.)

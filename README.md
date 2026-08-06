@@ -72,6 +72,26 @@ conflicts_with: [shared:security/loose-security]
 
 Metadata is tool-only. It does not render into `AGENTS.md`.
 
+The checked-in example libraries use this atomic style. Each reusable module
+usually lives in one file with one top-level heading and frontmatter metadata.
+For example, `libraries/cdint/shared-baseline/instructions/focused-change-loop.md`
+resolves as `shared:shared-baseline/instructions/focused-change-loop`.
+
+When a document wants several atomic modules under one local heading, name them
+explicitly in the manifest:
+
+```yaml
+doc:
+  - Instructions:
+      - Decision First:
+          - Decision Intent: shared:process/decision-first/decision-intent
+          - Thought Experiment: shared:process/decision-first/thought-experiment
+          - Open Questions: shared:process/decision-first/open-questions
+```
+
+Mogent does not currently stitch separate files into one implicit cross-file
+subtree. That keeps source selection explicit while the library model settles.
+
 ## Manifest
 
 `agents.yaml` is the authored document outline:
@@ -193,6 +213,7 @@ Ready for basic local usage:
 - local Markdown source directories,
 - strict `agents.yaml` manifests,
 - deterministic `AGENTS.md` rendering,
+- atomic module libraries with file-level metadata,
 - source browsing,
 - metadata/tag filtering,
 - source coverage,
