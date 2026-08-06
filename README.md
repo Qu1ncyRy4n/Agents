@@ -206,8 +206,13 @@ Not ready yet:
 - direct-edit import from hand-edited `AGENTS.md`,
 - copy-on-write local overrides,
 - conflict warnings from `conflicts_with`,
-- symlink generation for other agent-file names,
+- multiple agent outputs such as `CLAUDE.md`, `GEMINI.md`, or `.codex/AGENTS.md`,
 - split/import from a full `AGENTS.md` into an atomic library.
+
+Future multi-output support should allow both exact mirrors and tool-specific
+renders. For example, `CLAUDE.md` could include extra visible manifest entries
+for stricter Claude behavior, while `GEMINI.md` might simply symlink to
+`AGENTS.md`.
 
 ## Design Docs
 

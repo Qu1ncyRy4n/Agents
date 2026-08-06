@@ -322,6 +322,26 @@ writes `AGENTS.md`, using the same generated-output overwrite protection as
 `build`; direct edits must not be overwritten silently. `--force` and optional
 `.mogent` operation logs are future additions.
 
+Future multi-output support should stay manifest-visible. A sketch:
+
+```yaml
+output: AGENTS.md
+
+outputs:
+  - path: CLAUDE.md
+    mode: render
+    extra:
+      - Claude Strictness: shared:tools/claude/strictness
+  - path: GEMINI.md
+    mode: symlink
+    target: AGENTS.md
+```
+
+`mode: render` means "build this file from the base document plus declared
+extras." `mode: symlink` means "make this file point at the generated
+`AGENTS.md`." The exact schema is deferred, but the rule is not: tool-specific
+differences should be explicit reviewable manifest content.
+
 Dry-run output should offer several review views:
 
 - `--preview=summary` shows the intended manifest operation in compact prose.
@@ -387,10 +407,13 @@ Rebuild milestones (from scratch; old code removed):
   should continue to accept normal multi-heading Markdown files.
 - **Drift detection** — regenerate from manifest, diff against `AGENTS.md` on disk,
   offer explicit handling.
-- **Agent-file aliases** — optionally create symlinks or generated alias files
-  for other agent entrypoints such as `CLAUDE.md`, `GEMINI.md`, or
-  `.codex/AGENTS.md`. This should be explicit and reviewable because different
-  tools may attach different meanings to similarly named files.
+- **Multiple agent outputs** — optionally render additional agent entrypoint
+  files such as `CLAUDE.md`, `GEMINI.md`, or `.codex/AGENTS.md`. A secondary
+  output may be a symlink/mirror of `AGENTS.md`, or it may be a tool-specific
+  render with extra visible manifest entries, such as stricter Claude-specific
+  behavioral fixes. These differences must live in YAML, not hidden
+  post-processing, so users can review exactly why one output differs from
+  another.
 - **Promote local → shared** — push a copy-on-write override back up to its library.
 - **Generated index** — fast search over large libraries for the navigator.
 - **Pinned reference docs** — far-future support for making relevant project,
