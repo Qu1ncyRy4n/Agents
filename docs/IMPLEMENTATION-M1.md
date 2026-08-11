@@ -1,6 +1,7 @@
 # Mogent Milestone-One Contract
 
-Status: active implementation contract.
+Status: completed milestone contract; URL-source clauses are superseded by
+`docs/IMPLEMENTATION-M4.md`.
 
 This document resolves the milestone-one choices left open by the design of
 record. It is the implementation target for the first parser and renderer.
@@ -16,8 +17,9 @@ mogent build
 
 It reads a local `agents.yaml`, resolves local Markdown libraries, renders an
 `AGENTS.md`, validates all input before writing, and writes the output safely.
-It does not fetch URL sources, provide a navigator, or import direct edits into
-local overrides.
+The milestone did not fetch URL sources, provide a navigator, or import direct
+edits into local overrides. Later contracts add those capabilities without
+changing the local renderer rules recorded here.
 
 ## Manifest Forms
 
@@ -65,9 +67,8 @@ sources:
   `~/`.
 - A source reference is always `alias:heading/path`.
 - References cannot escape their selected source root.
-- HTTP(S) URL values are rejected with a clear message that URL sources are a
-  later milestone. URL source support will add pinning and changed-content
-  review before it is enabled.
+- HTTP(S) URL values require the immutable lock/cache and changed-content review
+  behavior in `docs/IMPLEMENTATION-M4.md`.
 
 ## Rendering
 
@@ -118,11 +119,13 @@ build:
 The next feature adds an interactive diff/import flow. It will let a user choose
 a manifest node and create a copy-on-write local override from direct edits.
 
-## Deferred
+## Deferred From Milestone One
 
-- URL source fetching, caching, pinning, and changed-content confirmation.
+- URL source fetching, caching, pinning, and changed-content confirmation
+  (implemented later by `docs/IMPLEMENTATION-M4.md`).
 - Interactive source-collision choices.
 - Relative exclusion syntax.
 - Entries that combine `from` with `children`.
-- Interactive direct-edit import into local overrides.
+- Interactive direct-edit import into local overrides (a conservative core/CLI
+  form is implemented by `docs/IMPLEMENTATION-M3.md`).
 - Navigator, init, edit, swap, and save flow.

@@ -9,9 +9,10 @@ The short version:
 - `agents.yaml` chooses, orders, and renames those modules for one repo.
 - `mogent build` renders the manifest to `AGENTS.md`.
 
-This is usable for local-path, manifest-driven `AGENTS.md` generation. It is not
-yet a complete package manager for remote libraries, drift import, or
-copy-on-write editing.
+This is usable for local and immutably pinned URL libraries, manifest-driven
+generation, copy-on-write localization, and conservative single-section drift
+import. Broader package management and automatic merge workflows remain future
+work.
 
 ## Install
 
@@ -39,7 +40,28 @@ go install ./cmd/mogent
 CGO_ENABLED=0 go install ./cmd/mogent
 ```
 
+The repository check entrypoint defaults to the pure-Go build and keeps its
+build cache under `/tmp`:
+
+```sh
+nix develop -c tools/check
+
+# or, when go and errcheck are already installed
+tools/check
+```
+
 ## Basic Files
+
+Create an editable starter manifest:
+
+```sh
+mogent init --list-templates
+mogent init --template minimal --source shared=./libraries/cdint --dry-run
+mogent init --template minimal --source shared=./libraries/cdint
+```
+
+Templates are ordinary manifest starting points, not hidden presets. `init`
+validates their source references and rendered output before writing.
 
 A source library is a directory of Markdown files:
 
@@ -151,16 +173,29 @@ mogent source show shared:lang/go/testing --metadata --content=snippet --lines=8
 mogent source show shared:lang/go/testing --align-source --under Instructions
 ```
 
+Pin and later review a manifest-declared URL source:
+
+```sh
+mogent source pin shared
+mogent source update shared
+mogent source update shared --ref <full-previewed-commit> --accept
+```
+
+Normal commands never fetch URL sources. They require the committed
+`mogent.lock.yaml` entry and verify the ignored `.mogent/sources/` checkout.
+
 Show included and unused source modules:
 
 ```sh
 mogent coverage
 mogent coverage --unused-only
 mogent coverage --tree
+mogent coverage --tree --tldr
 ```
 
 `coverage --tree` shows text state markers such as `[included]`, `[inherited]`,
-`[excluded]`, `[partial]`, and `[unused]`.
+`[excluded]`, `[partial]`, and `[unused]`. Add `--tldr` to show each source
+file's compact summary once beside its first visible node.
 
 Add a source module to the manifest:
 
@@ -180,6 +215,25 @@ Write the manifest and rebuild `AGENTS.md`:
 ```sh
 mogent add shared:lang/go/testing --under Instructions --rebuild
 ```
+
+Create a copy-on-write local override for one manifest entry:
+
+```sh
+mogent localize Instructions/Testing --dry-run
+mogent localize Instructions/Testing --rebuild
+```
+
+Inspect or explicitly resolve direct edits to generated output:
+
+```sh
+mogent drift
+mogent drift --import Instructions/Testing
+mogent drift --reject --force
+```
+
+Localization writes ordinary Markdown under `.mogent/library`, records its
+origin in `.mogent/provenance.yaml`, and changes the selected manifest reference
+to `local:`. Drift import refuses edits outside the selected section.
 
 Open the TUI:
 
@@ -216,6 +270,9 @@ Mogent writes `agents.yaml` and `AGENTS.md` conservatively.
 - `add` writes `agents.yaml` by default.
 - `add --dry-run` writes nothing.
 - `add --rebuild` also writes `AGENTS.md` through the normal overwrite checks.
+- `localize --dry-run` writes nothing; localization never changes a shared source.
+- `drift --import` accepts only one unambiguous edited section.
+- `drift --reject` requires `--force` before discarding direct edits.
 - Shared source libraries are read-only inputs during normal build/add flows.
 
 ## Testing Ground
@@ -244,14 +301,15 @@ Ready for basic local usage:
 - metadata/tag filtering,
 - source coverage,
 - simple manifest additions,
-- dry-run previews.
+- dry-run previews,
+- copy-on-write local overrides and conservative single-section drift import,
+- immutable pinned HTTP(S) Git sources with explicit update review.
 
 Not ready yet:
 
-- URL source fetching and pinning,
+- authenticated or non-Git remote sources,
 - global source cache,
-- direct-edit import from hand-edited `AGENTS.md`,
-- copy-on-write local overrides,
+- automatic or multi-section import from hand-edited `AGENTS.md`,
 - conflict warnings from `conflicts_with`,
 - multiple agent outputs such as `CLAUDE.md`, `GEMINI.md`, or `.codex/AGENTS.md`,
 - split/import from a full `AGENTS.md` into an atomic library.

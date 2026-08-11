@@ -8,6 +8,7 @@ import (
 
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
 	"github.com/Qu1ncyRy4n/Agents/internal/render"
+	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
 )
 
 func TestBuildUsesManifestHeadingsTemplatesAndExclusions(t *testing.T) {
@@ -31,6 +32,35 @@ func TestBuildUsesManifestHeadingsTemplatesAndExclusions(t *testing.T) {
 	want := "# Local Rules\n\nHello mogent.\n\n## Keep\n\nKeep this.\n"
 	if result.Content != want {
 		t.Fatalf("rendered content:\n%s\nwant:\n%s", result.Content, want)
+	}
+}
+
+func TestBuildUsesVerifiedPinnedURLCacheOffline(t *testing.T) {
+	temporary := t.TempDir()
+	commit := strings.Repeat("d", 40)
+	cache := filepath.Join(temporary, ".mogent", "sources", "remote", commit)
+	if err := os.MkdirAll(cache, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(cache, "rules.md"), "# Rules\nWork carefully.\n")
+	hash, err := sourcecache.HashMarkdown(cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock := "version: 1\nsources:\n  remote:\n    url: https://example.com/library.git\n    commit: " + commit + "\n    content_sha256: " + hash + "\n"
+	writeFile(t, filepath.Join(temporary, "mogent.lock.yaml"), lock)
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  remote: https://example.com/library.git\noutput: AGENTS.md\ndoc:\n  - Rules: remote:rules\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.Build(value, loadedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Content != "# Rules\n\nWork carefully.\n" {
+		t.Fatalf("content = %q", result.Content)
 	}
 }
 
@@ -112,7 +142,7 @@ func TestBuildRejectsCollisionsEmptyNodesAndURLs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := render.Build(value, loadedPath); err == nil || !strings.Contains(err.Error(), "URL sources") {
+	if _, err := render.Build(value, loadedPath); err == nil || !strings.Contains(err.Error(), "not pinned") {
 		t.Fatalf("URL error = %v", err)
 	}
 }

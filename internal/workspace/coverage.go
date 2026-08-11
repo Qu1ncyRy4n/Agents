@@ -33,6 +33,8 @@ type SourceCoverage struct {
 type CoverageNode struct {
 	Path    string
 	Heading string
+	File    string
+	TLDR    string
 	Depth   int
 	State   CoverageState
 }
@@ -98,6 +100,8 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 			coverageNode := CoverageNode{
 				Path:    path,
 				Heading: node.Heading,
+				File:    node.File,
+				TLDR:    node.Metadata.TLDR,
 				Depth:   depth,
 				State:   state,
 			}

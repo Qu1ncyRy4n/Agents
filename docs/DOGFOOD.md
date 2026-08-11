@@ -24,6 +24,25 @@ mogent_manifest="$mogent_dogfood_dir/testing-ground/personal-go-nix/agents.yaml"
 The relative source paths still resolve in this copied layout. Remove the
 temporary directory when the exercise is complete.
 
+## Stage -1: Guided Init
+
+Purpose: create a reviewable starter manifest instead of beginning from blank
+YAML.
+
+```sh
+mogent init --list-templates
+mogent init --template personal-go-nix \
+  --source shared="$mogent_dogfood_dir/libraries/cdint" \
+  --source go="$mogent_dogfood_dir/libraries/cdint" \
+  --source personal="$mogent_dogfood_dir/libraries/personal" \
+  --manifest "$mogent_dogfood_dir/starter-agents.yaml" \
+  --dry-run
+```
+
+Expected: the template list explains required aliases. Dry-run prints ordinary
+editable YAML and writes nothing. Remove `--dry-run` to write the starter; add
+`--build` only when its output path is safe.
+
 ## Stage 0: Build A Known Manifest
 
 Purpose: verify parsing, source resolution, rendering, and overwrite safety.
@@ -66,11 +85,14 @@ Purpose: compare available modules with what the manifest already selects.
 ```sh
 mogent coverage --manifest "$mogent_manifest"
 mogent coverage --manifest "$mogent_manifest" --tree
+mogent coverage --manifest "$mogent_manifest" --tree --tldr
 mogent coverage --manifest "$mogent_manifest" --unused-only
 ```
 
 Expected: tree output distinguishes included, inherited, excluded, partial,
 and unused nodes in text. Counts should agree with the visible source tree.
+`--tldr` shows each file-level summary once rather than repeating it for every
+heading that inherits the same metadata.
 
 Record confusing parent/child state, incorrect counts, or modules that appear
 selected merely because a related heading is selected.
@@ -131,12 +153,71 @@ source aliases, references, flags, and manifest headings.
 Record missing candidates, incorrect prefixes, shell errors, or output that is
 unsafe or awkward for scripts.
 
-## Stage 6: Future Editing And Drift
+## Stage 6: Localization
 
-This stage is not implemented yet. It will cover copy-on-write localization,
-source-to-local provenance, direct-edit detection and import, reconciliation,
-and promotion back to a trusted shared source. Do not treat `--force` as a
-substitute for that workflow.
+Purpose: create an explicit local override without modifying a shared source.
+
+```sh
+mogent localize Instructions/Go\ Tests --manifest "$mogent_manifest" --dry-run
+mogent localize Instructions/Go\ Tests --manifest "$mogent_manifest"
+mogent source show local:go/tests --manifest "$mogent_manifest" --metadata
+```
+
+Expected: dry-run writes nothing. The real operation creates ordinary Markdown
+under `.mogent/library`, records origin data in `.mogent/provenance.yaml`, and
+changes only the chosen manifest entry to `local:`. The generated output becomes
+stale until rebuilt unless `--rebuild` is supplied.
+
+Record unexpected source changes, path collisions, missing provenance, or a
+manifest that points at a nonexistent local file.
+
+## Stage 7: Drift Detection And Import
+
+Purpose: exercise explicit handling of a directly edited generated output.
+
+First build the disposable fixture, edit prose inside exactly one rendered
+manifest section, then run:
+
+```sh
+mogent drift --manifest "$mogent_manifest"
+mogent drift --manifest "$mogent_manifest" --import Instructions/Go\ Tests
+```
+
+Expected: drift reports direct edits. Import succeeds only when every change is
+inside the selected unambiguous section; it creates a local override and rebuilds
+without losing that edit. An edit elsewhere in the document makes import fail
+without writes. To deliberately discard edits instead:
+
+```sh
+mogent drift --manifest "$mogent_manifest" --reject --force
+```
+
+Promotion back to a trusted shared source remains future work.
+
+## Stage 8: Pinned URL Sources
+
+Purpose: verify that remote content is fetched only by explicit commands and is
+then consumed immutably offline.
+
+Use a disposable manifest with one HTTP(S) Git URL source, then run:
+
+```sh
+mogent source pin <alias> --manifest path/to/agents.yaml
+mogent build --manifest path/to/agents.yaml
+mogent source update <alias> --manifest path/to/agents.yaml
+# after reviewing the printed commit and Markdown content:
+mogent source update <alias> --manifest path/to/agents.yaml \
+  --ref <full-previewed-commit> --accept
+```
+
+Expected: pin writes reviewable `mogent.lock.yaml` and an ignored verified cache.
+Build performs no fetch. Update reports old/new commits and old/new Markdown
+content but writes nothing until repeated with the full previewed commit and
+`--accept`. Disconnecting the network after pinning must not prevent build,
+source browsing, or coverage.
+
+Record authentication prompts, mutable content consumption, missing change
+paths, integrity failures, or any ordinary command that unexpectedly fetches.
 
 ## Issue Report Template
 

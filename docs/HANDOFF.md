@@ -21,15 +21,19 @@ ChatGPT, Codex, or another product to share conversation history.
 
 - Architecture is core/CLI-first. The TUI remains a client of reusable workspace
   operations, not the only home of product behavior.
-- The last validated handoff described the `workspace.Session` extraction as
-  uncommitted. The current working tree still contains uncommitted workspace,
-  CLI, documentation, library, and dogfood changes, so inspect and preserve the
-  entire existing diff before editing or committing.
+- The prior dogfood baseline is committed as `8bf094b`. Current feature work is
+  on `codex/localization-and-pinning`.
 - `mogent status`, `mogent source show`, source listing/discovery, and
   `mogent coverage` exist. Current uncommitted work further improves status,
   discovery, coverage, completion, diagnostics, and dogfood material.
-- Copy-on-write localization, drift import/merge, remote URL sources, and pinning
-  remain future work.
+- Core-first copy-on-write localization, conservative single-section drift
+  import, immutable URL pinning, and guided starter templates are implemented on
+  the feature branch.
+- URL manifests use committed `mogent.lock.yaml` records and verified ignored
+  `.mogent/sources/` checkouts. Ordinary commands never fetch.
+- Multiple outputs remain unimplemented; `docs/MULTIPLE-OUTPUTS-PLAN.md` records
+  the proposed schema, transactions, state migration, CLI work, and decisions
+  required before implementation.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.
@@ -47,20 +51,17 @@ Continue to organize the agent-facing workspace surface in this order:
 4. coverage - compare selected and available material.
 5. localization - copy-on-write editing with explicit provenance.
 
-The first four have implementations. Stabilize and validate them through the
-shared workspace core, then proceed to localization rather than placing durable
-behavior only in the TUI.
+All five have core/CLI implementations on the feature branch. The TUI can adopt
+the same workspace operations later.
 
 ## Next Steps
 
-1. Finish reviewing and validating the full uncommitted dogfood diff; do not
-   overwrite or silently absorb unrelated user work.
-2. Exercise `docs/DOGFOOD.md` against a disposable real repository and record
-   discovery, TLDR, coverage, preview, completion, and save/rebuild friction.
-3. Add coverage TLDR summaries and revisit heading-level metadata only after
-   file-level summaries have been tested in real module selection.
-4. Design and implement copy-on-write localization through reusable workspace
-   operations with a useful noninteractive command shape.
+1. Complete the branch-wide validation and requirement audit.
+2. Run the HTTPS pin smoke test when network-command approval is available; the
+   approval service rejected the attempted disposable fetch before execution.
+3. Exercise `docs/DOGFOOD.md` manually when the user returns, especially URL
+   update review and real-repository starter selection.
+4. Resolve the questions in `docs/MULTIPLE-OUTPUTS-PLAN.md` before implementation.
 5. Later, design `mogent handoff` to generate a compact agent-readable summary
    from explicit Git, manifest, output, source, coverage, TODO, and design state.
 

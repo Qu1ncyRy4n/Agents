@@ -166,6 +166,24 @@ Intent: Match the source boundary to current ownership and dogfood use while pre
 Constraints: This resolves only the Nix portion of DR-garom. The broader `cdint`, `ucd_research`, `personal`, and future independent-library boundaries remain provisional and may be revisited after more real manifests are exercised.
 Affects: DR/DR-garom-library-source-boundaries.md, libraries/personal/lang/nix.md, libraries/nix/, docs/codex_eco/README.md, testing-ground/personal-go-nix/
 
+ID: DI-ravam
+Date: 2026-08-11
+Status: active
+Author: user-directed goal; recorded by Codex
+Decision: Implement localization and drift core-first. Store local Markdown under `.mogent/library`, expose it through the explicit `local` source alias, and store versioned origin records in `.mogent/provenance.yaml`. Address localization by manifest heading path, require an explicit source reference for composed entries, and provide non-mutating dry runs. Drift import is conservative and may change one unambiguously mapped manifest section; ambiguous edits remain unresolved.
+Intent: Let CLI, TUI, agents, and future interfaces share one safe copy-on-write and drift workflow without modifying shared sources, polluting Markdown with workspace history, or guessing how direct edits map back to the manifest.
+Constraints: Validate the complete resulting render before committing writes. Do not overwrite an existing different local artifact. Shared sources are never transaction targets. Rejecting direct edits requires explicit force. Exact behavior is defined by `docs/IMPLEMENTATION-M3.md` and TE-ravam.
+Affects: docs/IMPLEMENTATION-M3.md, internal/workspace/, internal/cli/, .mogent/library/, .mogent/provenance.yaml
+
+ID: DI-fipam
+Date: 2026-08-11
+Status: active
+Author: user-directed goal; recorded by Codex
+Decision: Keep remote Git URLs in `agents.yaml`, commit immutable URL/commit/Markdown-hash records in `mogent.lock.yaml`, and keep verified checkouts under ignored `.mogent/sources/<alias>/<commit>`. Ordinary workspace loads are offline-only and fail on missing or mismatched lock/cache state. Initial pinning is explicit; updates preview changed Markdown paths and require `--accept` before changing the lock or installed cache.
+Intent: Make remote sources reproducible and reviewable without turning build or browsing into hidden network operations or silently consuming a moving branch.
+Constraints: HTTP(S) Git only initially. Full commit IDs and deterministic Markdown content hashes are required. URL/lock mismatch, cache hash mismatch, unsafe path input, duplicate keys, and unreadable content are errors. Exact behavior is `docs/IMPLEMENTATION-M4.md` and TE-fipam.
+Affects: agents.yaml URL sources, mogent.lock.yaml, .mogent/sources/, internal/sourcecache/, internal/render/, internal/cli/
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -303,20 +321,20 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [x] Add first file-level source metadata: YAML frontmatter with `tags`, `tldr`, `priority`, `scope`, `requires`, and soft `conflicts_with`.
 - [x] Add metadata-aware source browsing and tag filtering: `source show --metadata` and `coverage --tag`.
 - [x] Add source browsing command: `source list` with source, exact tag, tag-search, metadata, and sort options.
-- [ ] Add CLI command shapes for additional draft/source changes and later drift/localize.
+- [x] Add CLI command shapes for core-first localization and conservative drift handling (`localize`, `drift`; DI-ravam).
 - [ ] Add optional force/logging for manifest mutations and rebuilds, likely under `.mogent`.
 - [ ] Add richer source display: source-vs-local diffs and optional metadata-driven summaries.
 - [ ] Decide raw Markdown/no-manifest command behavior; default commands remain manifest-based and use `agents.yaml` unless `--manifest` points elsewhere.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
-- [ ] Add drift detection: regenerate from manifest, diff against `AGENTS.md` on disk, offer an explicit handling path.
-- [ ] Add source pinning / lockfile: pin URL sources to commit/tag; optional content hashes as integrity data.
-- [ ] Design localization/upstream provenance: source/scope/location handles, source reference, URL/path, commit/hash when available, source file, heading path, localization time, and original content hash.
+- [x] Add drift detection: regenerate from manifest, report output state, conservatively import one unambiguous section, or explicitly reject edits.
+- [x] Add immutable URL source pinning with committed locks, verified ignored caches, and explicit changed-Markdown review (DI-fipam; TE-fipam).
+- [x] Design and implement localization provenance with `local:` plus `.mogent/provenance.yaml` (DI-ravam; TE-ravam).
 - [ ] Add promote-local-to-shared: push a localized override back up to its source library.
 - [ ] Resolve TE-kavam: hierarchical tags, declared alternative families, meaningful conflict warnings, and atomic-file library shape.
 - [x] Decide whether atomic library directory paths remain organizational only or contribute to source reference paths: directories contribute, filenames do not.
 - [ ] Add split/import workflow: turn a complete hand-written `AGENTS.md` into a draft atomic module library for review.
 - [ ] Design global source cache for init: remember known local/remote sources for visible reuse without ambient source resolution.
-- [ ] Design multiple agent outputs: optional symlink/mirror or tool-specific rendered files for `CLAUDE.md`, `GEMINI.md`, `.codex/AGENTS.md`, and similar entrypoints.
+- [x] Plan multiple agent outputs without implementing them: manifest evolution, build transaction, state migration, drift behavior, CLI review, sequencing, and open decisions (`docs/MULTIPLE-OUTPUTS-PLAN.md`).
 - [ ] Design multi-artifact project guidance generation beyond `AGENTS.md`: usage notes, dev docs, repo-specific reference indexes, command cheat sheets, and links to external docs. This needs substantial design because those files have different audiences, update cadence, visibility, and source-of-truth rules from agent prompts.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
@@ -324,8 +342,8 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Add tags as search/discovery after the core stabilizes: searchable tags, swap-alternative groups (XOR), and conflict warnings for incompatible styles.
 - [x] Local-vs-global storage: resolved by copy-on-write localization (DESIGN.md §3.5) — shared libraries read-only, local overrides explicit in the manifest.
 - [x] Add shell completion for source references, especially `mogent source show <ref>` and `mogent add <ref>`: implemented `mogent complete <kind>` candidate lists plus `mogent completion bash|zsh` wrappers.
-- [ ] Add a guided init/builder walkthrough that starts from recommended templates/presets, explains suggested ordering, and produces a readable starter `agents.yaml`.
-- [ ] Add a templater/preset system for common repo shapes such as transitional Python-to-Rust app, heavy CDINT design-first repo, personal project, research repo, static site, and Nix-managed project.
+- [x] Add a guided, agent-readable init flow with template listing, explicit source bindings, dry-run preview, and validated writes.
+- [x] Add the first editable starter templates: minimal, Go, personal Go/Nix, and research Python. Expand to migration/static-site shapes after dogfooding.
 - [ ] Add library-level metadata manifests, likely `library.yaml`, for suggested placement, recommended order, status, last updated/reviewed dates, requirements, urgency/risk, and preset membership.
 - [ ] Add suggested-placement-aware browsing and coverage output, so unused modules can be grouped by where they likely belong in the rendered document rather than only by source path.
 - [x] Improve `mogent coverage --tree` to show included, inherited, excluded, and unused state in one tree with text markers and optional color.
@@ -334,8 +352,8 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [x] Add source-list search over source reference paths, headings, TLDRs, and content snippets; keep tag search available as a precise metadata filter.
 - [x] Add `source list <source-prefix>` shorthand for filtering one or more sources, for example `mogent source list cdint` instead of requiring `--source cdint`.
 - [ ] Add filters for metadata fields beyond tags: `requires`, `conflicts_with`, `scope`, urgency/risk/status, and update/review age once those fields exist.
-- [x] Add TLDR coverage/source browsing modes so large libraries can be explored without dumping every full heading and metadata block: first pass is `source list --tldr`; coverage TLDR summaries remain future metadata work.
-- [ ] Add concise file-level TLDR metadata across the seed libraries, then add heading-level summaries when the metadata model can represent them without duplicating whole-file text.
+- [x] Add TLDR source browsing and coverage modes; coverage shows each file-level summary once rather than repeating inherited metadata on every heading.
+- [x] Add concise file-level TLDR metadata across the seed libraries. Heading-level summaries remain future metadata work.
 - [ ] Add paging or compact layouts for large command output, or first-class hints for piping through `less`, `rg`, and `fzf`.
 - [x] Add `source show --align-source` or equivalent rendered-preview mode that shows how a source node would align under a manifest heading, including shifted heading levels and optional `--under`/`--heading`.
 - [x] Add source-directory expansion for path-like refs such as `cdint:engineering`, `cdint:engineering/`, and `cdint:engineering/*`, or provide a better diagnostic that lists available descendant refs: implemented descendant diagnostics, not wildcard expansion.

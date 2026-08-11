@@ -30,12 +30,12 @@ type Node struct {
 // Metadata is tool-only source metadata. It is useful for browsing and
 // filtering source modules, but is never rendered into AGENTS.md.
 type Metadata struct {
-	Tags          []string `yaml:"tags"`
-	TLDR          string   `yaml:"tldr"`
-	Priority      *float64 `yaml:"priority"`
-	Scope         string   `yaml:"scope"`
-	Requires      []string `yaml:"requires"`
-	ConflictsWith []string `yaml:"conflicts_with"`
+	Tags          []string `yaml:"tags,omitempty"`
+	TLDR          string   `yaml:"tldr,omitempty"`
+	Priority      *float64 `yaml:"priority,omitempty"`
+	Scope         string   `yaml:"scope,omitempty"`
+	Requires      []string `yaml:"requires,omitempty"`
+	ConflictsWith []string `yaml:"conflicts_with,omitempty"`
 }
 
 // Index permits exact heading-path lookup within one library.

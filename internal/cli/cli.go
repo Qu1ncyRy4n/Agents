@@ -6,34 +6,43 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
 	"github.com/Qu1ncyRy4n/Agents/internal/navigator"
 	"github.com/Qu1ncyRy4n/Agents/internal/render"
+	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
+	"github.com/Qu1ncyRy4n/Agents/internal/starter"
 	"github.com/Qu1ncyRy4n/Agents/internal/state"
 	"github.com/Qu1ncyRy4n/Agents/internal/workspace"
 )
 
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		if _, err := fmt.Fprintln(stdout, "Usage: mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source list [source] [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent add <ref> [--under heading/path | --append]\n       mogent complete <kind> [--manifest agents.yaml]\n       mogent completion <bash|zsh>\n       mogent tui [--manifest agents.yaml]"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Usage: mogent init [--template name] [--source alias=path]\n       mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent drift [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source list [source] [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent source pin <alias> [--ref ref]\n       mogent source update <alias> [--ref ref] [--accept]\n       mogent add <ref> [--under heading/path | --append]\n       mogent localize <manifest-heading-path> [--from source-ref]\n       mogent complete <kind> [--manifest agents.yaml]\n       mogent completion <bash|zsh>\n       mogent tui [--manifest agents.yaml]"); err != nil {
 			return fmt.Errorf("write usage: %w", err)
 		}
 		return nil
 	}
 	switch args[0] {
+	case "init":
+		return runInit(args[1:], stdout, stderr)
 	case "build":
 		return runBuild(args[1:], stdout, stderr)
 	case "status":
 		return runStatus(args[1:], stdout, stderr)
+	case "drift":
+		return runDrift(args[1:], stdout, stderr)
 	case "coverage":
 		return runCoverage(args[1:], stdout, stderr)
 	case "source":
 		return runSource(args[1:], stdout, stderr)
 	case "add":
 		return runAdd(args[1:], stdout, stderr)
+	case "localize":
+		return runLocalize(args[1:], stdout, stderr)
 	case "complete":
 		return runComplete(args[1:], stdout, stderr)
 	case "completion":
@@ -43,6 +52,231 @@ func Run(args []string, stdout, stderr io.Writer) error {
 	default:
 		return unknownCommandError(args[0])
 	}
+}
+
+type sourceBindings map[string]string
+
+func (s sourceBindings) String() string {
+	var values []string
+	for alias, path := range s {
+		values = append(values, alias+"="+path)
+	}
+	sort.Strings(values)
+	return strings.Join(values, ",")
+}
+
+func (s sourceBindings) Set(value string) error {
+	alias, path, found := strings.Cut(value, "=")
+	alias, path = strings.TrimSpace(alias), strings.TrimSpace(path)
+	if !found || alias == "" || path == "" {
+		return fmt.Errorf("source binding %q must use alias=path-or-url", value)
+	}
+	if _, exists := s[alias]; exists {
+		return fmt.Errorf("source alias %q was provided twice", alias)
+	}
+	s[alias] = path
+	return nil
+}
+
+func runInit(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("init", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "new manifest path")
+	templateName := flags.String("template", "", "starter template name")
+	output := flags.String("output", "AGENTS.md", "generated output path")
+	listTemplates := flags.Bool("list-templates", false, "list starter templates")
+	dryRun := flags.Bool("dry-run", false, "preview the starter manifest without writing")
+	build := flags.Bool("build", false, "also build generated output")
+	force := flags.Bool("force", false, "allow --build to replace a reviewed untracked output")
+	sources := make(sourceBindings)
+	flags.Var(sources, "source", "available local source binding alias=path; repeat for each required alias")
+	args = reorderArgs(args, map[string]bool{
+		"-manifest": true, "--manifest": true,
+		"-template": true, "--template": true,
+		"-output": true, "--output": true,
+		"-source": true, "--source": true,
+		"-list-templates": false, "--list-templates": false,
+		"-dry-run": false, "--dry-run": false,
+		"-build": false, "--build": false,
+		"-force": false, "--force": false,
+	})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("init accepts no positional arguments")
+	}
+	if *listTemplates || *templateName == "" {
+		if _, err := fmt.Fprintln(stdout, "Starter templates:"); err != nil {
+			return fmt.Errorf("write init guide: %w", err)
+		}
+		for _, value := range starter.List() {
+			if _, err := fmt.Fprintf(stdout, "- %s  %s\n  requires: %s\n", value.Name, value.Description, strings.Join(value.Required, ", ")); err != nil {
+				return fmt.Errorf("write init guide: %w", err)
+			}
+		}
+		if *templateName == "" {
+			if _, err := fmt.Fprintln(stdout, "\nNext: mogent init --template <name> --source alias=path [--source alias=path ...] --dry-run"); err != nil {
+				return fmt.Errorf("write init guide: %w", err)
+			}
+			return nil
+		}
+	}
+	template, err := starter.Get(*templateName)
+	if err != nil {
+		return err
+	}
+	value, err := template.Manifest(map[string]string(sources), *output)
+	if err != nil {
+		return err
+	}
+	result, err := workspace.Initialize(workspace.InitOptions{
+		ManifestPath: *manifestFile,
+		Manifest:     value,
+		DryRun:       *dryRun,
+		Build:        *build,
+		ForceOutput:  *force,
+	})
+	if err != nil {
+		return err
+	}
+	if *dryRun {
+		if _, err := fmt.Fprintln(stdout, "Dry run: no files written\n\nStarter manifest:"); err != nil {
+			return fmt.Errorf("write init result: %w", err)
+		}
+		if _, err := fmt.Fprint(stdout, result.ManifestYAML); err != nil {
+			return fmt.Errorf("write init result: %w", err)
+		}
+		return nil
+	}
+	if _, err := fmt.Fprintf(stdout, "Wrote starter manifest %s\n", result.ManifestPath); err != nil {
+		return fmt.Errorf("write init result: %w", err)
+	}
+	if result.Built {
+		if _, err := fmt.Fprintf(stdout, "Built %s\n", result.OutputPath); err != nil {
+			return fmt.Errorf("write init result: %w", err)
+		}
+	} else if _, err := fmt.Fprintf(stdout, "Next: mogent source list --manifest %s\n      mogent build --manifest %s\n", result.ManifestPath, result.ManifestPath); err != nil {
+		return fmt.Errorf("write init result: %w", err)
+	}
+	return nil
+}
+
+func runDrift(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("drift", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	importHeading := flags.String("import", "", "import direct edits from one manifest heading path")
+	from := flags.String("from", "", "source reference to localize for a composed entry")
+	reject := flags.Bool("reject", false, "reject direct edits and rebuild from the manifest")
+	force := flags.Bool("force", false, "confirm rejection of direct edits")
+	args = reorderArgs(args, map[string]bool{
+		"-manifest": true, "--manifest": true,
+		"-import": true, "--import": true,
+		"-from": true, "--from": true,
+	})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("drift accepts no positional arguments")
+	}
+	if *reject && *importHeading != "" {
+		return fmt.Errorf("drift accepts only one of --reject or --import")
+	}
+	session, err := workspace.New(*manifestFile)
+	if err != nil {
+		return err
+	}
+	if *reject {
+		if err := session.RejectDrift(*force); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(stdout, "Rejected direct edits and rebuilt output"); err != nil {
+			return fmt.Errorf("write drift result: %w", err)
+		}
+		return nil
+	}
+	if *importHeading != "" {
+		result, err := session.ImportDrift(*importHeading, *from)
+		if err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(stdout, "Imported direct edits from %s into %s\n", result.ManifestHeading, result.LocalReference); err != nil {
+			return fmt.Errorf("write drift result: %w", err)
+		}
+		if _, err := fmt.Fprintf(stdout, "Local file: %s\n", result.LocalPath); err != nil {
+			return fmt.Errorf("write drift result: %w", err)
+		}
+		return nil
+	}
+	report, err := session.Drift()
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(stdout, "Output: %s\nDrift status: %s\n", report.OutputPath, report.Status); err != nil {
+		return fmt.Errorf("write drift result: %w", err)
+	}
+	if report.DirectEdits {
+		if _, err := fmt.Fprintln(stdout, "Direct edits detected. Use --import <manifest-heading-path> or review and use --reject --force."); err != nil {
+			return fmt.Errorf("write drift result: %w", err)
+		}
+	}
+	return nil
+}
+
+func runLocalize(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("localize", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	from := flags.String("from", "", "source reference to replace when the entry composes several sources")
+	dryRun := flags.Bool("dry-run", false, "preview localization without writing files")
+	rebuild := flags.Bool("rebuild", false, "also rebuild generated output")
+	args = reorderArgs(args, map[string]bool{
+		"-manifest": true, "--manifest": true,
+		"-from": true, "--from": true,
+	})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 1 {
+		return fmt.Errorf("localize requires exactly one manifest heading path")
+	}
+	session, err := workspace.New(*manifestFile)
+	if err != nil {
+		return err
+	}
+	result, err := session.Localize(workspace.LocalizeOptions{
+		ManifestHeading: flags.Arg(0),
+		From:            *from,
+		DryRun:          *dryRun,
+		Rebuild:         *rebuild,
+	})
+	if err != nil {
+		return err
+	}
+	if *dryRun {
+		if _, err := fmt.Fprintln(stdout, "Dry run: no files written"); err != nil {
+			return fmt.Errorf("write localize result: %w", err)
+		}
+	}
+	for _, line := range []string{
+		"Manifest entry: " + result.ManifestHeading,
+		"Source: " + result.SourceReference,
+		"Local: " + result.LocalReference,
+		"Local file: " + result.LocalPath,
+		"Provenance: " + result.ProvenancePath,
+	} {
+		if _, err := fmt.Fprintln(stdout, line); err != nil {
+			return fmt.Errorf("write localize result: %w", err)
+		}
+	}
+	if result.Rebuilt {
+		if _, err := fmt.Fprintln(stdout, "Rebuilt output"); err != nil {
+			return fmt.Errorf("write localize result: %w", err)
+		}
+	}
+	return nil
 }
 
 func runBuild(args []string, stdout, stderr io.Writer) error {
@@ -160,6 +394,7 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	depth := flags.Int("depth", -1, "maximum source-tree depth to show; root headings are depth 0")
 	unusedOnly := flags.Bool("unused-only", false, "show only unused source references")
 	tree := flags.Bool("tree", false, "show unused source references as an ASCII tree")
+	showTLDR := flags.Bool("tldr", false, "show each source file's TLDR once beside its first visible node")
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
@@ -185,10 +420,10 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("source %q has no coverage rows after filtering", *sourceAlias)
 	}
 	if *tree {
-		return writeTreeCoverage(stdout, coverage)
+		return writeTreeCoverage(stdout, coverage, *showTLDR)
 	}
 	if *unusedOnly {
-		return writeUnusedCoverage(stdout, coverage)
+		return writeUnusedCoverage(stdout, coverage, *showTLDR)
 	}
 	for _, source := range coverage.Sources {
 		if _, err := fmt.Fprintf(stdout, "Source %s: %s\n", source.Alias, source.Path); err != nil {
@@ -205,8 +440,9 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 			if _, err := fmt.Fprintln(stdout, "Unused:"); err != nil {
 				return fmt.Errorf("write coverage: %w", err)
 			}
+			seenTLDRFiles := make(map[string]bool)
 			for _, node := range source.Unused {
-				if _, err := fmt.Fprintf(stdout, "- %s  %s:%s\n", node.Heading, source.Alias, node.Path); err != nil {
+				if _, err := fmt.Fprintf(stdout, "- %s  %s:%s%s\n", node.Heading, source.Alias, node.Path, coverageTLDR(node, *showTLDR, seenTLDRFiles)); err != nil {
 					return fmt.Errorf("write coverage: %w", err)
 				}
 			}
@@ -218,8 +454,9 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 	return nil
 }
 
-func writeTreeCoverage(stdout io.Writer, coverage workspace.Coverage) error {
+func writeTreeCoverage(stdout io.Writer, coverage workspace.Coverage, showTLDR bool) error {
 	for _, source := range coverage.Sources {
+		seenTLDRFiles := make(map[string]bool)
 		if _, err := fmt.Fprintf(stdout, "%s  %s  included %d/%d, unused %d\n", source.Alias, source.Path, source.Included, source.Total, len(source.Unused)); err != nil {
 			return fmt.Errorf("write coverage: %w", err)
 		}
@@ -235,7 +472,7 @@ func writeTreeCoverage(stdout io.Writer, coverage workspace.Coverage) error {
 				connector = "|-- "
 			}
 			indent := strings.Repeat("|   ", depth)
-			if _, err := fmt.Fprintf(stdout, "%s%s[%s] %s  %s:%s\n", indent, connector, node.State, node.Heading, source.Alias, node.Path); err != nil {
+			if _, err := fmt.Fprintf(stdout, "%s%s[%s] %s  %s:%s%s\n", indent, connector, node.State, node.Heading, source.Alias, node.Path, coverageTLDR(node, showTLDR, seenTLDRFiles)); err != nil {
 				return fmt.Errorf("write coverage: %w", err)
 			}
 		}
@@ -270,8 +507,9 @@ func hasNextAtDepth(nodes []workspace.CoverageNode, index int, depth int) bool {
 	return false
 }
 
-func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage) error {
+func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage, showTLDR bool) error {
 	for _, source := range coverage.Sources {
+		seenTLDRFiles := make(map[string]bool)
 		if len(source.Unused) == 0 {
 			continue
 		}
@@ -279,7 +517,7 @@ func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage) error {
 			return fmt.Errorf("write coverage: %w", err)
 		}
 		for _, node := range source.Unused {
-			if _, err := fmt.Fprintf(stdout, "  %s  %s\n", source.Alias+":"+node.Path, node.Heading); err != nil {
+			if _, err := fmt.Fprintf(stdout, "  %s  %s%s\n", source.Alias+":"+node.Path, node.Heading, coverageTLDR(node, showTLDR, seenTLDRFiles)); err != nil {
 				return fmt.Errorf("write coverage: %w", err)
 			}
 		}
@@ -290,21 +528,154 @@ func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage) error {
 	return nil
 }
 
+func coverageTLDR(node workspace.CoverageNode, show bool, seenFiles map[string]bool) string {
+	if !show || node.TLDR == "" || seenFiles[node.File] {
+		return ""
+	}
+	seenFiles[node.File] = true
+	return "  - " + node.TLDR
+}
+
 func runSource(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("source requires a subcommand; use source list or source show")
+		return fmt.Errorf("source requires a subcommand; use source list, show, pin, or update")
 	}
 	switch args[0] {
 	case "list":
 		return runSourceList(args[1:], stdout, stderr)
 	case "show":
 		return runSourceShow(args[1:], stdout, stderr)
+	case "pin":
+		return runSourcePin(args[1:], stdout, stderr)
+	case "update":
+		return runSourceUpdate(args[1:], stdout, stderr)
 	default:
-		if suggestion := closestString(args[0], []string{"list", "show"}, 2); suggestion != "" {
+		if suggestion := closestString(args[0], []string{"list", "show", "pin", "update"}, 2); suggestion != "" {
 			return fmt.Errorf("unknown source subcommand %q; did you mean %q?", args[0], suggestion)
 		}
-		return fmt.Errorf("unknown source subcommand %q; use source list or source show", args[0])
+		return fmt.Errorf("unknown source subcommand %q; use source list, show, pin, or update", args[0])
 	}
+}
+
+func runSourcePin(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("source pin", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	ref := flags.String("ref", "", "Git branch, tag, or full commit to pin")
+	args = reorderArgs(args, map[string]bool{"-manifest": true, "--manifest": true, "-ref": true, "--ref": true})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 1 {
+		return fmt.Errorf("source pin requires exactly one source alias")
+	}
+	value, manifestPath, err := manifest.Load(*manifestFile)
+	if err != nil {
+		return err
+	}
+	alias := strings.TrimSuffix(flags.Arg(0), ":")
+	sourceURL, found := value.Sources[alias]
+	if !found {
+		return fmt.Errorf("source %q is not declared in manifest", alias)
+	}
+	result, err := sourcecache.Pin(manifestPath, alias, sourceURL, *ref)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(stdout, "Pinned %s\nURL: %s\nCommit: %s\nContent SHA-256: %s\n", alias, result.URL, result.New.Commit, result.New.ContentSHA256); err != nil {
+		return fmt.Errorf("write source pin result: %w", err)
+	}
+	if !result.Wrote {
+		if _, err := fmt.Fprintln(stdout, "Cache and lock already verified"); err != nil {
+			return fmt.Errorf("write source pin result: %w", err)
+		}
+	}
+	return nil
+}
+
+func runSourceUpdate(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("source update", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	ref := flags.String("ref", "", "Git branch, tag, or full commit to review")
+	accept := flags.Bool("accept", false, "accept the reviewed candidate and update the lock")
+	args = reorderArgs(args, map[string]bool{"-manifest": true, "--manifest": true, "-ref": true, "--ref": true, "-accept": false, "--accept": false})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 1 {
+		return fmt.Errorf("source update requires exactly one source alias")
+	}
+	value, manifestPath, err := manifest.Load(*manifestFile)
+	if err != nil {
+		return err
+	}
+	alias := strings.TrimSuffix(flags.Arg(0), ":")
+	sourceURL, found := value.Sources[alias]
+	if !found {
+		return fmt.Errorf("source %q is not declared in manifest", alias)
+	}
+	result, err := sourcecache.Update(manifestPath, alias, sourceURL, *ref, *accept)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(stdout, "Source: %s\nOld commit: %s\nNew commit: %s\n", alias, result.Old.Commit, result.New.Commit); err != nil {
+		return fmt.Errorf("write source update result: %w", err)
+	}
+	if len(result.Changes) == 0 {
+		if _, err := fmt.Fprintln(stdout, "Markdown changes: none"); err != nil {
+			return fmt.Errorf("write source update result: %w", err)
+		}
+	} else {
+		if _, err := fmt.Fprintln(stdout, "Markdown changes:"); err != nil {
+			return fmt.Errorf("write source update result: %w", err)
+		}
+		for _, change := range result.Changes {
+			if _, err := fmt.Fprintf(stdout, "- %s  %s\n", change.Status, change.Path); err != nil {
+				return fmt.Errorf("write source update result: %w", err)
+			}
+			if err := writeSourceChange(stdout, change); err != nil {
+				return err
+			}
+		}
+	}
+	if result.Wrote {
+		if _, err := fmt.Fprintln(stdout, "Accepted update and wrote mogent.lock.yaml"); err != nil {
+			return fmt.Errorf("write source update result: %w", err)
+		}
+	} else if _, err := fmt.Fprintf(stdout, "Preview only: rerun with --ref %s --accept to install this exact candidate\n", result.New.Commit); err != nil {
+		return fmt.Errorf("write source update result: %w", err)
+	}
+	return nil
+}
+
+func writeSourceChange(stdout io.Writer, change sourcecache.Change) error {
+	if _, err := fmt.Fprintf(stdout, "  --- %s (old)\n  +++ %s (new)\n", change.Path, change.Path); err != nil {
+		return fmt.Errorf("write source update diff: %w", err)
+	}
+	if change.Old == "" {
+		if _, err := fmt.Fprintln(stdout, "  -(absent)"); err != nil {
+			return fmt.Errorf("write source update diff: %w", err)
+		}
+	} else {
+		for _, line := range strings.Split(strings.TrimSuffix(change.Old, "\n"), "\n") {
+			if _, err := fmt.Fprintln(stdout, "  -"+line); err != nil {
+				return fmt.Errorf("write source update diff: %w", err)
+			}
+		}
+	}
+	if change.New == "" {
+		if _, err := fmt.Fprintln(stdout, "  +(absent)"); err != nil {
+			return fmt.Errorf("write source update diff: %w", err)
+		}
+	} else {
+		for _, line := range strings.Split(strings.TrimSuffix(change.New, "\n"), "\n") {
+			if _, err := fmt.Fprintln(stdout, "  +"+line); err != nil {
+				return fmt.Errorf("write source update diff: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
 func runSourceList(args []string, stdout, stderr io.Writer) error {
@@ -941,11 +1312,11 @@ func runCompletion(args []string, stdout, stderr io.Writer) error {
 }
 
 func commandCandidates() []string {
-	return []string{"build", "status", "coverage", "source", "add", "complete", "completion", "tui", "help"}
+	return []string{"init", "build", "status", "drift", "coverage", "source", "add", "localize", "complete", "completion", "tui", "help"}
 }
 
 func flagCandidates() []string {
-	return []string{"--manifest", "--force", "--source", "--tag", "--tag-search", "--search", "--sort", "--metadata", "--file", "--line", "--content", "--lines", "--align-source", "--under", "--append", "--heading", "--dry-run", "--preview", "--rebuild", "--unused-only", "--tree", "--content-only", "--leaves-only", "--depth"}
+	return []string{"--manifest", "--template", "--output", "--list-templates", "--build", "--force", "--source", "--from", "--import", "--reject", "--ref", "--accept", "--tag", "--tag-search", "--search", "--sort", "--metadata", "--tldr", "--file", "--line", "--content", "--lines", "--align-source", "--under", "--append", "--heading", "--dry-run", "--preview", "--rebuild", "--unused-only", "--tree", "--content-only", "--leaves-only", "--depth"}
 }
 
 func bashCompletionScript() string {
@@ -966,7 +1337,7 @@ _mogent_completion() {
     return 0
   fi
 
-  case "$prev" in
+	case "$prev" in
     --manifest|-manifest)
       COMPREPLY=( $(compgen -f -- "$cur") )
       return 0
@@ -975,10 +1346,14 @@ _mogent_completion() {
       mapfile -t COMPREPLY < <(_mogent_complete_candidates source-aliases "$cur")
       return 0
       ;;
-    --under|-under)
+		--under|-under)
       mapfile -t COMPREPLY < <(_mogent_complete_candidates manifest-headings "$cur")
       return 0
-      ;;
+			;;
+		--import|-import)
+			mapfile -t COMPREPLY < <(_mogent_complete_candidates manifest-headings "$cur")
+			return 0
+			;;
   esac
 
   if [[ "$cur" == -* ]]; then
@@ -994,10 +1369,14 @@ _mogent_completion() {
     mapfile -t COMPREPLY < <(_mogent_complete_candidates source-aliases "$cur")
     return 0
   fi
-  if [[ "$command" == "add" ]]; then
+	if [[ "$command" == "add" ]]; then
     mapfile -t COMPREPLY < <(_mogent_complete_candidates source-refs "$cur")
     return 0
-  fi
+	fi
+	if [[ "$command" == "localize" ]]; then
+		mapfile -t COMPREPLY < <(_mogent_complete_candidates manifest-headings "$cur")
+		return 0
+	fi
 }
 
 complete -F _mogent_completion mogent
@@ -1023,7 +1402,7 @@ _mogent() {
     return
   fi
 
-  case "${words[CURRENT-1]}" in
+	case "${words[CURRENT-1]}" in
     --manifest|-manifest)
       _files
       return
@@ -1033,11 +1412,16 @@ _mogent() {
       _describe 'source alias' candidates
       return
       ;;
-    --under|-under)
+		--under|-under)
       candidates=("${(@f)$(_mogent_complete_candidates manifest-headings "$PREFIX")}")
       _describe 'manifest heading' candidates
       return
-      ;;
+			;;
+		--import|-import)
+			candidates=("${(@f)$(_mogent_complete_candidates manifest-headings "$PREFIX")}")
+			_describe 'manifest heading' candidates
+			return
+			;;
   esac
 
   if [[ "$PREFIX" == -* ]]; then
@@ -1056,11 +1440,16 @@ _mogent() {
     _describe 'source alias' candidates
     return
   fi
-  if [[ "$command" == "add" ]]; then
+	if [[ "$command" == "add" ]]; then
     candidates=("${(@f)$(_mogent_complete_candidates source-refs "$PREFIX")}")
     _describe 'source ref' candidates
     return
-  fi
+	fi
+	if [[ "$command" == "localize" ]]; then
+		candidates=("${(@f)$(_mogent_complete_candidates manifest-headings "$PREFIX")}")
+		_describe 'manifest heading' candidates
+		return
+	fi
 }
 
 _mogent "$@"
@@ -1085,7 +1474,7 @@ func unknownCommandError(command string) error {
 	if suggestion := closestString(command, commands, 3); suggestion != "" {
 		return fmt.Errorf("unknown command %q; did you mean %q? Use help for usage", command, suggestion)
 	}
-	return fmt.Errorf("unknown command %q; use build, status, coverage, source, add, complete, completion, or tui", command)
+	return fmt.Errorf("unknown command %q; use init, build, status, drift, coverage, source, add, localize, complete, completion, or tui", command)
 }
 
 func decorateSourceReferenceError(reference string, err error) error {

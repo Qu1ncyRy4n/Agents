@@ -25,6 +25,7 @@
             packages = [
               pkgs.go
               pkgs.gcc
+              pkgs.errcheck
               pkgs.ripgrep
             ];
           };

@@ -14,6 +14,7 @@ import (
 
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
+	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
 )
 
 // Result is the fully validated build result. Warnings are non-fatal facts that
@@ -78,7 +79,16 @@ func LoadSources(value *manifest.Manifest, manifestPath string) (map[string]*lib
 	for _, alias := range aliases {
 		path := value.Sources[alias]
 		if isURL(path) {
-			return nil, fmt.Errorf("source %q is a URL; URL sources are a later milestone", alias)
+			resolved, err := sourcecache.Resolve(manifestPath, alias, path)
+			if err != nil {
+				return nil, err
+			}
+			index, err := library.Load(resolved)
+			if err != nil {
+				return nil, fmt.Errorf("source %q: %w", alias, err)
+			}
+			indexes[alias] = index
+			continue
 		}
 		path, err := expandHome(path)
 		if err != nil {

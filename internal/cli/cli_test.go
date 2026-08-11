@@ -37,6 +37,48 @@ func TestRunBuildWritesConfiguredOutput(t *testing.T) {
 	}
 }
 
+func TestRunInitGuidesAndWritesStarter(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"init", "--list-templates"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"Starter templates:", "minimal", "personal-go-nix", "research-python"} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("template guide missing %q:\n%s", expected, stdout.String())
+		}
+	}
+
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "# Shared Baseline\n\n## Identity\n\n### Role\nAct.\n\n### Source Of Truth\nRead docs.\n\n## Instructions\n\n### Focused Change Loop\nWork.\n\n## Constraints\n\n### Safe Defaults\nSafe.\n\n## Format\n\n### Clear Handoff\nReport.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "baseline.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"init", "--template", "minimal", "--source", "shared=library", "--manifest", manifestPath, "--dry-run"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "shared: library") {
+		t.Fatalf("init dry run:\n%s", stdout.String())
+	}
+	if _, err := os.Stat(manifestPath); !os.IsNotExist(err) {
+		t.Fatalf("init dry run wrote manifest: %v", err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"init", "--template", "minimal", "--source", "shared=library", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Wrote starter manifest") {
+		t.Fatalf("init output:\n%s", stdout.String())
+	}
+}
+
 func TestRunStatusReportsWorkspaceState(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
@@ -234,6 +276,31 @@ func TestRunCoverageTreeOutput(t *testing.T) {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("tree coverage missing %q:\n%s", expected, stdout.String())
 		}
+	}
+}
+
+func TestRunCoverageTLDRShowsFileSummaryOnce(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "---\ntldr: Prefer deliberate tests.\n---\n# Testing\n\n## Unit\nUse fixtures.\n\n## Integration\nTest boundaries.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "testing.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Unit: shared:testing/unit\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath, "--tree", "--tldr"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if count := strings.Count(stdout.String(), "Prefer deliberate tests."); count != 1 {
+		t.Fatalf("TLDR count = %d, want 1:\n%s", count, stdout.String())
 	}
 }
 
@@ -631,6 +698,42 @@ func TestRunAddWritesManifestByDefault(t *testing.T) {
 	}
 	if !strings.Contains(string(manifestContents), "Testing: shared:instructions/testing") {
 		t.Fatalf("manifest missing added entry:\n%s", manifestContents)
+	}
+}
+
+func TestRunLocalizeDryRunAndWrite(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "core.md"), []byte("# Instructions\n\n## Testing\nUse fixtures.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Tests: shared:instructions/testing\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"localize", "Tests", "--manifest", manifestPath, "--dry-run"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "Local: local:instructions/testing") {
+		t.Fatalf("dry-run output:\n%s", stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(temporary, ".mogent")); !os.IsNotExist(err) {
+		t.Fatalf("dry run created .mogent: %v", err)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"localize", "Tests", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Manifest entry: Tests") {
+		t.Fatalf("localize output:\n%s", stdout.String())
 	}
 }
 

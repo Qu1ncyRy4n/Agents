@@ -234,20 +234,25 @@ Other entry points are the same model:
 
 | Command | Role in the model |
 |---|---|
+| `mogent init` | list editable starter templates and create a validated manifest from explicit source bindings |
 | `mogent tui` | re-enter step 2 on an existing manifest |
 | `mogent build` | render the manifest → `AGENTS.md` (validates, fails loud) |
 | `mogent status` | show manifest/output paths, generated-output state, and source counts |
 | `mogent coverage` | show included and unused source nodes for the manifest; `--unused-only` prints a compact unused list |
 | `mogent source show <ref>` | inspect one source node with file, heading line, and optional content |
+| `mogent source pin <alias>` | explicitly fetch and lock an initial URL source |
+| `mogent source update <alias>` | preview a pinned source change; `--accept` installs it |
 | `mogent add <ref>` | add a source node to the manifest; writes the manifest by default, `--dry-run` previews only, `--rebuild` also rebuilds output through normal overwrite protection |
+| `mogent localize <manifest-heading>` | create a copy-on-write local override with provenance |
+| `mogent drift` | inspect direct edits; explicitly import one section or reject edits |
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
 
-Current implementation status: mogent is ready for basic local usage with
-local-path source libraries, strict manifests, deterministic rendering, source
-browsing, coverage, metadata filters, dry-run add previews, and conservative
-overwrite checks. It is not yet ready for remote URL sources, pinning,
-copy-on-write local overrides, drift import, or full conflict resolution.
+Current implementation status: mogent supports local libraries, strict
+manifests, deterministic rendering, source browsing, coverage, metadata filters,
+dry-run add previews, copy-on-write localization, conservative drift import,
+and immutable pinned URL sources. It is not yet ready for authenticated or
+non-Git remote sources, a global cache, or full conflict resolution.
 
 Commands default to manifest mode. If no manifest flag is provided, mogent looks
 for `agents.yaml` in the current directory. `--manifest <path>` only points the
@@ -392,12 +397,19 @@ Rebuild milestones (from scratch; old code removed):
 4. Copy-on-write editing, direct-edit import, source browsing, and richer
    save/history flows.
 
+Localization and drift follow the core-first contract in
+`docs/IMPLEMENTATION-M3.md`. Local Markdown lives under `.mogent/library`, while
+versioned origin records live in `.mogent/provenance.yaml`; the manifest retains
+the visible `local:` reference. Source: DI-ravam.
+
 ---
 
 ## 7. Deferred / future
 
-- **Pinning / lockfile** — URL sources pinned to commit/tag; optional content hashes
-  as integrity data. Not needed for local-path POC.
+- **Remote source expansion** — the first URL source contract is
+  `docs/IMPLEMENTATION-M4.md`: committed locks, ignored verified checkouts, and
+  explicit update review. Authentication, non-Git archives, and a cross-project
+  global cache remain future work. Source: DI-fipam.
 - **Swap alternatives via tags** — tags as a search/discovery layer; mark nodes as
   alternatives for a slot (the old XOR-group idea). After the core is stable.
 - **Split/import AGENTS.md into a library** — take a complete hand-written
@@ -458,6 +470,9 @@ summary. Git state and these maintained documents win when a chat recap is stale
 | `docs/DESIGN.md` | **This file** — design of record | active |
 | `TODO/TODO-jusuk-mogent-agent-modules.md` | Task tracking + DI log | active |
 | `docs/HANDOFF.md` | Compact current state and next steps for agent transfer | active |
+| `docs/IMPLEMENTATION-M3.md` | Core-first localization and drift contract | active |
+| `docs/IMPLEMENTATION-M4.md` | Immutable URL source pinning contract | active |
+| `docs/MULTIPLE-OUTPUTS-PLAN.md` | Planned schema, transaction, drift, and decision work for multiple outputs | planning |
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
 | `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | historical — block/id framing superseded by §3 |
 | `docs/brainstorn.md` | Raw brainstorm; taxonomy + fork-import notes | partial — config section superseded by §4 |
