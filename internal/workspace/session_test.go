@@ -154,8 +154,17 @@ func TestSessionCoverageCountsSubtreeAndExclude(t *testing.T) {
 	if sourceCoverage.Included != 2 || sourceCoverage.Total != 3 {
 		t.Fatalf("coverage = %#v", sourceCoverage)
 	}
-	if len(sourceCoverage.Unused) != 1 || sourceCoverage.Unused[0].Path != "instructions/testing" {
+	if len(sourceCoverage.Unused) != 0 {
 		t.Fatalf("unused = %#v", sourceCoverage.Unused)
+	}
+	var excluded bool
+	for _, node := range sourceCoverage.Nodes {
+		if node.Path == "instructions/testing" && node.State == CoverageExcluded {
+			excluded = true
+		}
+	}
+	if !excluded {
+		t.Fatalf("coverage nodes missing excluded testing node: %#v", sourceCoverage.Nodes)
 	}
 }
 

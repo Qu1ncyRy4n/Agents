@@ -6,8 +6,10 @@ This repository designs mogent, a tool that composes repository-specific
 `AGENTS.md` files from Markdown libraries and an `agents.yaml` manifest.
 
 `docs/DESIGN.md` is the design of record. `TODO/` holds decisions and planned
-work. The current repository is documentation-first while the new implementation
-is rebuilt. Source: DI-ralik.
+work. `docs/HANDOFF.md` is the compact, current resume point for another agent;
+refresh it from repository docs and Git state rather than treating chat history
+as durable project memory. The current repository is documentation-first while
+the new implementation is rebuilt. Source: DI-ralik.
 
 Keep prose, slides, and small tools in purpose-named top-level directories.
 Keep planning records in `TODO/`, decision requests in `DR/` when needed, and
@@ -83,6 +85,12 @@ that escalated work.
 For routine work, report the changed files and checks run. For escalated,
 decision-first work, also report decision compliance, the decision-to-evidence
 matrix, runtime paths, and user-approved exceptions. Source: DI-venit.
+
+Keep durable context in the repository. `AGENTS.md` says how to work here;
+`docs/DESIGN.md` and decision records explain what is being built and why;
+`docs/HANDOFF.md` records the current state, unfinished work, and next steps.
+Update the handoff when those facts materially change, and treat the repository
+and current Git state as authoritative when a chat summary disagrees.
 
 Use clear, direct language. Explain a decision with a concrete example when it
 would otherwise be hard to understand.

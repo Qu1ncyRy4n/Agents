@@ -157,6 +157,15 @@ Intent: Make mogent usable by humans, agents, and scripts without trapping produ
 Constraints: Do not roll back the M2 TUI. Extract behavior incrementally: preserve the current navigator behavior while moving save, preview, dirty state, source inspection, source coverage, copy-on-write, and drift/import decisions into reusable packages.
 Affects: docs/DESIGN.md, internal/workspace/ or equivalent core package, internal/navigator/, internal/cli/, future M3+
 
+ID: DI-pesun
+Date: 2026-08-11
+Status: active
+Author: user
+Decision: Move Nix guidance under the `personal` source as `personal:lang/nix` rather than retaining a separate `nix` source. Keep Nix independently selectable as a manifest node, and retain its activation and machine-safety warnings in the module content.
+Intent: Match the source boundary to current ownership and dogfood use while preserving deliberate selection for guidance that can affect an active machine.
+Constraints: This resolves only the Nix portion of DR-garom. The broader `cdint`, `ucd_research`, `personal`, and future independent-library boundaries remain provisional and may be revisited after more real manifests are exercised.
+Affects: DR/DR-garom-library-source-boundaries.md, libraries/personal/lang/nix.md, libraries/nix/, docs/codex_eco/README.md, testing-ground/personal-go-nix/
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -170,7 +179,7 @@ Affects: docs/DESIGN.md, internal/workspace/ or equivalent core package, interna
 - [x] jusuk.9 List command - List available and active modules
 - [x] jusuk.10 Dogfood - Use mogent on this repo's AGENTS.md
 - [x] jusuk.11 Lock the milestone-one manifest schema, source scope, and rebuilt Go module location (DI-vukam; TE-vorum).
-- [ ] jusuk.12 Revisit source-library boundaries after dogfooding `cdint`, `ucd_research`, `personal`, and `nix` (DR-garom).
+- [x] jusuk.12 Resolve the first source-boundary review: move Nix under `personal` while leaving broader boundaries provisional (DI-pesun; DR-garom).
 - [x] jusuk.13 Seed sanitized CDINT, UCD research, and Nix source libraries (DI-voraz).
 
 ## Feature Backlog
@@ -179,6 +188,108 @@ Rebuild milestones now proceed core-first: 1. manifest parse/resolve/render, 2.
 navigator proof of concept, 3. extract reusable workspace operations, 4. add
 copy-on-write localization, source browsing, drift/import, and URL pinning on top
 of that shared core.
+
+For agent- and script-facing capabilities, preserve the smaller progression that
+motivated the core extraction: `status` -> show/inspect -> sources/discovery ->
+coverage -> localization. The first four now have CLI surfaces and should be
+stabilized against the shared workspace core before copy-on-write localization
+is added. Repository docs and current Git state are authoritative over older chat
+summaries; see `docs/HANDOFF.md` for the compact resume point.
+
+## Phase Sequence
+
+### Phase 0 - Stabilize Current Dogfood
+
+- Keep `build`, `status`, `coverage`, `source list`, `source show`, and `add`
+  reliable for local Markdown sources.
+- Fix README/install accuracy and keep examples runnable from a fresh checkout.
+- Keep Vroca and the testing-ground manifests as smoke-test fixtures for real
+  authoring friction.
+
+### Phase 1 - CLI Discoverability And Pleasant Dogfood
+
+- Add shell completion for commands, flags, source aliases, source references,
+  manifest heading paths, and `--under` targets.
+- Add typo suggestions and close-match diagnostics for source refs, command
+  names, flags, source aliases, and manifest heading paths.
+- Improve empty states, especially when tag search finds nothing but source
+  paths or headings would match the user's text.
+- Add compact/TLDR browsing modes and source/path/heading search so users do not
+  need two terminals just to explore a library.
+- Prioritize these "pleasant first" improvements before deeper metadata work so
+  Vroca-style dogfooding remains fast while the library model evolves.
+- First pass complete: source refs, source aliases, source subcommands, command
+  names, flag names, and manifest heading paths now have close-match
+  suggestions.
+
+### Phase 2 - Coverage And Status UX
+
+- Make `coverage --tree` show included, inherited, excluded, partial, and
+  unused state in one tree with text markers and optional color.
+- Add placement-aware grouping once library metadata exists.
+- Improve `status` with clear missing/stale/clean output and actionable hints
+  such as `run: mogent build`.
+- Add better diagnostics for organizational-directory refs such as
+  `cdint:engineering`, including descendant suggestions.
+- Resolved first pass: `mogent complete <kind>` exposes candidate lists and
+  `mogent completion bash|zsh` emits shell wrappers without committing to Cobra
+  or another command framework.
+
+### Phase 3 - Library Metadata And Recommended Order
+
+- Add `library.yaml` or equivalent source-level metadata for suggested
+  placement, recommended order, presets, update/review dates, requirements,
+  urgency/risk, and related nodes.
+- Use that metadata to drive recommended order in init, coverage, source
+  browsing, and template generation.
+- Add "see also" / related-node support so adjacent styles and modules can point
+  at one another.
+- Add OR/XOR choice-group metadata for headings whose children are alternatives
+  rather than additive modules. XOR groups should require one deliberate choice
+  and warn when multiple contradictory children are selected; OR groups should
+  make optional compatible choices explicit.
+- Reorganize library source boundaries and top-level groups after dogfooding:
+  core/code-principles, process/decision, stack/langs, communication/style,
+  domains, and CDINT/PromiseGrid as non-universal domain material.
+
+Initial dogfood extraction: `personal:engineering/staged-migration` and
+`personal:engineering/local-service-design` are intentionally separate heavy,
+opt-in modules. They generalize the Vroca Rust-design handoff without making
+ordinary Rust CLI projects inherit daemon, protocol, or parity-gate policy.
+They overlap deliberately with `cdint:process/decision-first`,
+`cdint:engineering/test-strategy`, and `personal:lang/rust`; Phase 3 metadata
+should eventually represent those relationships as selectable `see also` and
+preset guidance rather than rendering library-maintenance prose into prompts.
+
+### Phase 4 - Init, Templates, And Repo Prose
+
+- Add a guided `mogent init` / builder walkthrough that starts from repo-shape
+  templates and produces an editable starter `agents.yaml`.
+- Add templates for transitional Python-to-Rust apps, heavy CDINT design-first
+  repos, personal projects, research repos, static sites, and Nix-managed
+  projects.
+- Add repository-specific prose support through inline YAML block scalars, local
+  source snippets, or dedicated repo overlay files.
+- Add over-composition diagnostics that warn when a small repo pulls in broad
+  policy subtrees.
+
+### Phase 5 - Editing, Localization, And Drift
+
+- Add safe source/local editing workflows, including copy-on-write local
+  overrides and explicit shared-source editing for trusted libraries.
+- Add drift detection and import/merge flows for hand-edited `AGENTS.md`.
+- Add source-vs-local diffs, localization provenance, and promote-local-to-shared
+  support.
+
+### Phase 6 - Multi-Output And Broader Project Guidance
+
+- Design multiple agent outputs such as `CLAUDE.md`, `GEMINI.md`, and
+  `.codex/AGENTS.md`.
+- Design multi-artifact project guidance generation beyond `AGENTS.md`: usage
+  notes, dev docs, repo-specific reference indexes, command cheat sheets, and
+  external doc refs.
+- Add URL source pinning, lockfiles, source cache design, and changed-content
+  review after local workflows are stable.
 
 - [x] Extract M2 draft/save behavior from `internal/navigator` into a reusable workspace/session package.
 - [x] Add first CLI parity command: `mogent status`.
@@ -206,11 +317,135 @@ of that shared core.
 - [ ] Add split/import workflow: turn a complete hand-written `AGENTS.md` into a draft atomic module library for review.
 - [ ] Design global source cache for init: remember known local/remote sources for visible reuse without ambient source resolution.
 - [ ] Design multiple agent outputs: optional symlink/mirror or tool-specific rendered files for `CLAUDE.md`, `GEMINI.md`, `.codex/AGENTS.md`, and similar entrypoints.
+- [ ] Design multi-artifact project guidance generation beyond `AGENTS.md`: usage notes, dev docs, repo-specific reference indexes, command cheat sheets, and links to external docs. This needs substantial design because those files have different audiences, update cadence, visibility, and source-of-truth rules from agent prompts.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.
 - [ ] Add tags as search/discovery after the core stabilizes: searchable tags, swap-alternative groups (XOR), and conflict warnings for incompatible styles.
 - [x] Local-vs-global storage: resolved by copy-on-write localization (DESIGN.md §3.5) — shared libraries read-only, local overrides explicit in the manifest.
+- [x] Add shell completion for source references, especially `mogent source show <ref>` and `mogent add <ref>`: implemented `mogent complete <kind>` candidate lists plus `mogent completion bash|zsh` wrappers.
+- [ ] Add a guided init/builder walkthrough that starts from recommended templates/presets, explains suggested ordering, and produces a readable starter `agents.yaml`.
+- [ ] Add a templater/preset system for common repo shapes such as transitional Python-to-Rust app, heavy CDINT design-first repo, personal project, research repo, static site, and Nix-managed project.
+- [ ] Add library-level metadata manifests, likely `library.yaml`, for suggested placement, recommended order, status, last updated/reviewed dates, requirements, urgency/risk, and preset membership.
+- [ ] Add suggested-placement-aware browsing and coverage output, so unused modules can be grouped by where they likely belong in the rendered document rather than only by source path.
+- [x] Improve `mogent coverage --tree` to show included, inherited, excluded, and unused state in one tree with text markers and optional color.
+- [x] Improve `mogent status` with clearer stale/missing/clean status output, actionable hints such as `run: mogent build`, and optional color that is not the only signal.
+- [x] Improve source-list empty results. When `--tag-search` finds nothing but matching source paths/headings exist, explain that the current filter searches metadata tags only and suggest `source list | rg <term>` or a future path/heading search.
+- [x] Add source-list search over source reference paths, headings, TLDRs, and content snippets; keep tag search available as a precise metadata filter.
+- [x] Add `source list <source-prefix>` shorthand for filtering one or more sources, for example `mogent source list cdint` instead of requiring `--source cdint`.
+- [ ] Add filters for metadata fields beyond tags: `requires`, `conflicts_with`, `scope`, urgency/risk/status, and update/review age once those fields exist.
+- [x] Add TLDR coverage/source browsing modes so large libraries can be explored without dumping every full heading and metadata block: first pass is `source list --tldr`; coverage TLDR summaries remain future metadata work.
+- [ ] Add concise file-level TLDR metadata across the seed libraries, then add heading-level summaries when the metadata model can represent them without duplicating whole-file text.
+- [ ] Add paging or compact layouts for large command output, or first-class hints for piping through `less`, `rg`, and `fzf`.
+- [x] Add `source show --align-source` or equivalent rendered-preview mode that shows how a source node would align under a manifest heading, including shifted heading levels and optional `--under`/`--heading`.
+- [x] Add source-directory expansion for path-like refs such as `cdint:engineering`, `cdint:engineering/`, and `cdint:engineering/*`, or provide a better diagnostic that lists available descendant refs: implemented descendant diagnostics, not wildcard expansion.
+- [x] Improve diagnostics for failed source refs by suggesting close matches and descendant headings when the user names an organizational directory rather than a heading path.
+- [ ] Add manifest shorthand for reusable base/source aliases inside one subtree, while preserving the readable compact `- Heading: source:path` and `- Heading: [children...]` forms.
+- [ ] Explore relative child references under a declared base, for example a future explicit form that can reference `./role` and `./source-of-truth` without repeating the source prefix.
+- [ ] Add direct source/local editing workflows: safe `source edit`, copy-on-write local override editing, and explicit shared-source editing for trusted libraries.
+- [ ] Reorganize source libraries into clearer top-level groups: core/code-principles, process/decision, stack/langs, communication/public-prose, domains, and CDINT/PromiseGrid as a non-universal domain source.
+- [ ] Clarify or rename `Corpus Variants` sections. They currently mean "differences observed in the captured repo-agent corpus"; the label is unclear and appears too widely in rendered output.
+- [ ] Add hierarchy-aware section spacing in rendered output or preview output when dense heading transitions make generated AGENTS.md hard to scan.
+- [ ] Add accessibility support for a TTS-friendly second stream: optionally write a concise spoken version of substantial chat/tool output to a configured sidecar file.
+- [ ] Add related-node metadata or "see also" support so adjacent styles and modules can point at each other without forcing users to discover relationships manually.
+- [ ] Add OR/XOR heading choice groups for sibling modules that are alternatives instead of additive guidance. Use this for mutually exclusive styles, dependency managers, migration strategies, validation levels, or repo ownership models where the generator should force a deliberate choice and warn on contradictions.
+- [x] Fix coverage tree rendering/markers where source boundaries and nested trees are visually confusing, especially around transitions between sources.
+- [ ] Decide whether communication styles should live under `communication/personas`, `communication/style`, or a separate source. Preserve persona examples so users can understand the expected voice quickly.
+- [ ] Add repository-specific prose support in manifests, either as inline YAML block scalars, local source snippets, or a dedicated repo overlay file, so prompts can include concise project identity and invariants without forcing every repo fact into shared libraries.
+- [ ] Add prompt-size/over-composition diagnostics that warn when a generated AGENTS.md pulls broad policy subtrees into a small repo and suggest narrower child nodes.
+- [ ] Add formatting preferences for generated Markdown, including sentence/paragraph-oriented source lines and avoiding arbitrary hard wraps when the user wants display wrapping to be handled by the viewer.
+- [ ] Add stale-doc review support: compare docs claims against code-visible surfaces where possible, or at least provide a checklist for public-surface docs such as sockets, commands, prefs/state files, service lifecycle, and implemented roadmap items.
+- [ ] Add `mogent handoff`: generate a compact, agent-readable project-state summary from explicit repository and workspace data. Include current manifest/output state, source and coverage summaries, Git state, maintained TODO/design pointers, and next actions; never scrape chat history or protected/private corpora.
+
+## Dogfood Feedback - Vroca setup, 2026-08-06
+
+Context: user is setting up `/home/qix/dev/omnicortex/vroca_tts`, a Nix-backed
+Python prototype intended to become a Rust CLI plus GUI app. The user is trying
+to build `agents.yaml` by browsing local `cdint` and `personal` libraries from
+the CLI.
+
+Observed friction:
+
+- `source list --tag-search lang`, `--tag-search python`, and
+  `--tag-search python --metadata` returned `No source nodes matched` even
+  though refs such as `personal:lang/python` exist. The command searches tags
+  only; most seed library files currently have no frontmatter tags. This is
+  correct by implementation but misleading for a newcomer.
+- `source list --sort priority --metadata` prints a large dense stream of
+  `Metadata: none`, which makes it hard to discover useful modules.
+- `coverage --tree` currently focuses on unused refs and does not clearly show
+  which source nodes are already included, inherited by a selected parent, or
+  excluded.
+- The user tried `mogent add cdint:engineering` and `mogent add
+  cdint:engineering/`. Both failed because `engineering` is an organizational
+  directory, not a heading path. The diagnostic is technically correct but does
+  not help the user discover descendants such as
+  `cdint:engineering/code-quality`.
+- `--manifest` is unclear to new users. It means "use this agents.yaml instead
+  of `./agents.yaml`", but the help text does not explain when or why to use it.
+- The current source-library structure makes `CDINT And PromiseGrid` appear as a
+  universal peer of general engineering modules. That is misleading; CDINT and
+  PromiseGrid should be a domain/source, while engineering/process/language
+  modules should be easier to browse as general reusable material.
+- `Corpus Variants` sections are unclear in rendered output. They preserve
+  observed differences from the captured source-agent corpus, but the label and
+  ubiquity make them feel like noise.
+- The compact manifest form is readable:
+
+  ```yaml
+  doc:
+    - Identity:
+        - Role: cdint:shared-baseline/identity/role
+        - Source Of Truth: cdint:shared-baseline/identity/source-of-truth
+  ```
+
+  But it becomes repetitive when several child refs share the same source base.
+  Need a shorthand that preserves readability without inventing a confusing
+  mini-language.
+
+Requested / candidate improvements:
+
+- Add a beginner-friendly `init` or builder walkthrough with recommended
+  ordering and templates. For a Vroca-like repo, a template might suggest:
+  Identity, Project Direction, Instructions, Constraints, Stack,
+  Communication, Format.
+- Add presets/templates rather than making users discover everything from a huge
+  source list. Presets should be editable manifests, not opaque hidden config.
+- Add `library.yaml` or equivalent source-level metadata for recommended
+  placement/order, update/review date, requirements, urgency/risk, and preset
+  membership.
+- Add source-search over refs/headings/TLDR/content, not only tags.
+- Add useful empty-state messages and per-command help hints.
+- Add tab completion for source refs.
+- Add `source show --align-source` to preview render alignment.
+- Add path/glob expansion or descendant suggestions for organizational paths
+  such as `cdint:engineering/*`.
+- Add coverage states and color/text markers.
+- Add local/source edit flows.
+- Revisit library top-level hierarchy and the naming of `Corpus Variants`.
+
+Follow-up review from generated Vroca `AGENTS.md`:
+
+- The generated prompt was about 485 lines for a small Python/Nix repo and read
+  as a strong policy library but a weak repo-specific prompt. The right dogfood
+  target for Vroca is closer to 60-100 lines.
+- Useful retained ingredients: preserve user changes, narrow diffs, read
+  architecture before behavior changes, risk-scaled validation, runtime-artifact
+  hygiene, separate Nix and Python dependency surfaces, TTS-friendly
+  communication, and public-surface caution around socket protocol,
+  preferences, and command-line interface.
+- Poor fit: Go guidance, premature Rust guidance while `rust_impl/` is only a
+  placeholder, Decision Intent/Decision Request/proquint/TODO infrastructure
+  that does not exist in Vroca, generator refs rendered as meaningful prose,
+  corpus-library commentary, persona nodes without selection rules, and
+  unrelated white paper / slide / experiment / database / data-pipeline rules.
+- Missing Vroca-specific prompt material: `docs/vroca.md` should be named as the
+  design of record; prompt should identify Vroca as a TTS/assistive reading
+  framework with a Python implementation and imminent Rust refactor; prompt
+  should name public surfaces and lifecycle boundaries.
+- Missing Vroca docs/code topics surfaced by review: daemon singleton
+  ownership, stale socket recovery, malformed command behavior, systemd restart
+  semantics, child mpv cleanup, and client/daemon version compatibility.
 
 ## Module Extraction Plan (from corpus)
 

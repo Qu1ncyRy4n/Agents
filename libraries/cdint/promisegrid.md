@@ -1,3 +1,6 @@
+---
+tldr: Apply CDINT and PromiseGrid-specific architecture and coordination guidance.
+---
 # CDINT And PromiseGrid
 
 ## Terminology

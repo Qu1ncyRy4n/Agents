@@ -1,3 +1,6 @@
+---
+tldr: Scale planning and decision ceremony to the durability and risk of the change.
+---
 # Process
 
 ## Lightweight Escalation

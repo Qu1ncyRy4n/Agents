@@ -416,6 +416,12 @@ Rebuild milestones (from scratch; old code removed):
   another.
 - **Promote local → shared** — push a copy-on-write override back up to its library.
 - **Generated index** — fast search over large libraries for the navigator.
+- **Generated handoff** — `mogent handoff` can summarize agent-readable project
+  state from explicit repository sources such as Git status, the manifest,
+  generated-output status, selected sources, active TODO items, and a maintained
+  handoff file. Its output should be compact, reviewable, and safe to commit or
+  pass to another tool. It must not scrape product chat history or infer private
+  context from protected files.
 - **Pinned reference docs** — far-future support for making relevant project,
   API, design, or dependency docs easy for both humans and agents to find,
   pin, and cite. This may share source/manifest ideas with AGENTS composition,
@@ -440,14 +446,22 @@ Rebuild milestones (from scratch; old code removed):
 
 Treat this file as the entry point.
 
+Project memory that must survive a change of agent or product belongs in these
+repository documents, not only in ChatGPT, Codex, or another product's history.
+The documents have separate jobs: `AGENTS.md` defines workflow and constraints;
+this design and the decision records preserve design rationale; the TODO tracks
+planned work; and `docs/HANDOFF.md` is the short-lived current-state and next-step
+summary. Git state and these maintained documents win when a chat recap is stale.
+
 | Doc | Role | Status |
 |---|---|---|
 | `docs/DESIGN.md` | **This file** — design of record | active |
 | `TODO/TODO-jusuk-mogent-agent-modules.md` | Task tracking + DI log | active |
+| `docs/HANDOFF.md` | Compact current state and next steps for agent transfer | active |
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
 | `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | historical — block/id framing superseded by §3 |
 | `docs/brainstorn.md` | Raw brainstorm; taxonomy + fork-import notes | partial — config section superseded by §4 |
-| `docs/other_repo_agents/` | Real-world `AGENTS.md` samples (untracked, pending review) | reference corpus |
+| `docs/other_repo_agents/` | Protected real-world samples; do not inspect, commit, expose, or reconstruct without explicit authorization | private reference corpus |
 
 Gen-1 tag-model docs and the old implementation were removed; recover from git
 history if ever needed.

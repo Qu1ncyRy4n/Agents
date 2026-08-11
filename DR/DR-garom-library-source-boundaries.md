@@ -2,7 +2,7 @@
 
 DR-ID: DR-garom
 Date: 2026-07-29 22:30:00
-State: open
+State: resolved by DI-pesun
 Asked by: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
 
 ## Question
@@ -45,8 +45,8 @@ Real use of the first manifests and source libraries.
 
 ## Linked DI
 
-None yet. A Decision Intent will supersede this request when the source
-boundaries are locked.
+DI-pesun moves Nix under `personal` and keeps the broader source boundaries
+provisional until further dogfooding provides enough evidence to lock them.
 
 ## Related Work
 

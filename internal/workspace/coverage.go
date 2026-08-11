@@ -26,6 +26,7 @@ type SourceCoverage struct {
 	Path     string
 	Total    int
 	Included int
+	Nodes    []CoverageNode
 	Unused   []CoverageNode
 }
 
@@ -33,7 +34,18 @@ type CoverageNode struct {
 	Path    string
 	Heading string
 	Depth   int
+	State   CoverageState
 }
+
+type CoverageState string
+
+const (
+	CoverageUnused    CoverageState = "unused"
+	CoverageIncluded  CoverageState = "included"
+	CoverageInherited CoverageState = "inherited"
+	CoverageExcluded  CoverageState = "excluded"
+	CoveragePartial   CoverageState = "partial"
+)
 
 // Coverage reports which source nodes are included by the current draft and
 // which source nodes are available but unused.
@@ -42,8 +54,9 @@ func (s *Session) Coverage() Coverage {
 }
 
 func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
-	included := make(map[string]bool)
-	markEntries(s.Draft.Doc, s.Sources, included)
+	states := make(map[string]CoverageState)
+	markEntries(s.Draft.Doc, s.Sources, states)
+	markPartialAncestors(states)
 
 	aliases := make([]string, 0, len(s.Sources))
 	for alias := range s.Sources {
@@ -61,7 +74,6 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 		source := SourceCoverage{
 			Alias: alias,
 			Path:  s.Saved.Sources[alias],
-			Total: len(paths),
 		}
 		for _, path := range paths {
 			node := index.ByPath[path]
@@ -78,19 +90,56 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 			if options.LimitDepth && depth > options.MaxDepth {
 				continue
 			}
-			if included[alias+":"+path] {
-				source.Included++
-				continue
+			source.Total++
+			state := states[alias+":"+path]
+			if state == "" {
+				state = CoverageUnused
 			}
-			source.Unused = append(source.Unused, CoverageNode{
+			coverageNode := CoverageNode{
 				Path:    path,
 				Heading: node.Heading,
 				Depth:   depth,
-			})
+				State:   state,
+			}
+			source.Nodes = append(source.Nodes, coverageNode)
+			if state == CoverageIncluded || state == CoverageInherited {
+				source.Included++
+				continue
+			}
+			if state == CoverageUnused {
+				source.Unused = append(source.Unused, coverageNode)
+			}
 		}
 		result.Sources = append(result.Sources, source)
 	}
 	return result
+}
+
+func markPartialAncestors(states map[string]CoverageState) {
+	for reference, state := range cloneCoverageStates(states) {
+		if state != CoverageIncluded && state != CoverageInherited && state != CoverageExcluded {
+			continue
+		}
+		alias, path, found := strings.Cut(reference, ":")
+		if !found {
+			continue
+		}
+		parts := strings.Split(path, "/")
+		for index := 1; index < len(parts); index++ {
+			parentReference := alias + ":" + strings.Join(parts[:index], "/")
+			if states[parentReference] == "" {
+				states[parentReference] = CoveragePartial
+			}
+		}
+	}
+}
+
+func cloneCoverageStates(states map[string]CoverageState) map[string]CoverageState {
+	clone := make(map[string]CoverageState, len(states))
+	for key, value := range states {
+		clone[key] = value
+	}
+	return clone
 }
 
 func hasTag(tags []string, target string) bool {
@@ -102,10 +151,10 @@ func hasTag(tags []string, target string) bool {
 	return false
 }
 
-func markEntries(entries []manifest.Entry, sources map[string]*library.Index, included map[string]bool) {
+func markEntries(entries []manifest.Entry, sources map[string]*library.Index, states map[string]CoverageState) {
 	for _, entry := range entries {
 		if len(entry.Children) > 0 {
-			markEntries(entry.Children, sources, included)
+			markEntries(entry.Children, sources, states)
 			continue
 		}
 		excluded := excludedReferences(entry.Exclude)
@@ -122,19 +171,31 @@ func markEntries(entries []manifest.Entry, sources map[string]*library.Index, in
 			if !found {
 				continue
 			}
-			markNode(alias, node, excluded, included)
+			markNode(alias, node, excluded, states, true)
 		}
 	}
 }
 
-func markNode(alias string, node *library.Node, excluded map[string]bool, included map[string]bool) {
+func markNode(alias string, node *library.Node, excluded map[string]bool, states map[string]CoverageState, direct bool) {
 	reference := alias + ":" + node.Path
 	if excluded[reference] {
+		markExcludedNode(alias, node, states)
 		return
 	}
-	included[reference] = true
+	if direct {
+		states[reference] = CoverageIncluded
+	} else {
+		states[reference] = CoverageInherited
+	}
 	for _, child := range node.Children {
-		markNode(alias, child, excluded, included)
+		markNode(alias, child, excluded, states, false)
+	}
+}
+
+func markExcludedNode(alias string, node *library.Node, states map[string]CoverageState) {
+	states[alias+":"+node.Path] = CoverageExcluded
+	for _, child := range node.Children {
+		markExcludedNode(alias, child, states)
 	}
 }
 

@@ -60,6 +60,7 @@ func TestRunStatusReportsWorkspaceState(t *testing.T) {
 		"Manifest: " + manifestPath,
 		"Output: " + filepath.Join(temporary, "AGENTS.md"),
 		"Output status: missing",
+		"Hint: run `mogent build` to create the output",
 		"Sources: 1",
 		"- shared: library (2 nodes)",
 	} {
@@ -225,9 +226,10 @@ func TestRunCoverageTreeOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
-		"shared  library  unused 2/3",
-		"`-- Instructions  shared:instructions",
-		"|   `-- Workflow  shared:instructions/workflow",
+		"shared  library  included 1/3, unused 2",
+		"[included] Identity  shared:identity",
+		"[unused] Instructions  shared:instructions",
+		"[unused] Workflow  shared:instructions/workflow",
 	} {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("tree coverage missing %q:\n%s", expected, stdout.String())
@@ -381,6 +383,45 @@ func TestRunSourceListShowsMetadataAndLocation(t *testing.T) {
 	}
 }
 
+func TestRunSourceListSearchesRefsHeadingsAndBodyWithHelpfulEmptyTagSearch(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "python.md"), []byte("# Python\n\n## uv Dependency Management\nUse uv.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Python: shared:python\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "list", "shared", "--manifest", manifestPath, "--search", "uv"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "shared:python/uv-dependency-management") {
+		t.Fatalf("source search missing uv child:\n%s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"source", "list", "--manifest", manifestPath, "--tag-search", "python"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"No source nodes matched.",
+		"--tag-search only searches metadata tags",
+		"try `mogent source list --search python`",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("empty tag-search hint missing %q:\n%s", expected, stdout.String())
+		}
+	}
+}
+
 func TestRunSourceShowContentFlags(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
@@ -420,6 +461,50 @@ func TestRunSourceShowContentFlags(t *testing.T) {
 	}
 }
 
+func TestRunSourceShowAlignsSourceAndSuggestsDescendants(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	engineeringPath := filepath.Join(libraryPath, "engineering")
+	if err := os.Mkdir(engineeringPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(engineeringPath, "runtime.md"), []byte("# Runtime Artifacts\nKeep caches out.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Constraints: shared:engineering/runtime-artifacts\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "show", "shared:engineering/runtime-artifacts", "--manifest", manifestPath, "--align-source", "--under", "Constraints"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"Aligned preview: shared:engineering/runtime-artifacts",
+		"Under: Constraints",
+		"## Runtime Artifacts",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("aligned source missing %q:\n%s", expected, stdout.String())
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	err := cli.Run([]string{"source", "show", "shared:engineering", "--manifest", manifestPath}, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected missing organizational path to fail")
+	}
+	if !strings.Contains(err.Error(), "Try a descendant such as engineering/runtime-artifacts") {
+		t.Fatalf("missing descendant suggestion:\n%v", err)
+	}
+}
+
 func TestRunSourceShowMetadata(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
@@ -452,6 +537,81 @@ func TestRunSourceShowMetadata(t *testing.T) {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("metadata output missing %q:\n%s", expected, stdout.String())
 		}
+	}
+}
+
+func TestRunCompletePrintsCandidates(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "core.md"), []byte("# Identity\nHello.\n\n# Instructions\n\n## Workflow\nWork.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - heading: Instructions\n    children:\n      - Workflow: shared:instructions/workflow\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"complete", "source-refs", "--manifest", manifestPath, "--prefix", "shared:inst"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "shared:instructions/workflow") {
+		t.Fatalf("source-ref completion missing workflow:\n%s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"complete", "manifest-headings", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Instructions/Workflow") {
+		t.Fatalf("manifest heading completion missing nested path:\n%s", stdout.String())
+	}
+}
+
+func TestRunCompletionPrintsShellScripts(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"completion", "bash"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"_mogent_completion()",
+		"complete -F _mogent_completion mogent",
+		"mogent complete",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("bash completion script missing %q:\n%s", expected, stdout.String())
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	if err := cli.Run([]string{"completion", "zsh"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"#compdef mogent",
+		"_mogent()",
+		"mogent complete",
+	} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("zsh completion script missing %q:\n%s", expected, stdout.String())
+		}
+	}
+}
+
+func TestRunSuggestsUnknownFlag(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := cli.Run([]string{"status", "--manfiest", "agents.yaml"}, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected unknown flag to fail")
+	}
+	if !strings.Contains(err.Error(), "did you mean --manifest?") {
+		t.Fatalf("missing flag suggestion:\n%v", err)
 	}
 }
 
@@ -497,6 +657,19 @@ func TestRunAddDryRunDoesNotWrite(t *testing.T) {
 	}
 	if string(after) != string(original) {
 		t.Fatalf("dry run changed manifest:\n%s", after)
+	}
+}
+
+func TestRunAddSuggestsManifestHeadingPath(t *testing.T) {
+	_, manifestPath := writeAddCLIFixture(t)
+
+	var stdout, stderr bytes.Buffer
+	err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instrctions"}, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected bad manifest heading path to fail")
+	}
+	if !strings.Contains(err.Error(), `did you mean "Instructions"`) {
+		t.Fatalf("missing manifest heading suggestion:\n%v", err)
 	}
 }
 

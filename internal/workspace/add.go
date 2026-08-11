@@ -119,6 +119,9 @@ func (s *Session) addTarget(options AddOptions) (string, *[]manifest.Entry, erro
 	}
 	matches := findEntryPaths(s.Draft.Doc, splitManifestPath(options.Under), nil)
 	if len(matches) == 0 {
+		if suggestion := closestManifestHeadingPath(options.Under, s.ManifestHeadingPaths()); suggestion != "" {
+			return "", nil, fmt.Errorf("manifest heading path %q was not found; did you mean %q?", options.Under, suggestion)
+		}
 		return "", nil, fmt.Errorf("manifest heading path %q was not found", options.Under)
 	}
 	if len(matches) > 1 {
@@ -133,6 +136,23 @@ func (s *Session) addTarget(options AddOptions) (string, *[]manifest.Entry, erro
 		return "", nil, fmt.Errorf("manifest heading path %q is a source entry and cannot contain children", options.Under)
 	}
 	return strings.Join(match.Headings, "/"), &match.Entry.Children, nil
+}
+
+func closestManifestHeadingPath(path string, candidates []string) string {
+	best := ""
+	bestDistance := 8
+	target := strings.ToLower(path)
+	for _, candidate := range candidates {
+		distance := levenshtein(target, strings.ToLower(candidate))
+		if strings.Contains(strings.ToLower(candidate), target) || strings.Contains(target, strings.ToLower(candidate)) {
+			distance--
+		}
+		if distance < bestDistance {
+			best = candidate
+			bestDistance = distance
+		}
+	}
+	return best
 }
 
 type entryPath struct {

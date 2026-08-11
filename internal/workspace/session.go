@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
@@ -21,6 +22,15 @@ type Session struct {
 	Sources      map[string]*library.Index
 	Output       string
 	Dirty        bool
+}
+
+func (s *Session) SavedSourceAliases() []string {
+	aliases := make([]string, 0, len(s.Saved.Sources))
+	for alias := range s.Saved.Sources {
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+	return aliases
 }
 
 // New loads an existing manifest and prepares a clean in-memory draft.

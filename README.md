@@ -18,11 +18,26 @@ copy-on-write editing.
 From this repository:
 
 ```sh
-go install .
+go install ./cmd/mogent
 ```
 
 That installs the `mogent` CLI built from your current checkout. It will not
-auto-update; run `go install .` again after pulling or making code changes.
+auto-update; run `go install ./cmd/mogent` again after pulling or making code
+changes.
+
+If you are already in `cmd/mogent`, `go install .` is equivalent. From the
+repository root it is not: the root has no Go package.
+
+If your environment has no C compiler and Go tries to use cgo through a
+terminal dependency, either enter the Nix dev shell or disable cgo:
+
+```sh
+nix develop
+go install ./cmd/mogent
+
+# or
+CGO_ENABLED=0 go install ./cmd/mogent
+```
 
 ## Basic Files
 
@@ -113,18 +128,27 @@ Show workspace state:
 mogent status
 ```
 
+`status` prints an actionable hint. For example, missing or stale output points
+back to `mogent build`, while direct edits warn before `--force`.
+
 List available source modules:
 
 ```sh
 mogent source list
+mogent source list cdint
+mogent source list --search python --tldr
 mogent source list --tag-search go
 mogent source list --sort priority --metadata
 ```
+
+`--tag-search` searches metadata tags only. Use `--search` to search source
+references, headings, TLDRs, tags, and direct body text.
 
 Inspect one source module:
 
 ```sh
 mogent source show shared:lang/go/testing --metadata --content=snippet --lines=8
+mogent source show shared:lang/go/testing --align-source --under Instructions
 ```
 
 Show included and unused source modules:
@@ -134,6 +158,9 @@ mogent coverage
 mogent coverage --unused-only
 mogent coverage --tree
 ```
+
+`coverage --tree` shows text state markers such as `[included]`, `[inherited]`,
+`[excluded]`, `[partial]`, and `[unused]`.
 
 Add a source module to the manifest:
 
@@ -160,6 +187,23 @@ Open the TUI:
 mogent tui
 ```
 
+Print completion candidates for shell wrappers:
+
+```sh
+mogent complete commands
+mogent complete source-aliases
+mogent complete source-refs --prefix shared:lang
+mogent complete manifest-headings
+mogent complete flags
+```
+
+Install shell completion by evaluating or saving the generated script:
+
+```sh
+mogent completion bash
+mogent completion zsh
+```
+
 The TUI is useful for browsing and proof-of-concept editing, but the CLI is the
 more reliable surface for basic usage today.
 
@@ -175,6 +219,9 @@ Mogent writes `agents.yaml` and `AGENTS.md` conservatively.
 - Shared source libraries are read-only inputs during normal build/add flows.
 
 ## Testing Ground
+
+For a feature-by-feature exercise sequence and issue template, see
+[`docs/DOGFOOD.md`](docs/DOGFOOD.md).
 
 Try the metadata-oriented sandbox:
 
@@ -217,6 +264,8 @@ for stricter Claude behavior, while `GEMINI.md` might simply symlink to
 ## Design Docs
 
 - [docs/DESIGN.md](docs/DESIGN.md) is the design of record.
+- [docs/DOGFOOD.md](docs/DOGFOOD.md) stages current features for dogfooding and issue reporting.
+- [docs/HANDOFF.md](docs/HANDOFF.md) is the compact current resume point.
 - [TODO/TODO-jusuk-mogent-agent-modules.md](TODO/TODO-jusuk-mogent-agent-modules.md)
   tracks implementation and open decisions.
 - [docs/thought-experiments/TE-kavam-metadata-tags-and-library-shape.md](docs/thought-experiments/TE-kavam-metadata-tags-and-library-shape.md)

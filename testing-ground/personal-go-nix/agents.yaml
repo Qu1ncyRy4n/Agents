@@ -1,7 +1,7 @@
 sources:
   shared: ../../libraries/cdint
   go: ../../libraries/cdint
-  nix: ../../libraries/nix
+  personal: ../../libraries/personal
 output: AGENTS.md
 doc:
   - Identity:
@@ -14,8 +14,8 @@ doc:
       - Lightweight Escalation: shared:process/lightweight-escalation
   - Constraints:
       - Safe Defaults: shared:shared-baseline/constraints/safe-defaults
-      - Nix Safety: nix:nix/safety
-      - Nix Scope: nix:nix/scope
+      - Nix Safety: personal:lang/nix/safety
+      - Nix Scope: personal:lang/nix/scope
   - Format:
       - Clear Handoff: shared:shared-baseline/format/clear-handoff
       - Minimal Diff: shared:shared-baseline/format/minimal-diff

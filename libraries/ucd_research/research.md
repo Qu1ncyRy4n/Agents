@@ -1,3 +1,6 @@
+---
+tldr: Protect participant data and preserve experimental validity, provenance, and reproducibility.
+---
 # UCD Research
 
 ## Research Orientation

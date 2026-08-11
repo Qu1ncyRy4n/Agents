@@ -12,6 +12,27 @@ headings, user-defined source aliases, and visible source provenance. Process
 weight, domain, and language are selectable library content, not top-level
 categories.
 
+## Durable Context Across Agents
+
+ChatGPT, Codex, other agents, and human contributors may not share conversation
+history. Durable project memory therefore belongs in the repository, where every
+authorized collaborator can inspect the same sources of truth:
+
+- `AGENTS.md` defines how an agent should work in this repository.
+- `docs/DESIGN.md` and decision records explain the product design and why durable
+  choices were made.
+- `TODO/` tracks planned and unresolved work.
+- `docs/HANDOFF.md` gives the compact current state, unfinished work, and next
+  steps needed to resume.
+
+A handoff is a navigation aid, not a second design authority. Refresh it from
+the current docs and Git state, and prefer those sources whenever chat history or
+the handoff itself is stale. A future `mogent handoff` command could assemble the
+same agent-readable state from explicit repository inputs.
+
+The local `docs/other_repo_agents/` corpus is outside that shared-memory model.
+Do not inspect, commit, expose, or reconstruct it without explicit authorization.
+
 ## Corpus Summary
 
 The corpus contains four distinct genres. They should not be flattened into one
@@ -229,8 +250,17 @@ sources/
 |   |-- shared-baseline
 |   |-- process
 |   |-- go
+|   |-- engineering/
+|   |   |-- code-quality
+|   |   |-- comment-intent
+|   |   |-- coordination-ids
+|   |   |-- error-handling
+|   |   |-- reviewability
+|   |   |-- runtime-artifacts
+|   |   `-- test-strategy
 |   |-- promisegrid
-|   `-- public-prose
+|   `-- docs/
+|       `-- public-prose
 |
 |-- ucd_research/
 |   |-- research-orientation
@@ -244,34 +274,43 @@ sources/
 |       `-- scientific-analysis
 |
 |-- personal/
-|   |-- teacher
-|   |-- notes-and-obsidian
-|   |-- archive-safety
-|   |-- rust
-|   `-- web-and-static-sites
-|
-`-- nix/
-    |-- nonactivating-validation
-    |-- host-boundary-rules
-    `-- lockfile-and-package-discipline
+|   |-- communication/
+|   |   |-- accessibility
+|   |   |-- personas
+|   |   `-- teacherbot
+|   |-- domain/
+|   |   |-- media-archive
+|   |   |-- notes-vault
+|   |   |-- research-data
+|   |   `-- static-sites
+|   |-- engineering/
+|   |   |-- local-service-design
+|   |   `-- staged-migration
+|   `-- lang/
+|       |-- godot
+|       |-- nix
+|       |-- python
+|       `-- rust
 ```
 
-`nix` remains an independent source because changes can affect the active
-machine. It should be selected deliberately, even when a personal project uses
-Nix. `uv` belongs under Python dependency management rather than being a
-top-level language or domain library.
+Nix now lives under the personal source because the first dogfood use cases are
+personal machine and project repositories. Host activation and flake-lock rules
+remain separate Nix nodes so they can be selected deliberately. `uv` belongs
+under Python dependency management rather than being a top-level language or
+domain library.
 
 ## Seed Library
 
 The first local source files now live under `libraries/`:
 
 - `libraries/cdint/` provides a shared baseline, adaptive process rules, Go
-  rules, and CDINT/PromiseGrid vocabulary.
+  rules, engineering discipline modules, public-prose rules, and
+  CDINT/PromiseGrid vocabulary.
 - `libraries/ucd_research/` provides sanitized research and Python/uv rules.
-- `libraries/nix/` provides standalone system-configuration safety rules.
-
-`libraries/personal/` is intentionally deferred. Its useful source examples
-contain private learner, vault, or machine context. Source: DI-voraz; DR-garom.
+- `libraries/personal/` provides optional personal language, domain, teaching,
+  accessibility, and persona modules derived from the captured repo-agent
+  corpus. Private local context stays out of the shared nodes. Source:
+  DI-voraz; DR-garom.
 
 ## Recommended Presets
 
@@ -279,6 +318,10 @@ Presets should be saved selections, not categories:
 
 - `engineering-go`: core + Go + lightweight escalation.
 - `engineering-rust`: core + Rust + lightweight escalation.
+- `python-to-rust-service`: core + Rust + staged compatibility migration + local
+  service design + the applicable Python/Nix modules. Use only when the
+  repository has an existing program or local service whose public behavior
+  must survive the transition.
 - `python-data-tool`: core + Python/uv + external-service or data-pipeline safety.
 - `research-sci`: core + research + scientific reproducibility + a relevant
   stack node.
@@ -403,3 +446,5 @@ repeating the contents.
    milestone 1 makes the manifest parser and renderer available.
 4. Add `teacher`, `research`, and `cdint` libraries as separate increments,
    with a privacy review before importing any source wording.
+5. Design `mogent handoff` after the workspace inspection surfaces stabilize,
+   using explicit repository state rather than product chat history.

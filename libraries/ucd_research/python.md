@@ -1,3 +1,6 @@
+---
+tldr: Use uv-managed Python workflows and deterministic validation for research code.
+---
 # Python
 
 ## Dependency Management

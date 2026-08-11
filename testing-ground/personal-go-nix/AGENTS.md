@@ -25,15 +25,33 @@ other material conflicts.
 ## Go Development
 
 Run `gofmt` on changed Go code. Run focused `go test` from the affected module.
+Run `go vet` when the repository uses it directly or through `make quality`.
 Run `errcheck ./...` for Go behavior changes. If a required command is missing
 or the environment is broken, report the blocker instead of changing unrelated
 files.
+
+When a repository has several Go modules, run commands from the module that owns
+the changed package. Common layouts include a root module, `cmd/<tool>` CLI
+entry points, and experimental modules under `x/**/go.mod`.
+
+For CLI tools, validate at least the help path or the smallest affected workflow
+after behavior changes, for example `go run ./cmd/<tool> -h` or the repo's
+documented smoke command.
 
 ## Go Tests
 
 Use the standard `testing` package. Keep tests deterministic. Prefer fixtures
 and table-driven tests when the same behavior has several cases. Add coverage
 for new behavior and error paths close to the code they exercise.
+
+Co-locate tests with the code they cover unless the repository already uses a
+separate integration-test tree. Mock external calls by default. Avoid network
+tests unless the task explicitly needs them and the repository documents the
+expected external dependency.
+
+When adding behavior, cover the success path, important error paths, and at
+least one boundary case. Prefer asserting whole structured values when that
+keeps the test clearer than checking fields one by one.
 
 ## Lightweight Escalation
 
@@ -62,10 +80,10 @@ covers that area.
 
 ## Nix Scope
 
-Read the repository's host layout and feature flags before structural edits.
-Keep shared behavior behind existing host boundaries. Put host-specific behavior
-in the appropriate host configuration rather than hard-coding it into a shared
-module.
+Read the repository's host layout, module layout, overlays, and feature flags
+before structural edits. Keep shared behavior behind existing host boundaries.
+Put host-specific behavior in the appropriate host configuration rather than
+hard-coding it into a shared module.
 
 # Format
 

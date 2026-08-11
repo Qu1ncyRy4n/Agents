@@ -1,3 +1,6 @@
+---
+tldr: Establish repository identity, source-of-truth documents, workflow, and handoff expectations.
+---
 # Shared Baseline
 
 ## Identity
