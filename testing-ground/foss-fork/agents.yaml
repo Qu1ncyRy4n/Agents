@@ -11,7 +11,10 @@ doc:
       - Documentation: shared:shared-baseline/instructions/documentation
       - Git: shared:shared-baseline/instructions/git
       - Go Development: go:go/development
-      - Decision First: shared:process/decision-first
+      - Decision First:
+          - Decision Intent: shared:process/decision-first/decision-intent
+          - Thought Experiment: shared:process/decision-first/thought-experiment
+          - Open Questions: shared:process/decision-first/open-questions
   - Constraints:
       - Safe Defaults: shared:shared-baseline/constraints/safe-defaults
       - Public Technical Prose: shared:cdint-and-promisegrid/public-technical-prose

@@ -338,7 +338,9 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [x] Plan multiple agent outputs without implementing them: manifest evolution, build transaction, state migration, drift behavior, CLI review, sequencing, and open decisions (`docs/MULTIPLE-OUTPUTS-PLAN.md`).
 - [ ] Design multi-artifact project guidance generation beyond `AGENTS.md`: usage notes, dev docs, repo-specific reference indexes, command cheat sheets, and links to external docs. This needs substantial design because those files have different audiences, update cadence, visibility, and source-of-truth rules from agent prompts.
 - [ ] Far-future note: explore pinned reference-doc support for project/API/design/dependency docs once prompt composition is stable.
+- [x] Split initial checked-in libraries into atomic metadata-bearing modules.
 - [ ] Add library expansion: extract Tier 1/Tier 2 corpus nodes; add tutor mode, TTS-friendly communication, architecture laws, strict testing, commit cadence, docs/session logs, and developer involvement levels.
+- [ ] Design cross-file subtree behavior, or keep explicit manifest grouping as the standard for atomic modules.
 - [ ] Add import/merge workflow: help convert manually edited `AGENTS.md` changes into local overrides, shared nodes, or rejected drift.
 - [ ] Add tags as search/discovery after the core stabilizes: searchable tags, swap-alternative groups (XOR), and conflict warnings for incompatible styles.
 - [x] Local-vs-global storage: resolved by copy-on-write localization (DESIGN.md §3.5) — shared libraries read-only, local overrides explicit in the manifest.
