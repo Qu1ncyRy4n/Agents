@@ -184,6 +184,15 @@ Intent: Make remote sources reproducible and reviewable without turning build or
 Constraints: HTTP(S) Git only initially. Full commit IDs and deterministic Markdown content hashes are required. URL/lock mismatch, cache hash mismatch, unsafe path input, duplicate keys, and unreadable content are errors. Exact behavior is `docs/IMPLEMENTATION-M4.md` and TE-fipam.
 Affects: agents.yaml URL sources, mogent.lock.yaml, .mogent/sources/, internal/sourcecache/, internal/render/, internal/cli/
 
+ID: DI-vurap
+Date: 2026-08-11
+Status: active
+Author: user-directed dogfood decision; recorded by Codex
+Decision: Preserve compact scalar sources and add an explicit normalized source form with `location` plus optional `subdir`. Bind URL subdirectories into the lock identity; scope Markdown hashing, update review, resolution, and browsing to the selected root while retaining the full immutable checkout in the ignored cache.
+Intent: Let one Git repository publish several clean libraries without changing short source references or indexing unrelated repository documentation, while leaving repository splits to ownership and release decisions.
+Constraints: Subdirectories are relative slash paths with no `.`, `..`, empty components, backslashes, absolute form, or symlinked components. Ordinary loads remain offline-only. Exact behavior is recorded in TE-vurap and the updated M4 contract.
+Affects: agents.yaml source values, mogent.lock.yaml, internal/manifest/, internal/sourcecache/, internal/render/, docs/IMPLEMENTATION-M4.md
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -198,6 +207,7 @@ Affects: agents.yaml URL sources, mogent.lock.yaml, .mogent/sources/, internal/s
 - [x] jusuk.10 Dogfood - Use mogent on this repo's AGENTS.md
 - [x] jusuk.11 Lock the milestone-one manifest schema, source scope, and rebuilt Go module location (DI-vukam; TE-vorum).
 - [x] jusuk.12 Resolve the first source-boundary review: move Nix under `personal` while leaving broader boundaries provisional (DI-pesun; DR-garom).
+- [ ] Reconcile the post-merge Nix conflict: remote atomic-library commit `fb8f007` reintroduced `libraries/nix/nix/*` while active DI-pesun places Nix only at `personal:lang/nix`. Do not publish both as canonical sources or delete either copy until ownership/history and the newer intended boundary are confirmed.
 - [x] jusuk.13 Seed sanitized CDINT, UCD research, and Nix source libraries (DI-voraz).
 
 ## Feature Backlog
@@ -328,7 +338,8 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Add diagnostics panel: surface missing sources, unresolved references, empty nodes, and duplicate ids in one place.
 - [x] Add drift detection: regenerate from manifest, report output state, conservatively import one unambiguous section, or explicitly reject edits.
 - [x] Add immutable URL source pinning with committed locks, verified ignored caches, and explicit changed-Markdown review (DI-fipam; TE-fipam).
-- [ ] Decide URL-source subdirectory selection before treating this combined repository as the canonical remote library: a URL currently indexes the repository root, so `libraries/cdint` and `libraries/personal` cannot retain their existing short reference paths without separate repositories or an explicit pinned `subdir` field.
+- [x] Add explicit, pinned URL-source subdirectories so one repository can expose `libraries/cdint` or `libraries/personal` with short references (DI-vurap; TE-vurap). Live combined HTTPS pin/build verification remains pending while the approval service blocks network execution.
+- [ ] After URL subdirectories work, decide repository topology by ownership and release cadence rather than tooling limitations: keep code plus small fixtures here; consider a public reusable-library repository; keep personal/private and institution-owned material in separately governed repositories. Preserve immutable URL/commit/subdirectory identity in locks.
 - [x] Design and implement localization provenance with `local:` plus `.mogent/provenance.yaml` (DI-ravam; TE-ravam).
 - [ ] Add promote-local-to-shared: push a localized override back up to its source library.
 - [ ] Resolve TE-kavam: hierarchical tags, declared alternative families, meaningful conflict warnings, and atomic-file library shape.
@@ -362,22 +373,27 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Keep normal list/tree output useful ASCII by default, including an inline key where states need explanation. Do not require a vague `--pretty-print` mode; color and alignment preferences may enhance the same stable information design.
 - [ ] Unify source inventory and coverage presentation around one reusable listing/tree model: `source list` supplies available nodes and metadata, while an optional selection-state/coverage overlay supplies included, inherited, excluded, partial, and unused state. Preserve clear command aliases if both names remain.
 - [ ] Design user-level presentation config with explicit precedence for color, field alignment, TLDR display, hints, and preferred preview mode. Respect `NO_COLOR`; keep durable project composition out of personal display preferences.
+- [ ] Use XDG discovery with YAML for the first user presentation-config design, and wire the same defaults into Nix/Home Manager from the start. Proposed preferences are `color`, `align`, `tldr`, `hints`, `preview`, and `legend`; finalize precedence and `auto` behavior before implementation.
 - [ ] Revisit the CLI inspection surface: make `status` the concise aggregate workspace view and keep drift-specific mutation under an explicit resolution command or subcommand rather than maintaining two overlapping read-only reports.
 - [ ] Clarify `help`, `complete`, and `completion`: human help explains commands; the machine-readable candidate backend should be internal or clearly documented; add a safe shell-specific installation path instead of only printing a completion script.
+- [ ] Package zsh/bash completion through Nix in the shells' normal completion directories. An explicit install command may help non-Nix users; generated completion text should remain available for package managers without encouraging users to paste it into shell startup files.
 - [ ] Generate human help, shell candidates, and future agent-readable command descriptions from one command schema rather than maintaining separate human and LLM documentation. Prefer explicit output modes or aliases where the same information differs only in presentation.
 - [ ] Add a source-inventory tree view, likely `source list <alias> --tree`, distinct from coverage's manifest-selection overlay.
+- [ ] Preserve organizational hierarchy in source trees for atomic modules. Current indexing stores directory prefixes in reference paths but creates nodes only for Markdown headings, so `communication`, `domain`, `engineering`, and `lang` disappear and their file roots flatten together. Render visibly synthetic, non-selectable directory groups with aggregate state (`unused`, `included`, or `partial`), a trailing `/` or group label, and an ASCII key; never present a directory group as a selectable source reference.
 - [ ] Add `mogent source add <alias> <path-or-url>` for extending an existing manifest, with dry-run preview, duplicate-alias validation, URL pinning guidance, and no implicit node selection.
 - [ ] When the first CLI argument looks like `alias:path`, suggest `mogent add alias:path`; if the alias is undeclared, explain how to declare it rather than only reporting an unknown command.
 - [ ] Make actionable hints configurable later (`--no-hints` and/or a persisted hint setting) while keeping hints enabled by default.
 - [ ] Add a core-first manifest reorder command with explicit relative placement (`--before`, `--after`, or `--under`) and dry-run previews; resolve the exact heading-path and nesting semantics before implementation.
 - [ ] Extend localization provenance for pinned URL sources with the immutable source revision/lock identity. Keep one canonical sidecar record unless a later export feature deliberately embeds a portable copy in Markdown; do not add redundant `localized: true` metadata.
 - [ ] Design promote-local-to-shared separately from localization: preview the local-vs-upstream diff, require an explicit writable source, and preserve Git review rather than silently editing a shared library.
+- [ ] Later integrate `propose` with Git or another version-control adapter so a reviewed local-to-shared change can become a branch/commit/change request; keep the first reconciliation model independent of any one forge.
 - [ ] Replace or broaden the `drift` command vocabulary after a workflow thought experiment. The command family must express direction: preserve a hand edit locally, compare with origin, inherit upstream changes into a customized node, or propose/promote a local change to a shared source. Consider Promise Theory/Grid vocabulary, but prefer terms that remain understandable without that background.
 - [ ] Add origin freshness to status: pinned revision, last explicit upstream check, available reviewed update when known, and whether a localized node has diverged from its recorded origin. Never perform a network check as a side effect of status.
 - [ ] Design explicit local/upstream reconciliation using the provenance base: three-way compare original content, current upstream, and local content; support an inherit/rebase-like flow and a reviewable change-request/promote flow without silently overwriting either side.
 - [ ] Add a guided module-creation command independent of init: prompt or accept flags for heading, Markdown content, TLDR, destination/source, and optional metadata; preview the resulting file/reference before writing.
 - [ ] Run a privacy/security thought experiment for cross-agent activity and memory interoperability. Prefer explicit workspace event/handoff records; do not scrape private Claude, Codex, or other product histories by default.
 - [ ] Revisit the product name before a broader public release. Explore respectful psychology/neuroscience references involving plurality, integration, memory, or perspective; avoid stigmatizing "multiple personality" framing and check project/package-name availability before choosing.
+- [ ] Keep `Mosagent` in the naming candidates: it preserves the current sound while making the multi-agent association more visible. Revisit alongside Mosaic, Engram, Connectome, and availability research later.
 - [x] Add `source show --align-source` or equivalent rendered-preview mode that shows how a source node would align under a manifest heading, including shifted heading levels and optional `--under`/`--heading`.
 - [x] Add source-directory expansion for path-like refs such as `cdint:engineering`, `cdint:engineering/`, and `cdint:engineering/*`, or provide a better diagnostic that lists available descendant refs: implemented descendant diagnostics, not wildcard expansion.
 - [x] Improve diagnostics for failed source refs by suggesting close matches and descendant headings when the user names an organizational directory rather than a heading path.
