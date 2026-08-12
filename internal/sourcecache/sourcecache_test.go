@@ -28,7 +28,7 @@ func TestResolveUsesVerifiedCacheWithoutNetwork(t *testing.T) {
 	if err := writeLock(lockPath(manifestPath), lock); err != nil {
 		t.Fatal(err)
 	}
-	resolved, err := Resolve(manifestPath, "shared", "https://example.com/library.git")
+	resolved, err := Resolve(manifestPath, "shared", "https://example.com/library.git", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestResolveRejectsMissingAndChangedCaches(t *testing.T) {
 	if err := writeLock(lockPath(manifestPath), lock); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Resolve(manifestPath, "shared", "https://example.com/library.git"); err == nil || !strings.Contains(err.Error(), "cache") {
+	if _, err := Resolve(manifestPath, "shared", "https://example.com/library.git", ""); err == nil || !strings.Contains(err.Error(), "cache") {
 		t.Fatalf("missing cache error = %v", err)
 	}
 	cache := cachePath(manifestPath, "shared", commit)
@@ -57,7 +57,7 @@ func TestResolveRejectsMissingAndChangedCaches(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cache, "rules.md"), []byte("# Changed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Resolve(manifestPath, "shared", "https://example.com/library.git"); err == nil || !strings.Contains(err.Error(), "failed content verification") {
+	if _, err := Resolve(manifestPath, "shared", "https://example.com/library.git", ""); err == nil || !strings.Contains(err.Error(), "failed content verification") {
 		t.Fatalf("changed cache error = %v", err)
 	}
 }
@@ -136,12 +136,12 @@ func TestUpdatePreviewWritesNothingAndAcceptInstallsCandidate(t *testing.T) {
 	}
 	newCommit := strings.Repeat("2", 40)
 	originalFetcher := fetchCandidate
-	fetchCandidate = func(sourceURL, ref string) (candidate, func(), error) {
-		return candidate{LockEntry: LockEntry{URL: sourceURL, Commit: newCommit, ContentSHA256: newHash}, Path: candidateRoot}, func() {}, nil
+	fetchCandidate = func(sourceURL, ref, subdir string) (candidate, func(), error) {
+		return candidate{LockEntry: LockEntry{URL: sourceURL, Subdir: subdir, Commit: newCommit, ContentSHA256: newHash}, Path: candidateRoot}, func() {}, nil
 	}
 	t.Cleanup(func() { fetchCandidate = originalFetcher })
 
-	preview, err := Update(manifestPath, "shared", url, "main", false)
+	preview, err := Update(manifestPath, "shared", url, "", "main", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,21 +162,57 @@ func TestUpdatePreviewWritesNothingAndAcceptInstallsCandidate(t *testing.T) {
 		t.Fatalf("preview installed cache: %v", err)
 	}
 
-	if _, err := Update(manifestPath, "shared", url, "main", true); err == nil || !strings.Contains(err.Error(), "full commit") {
+	if _, err := Update(manifestPath, "shared", url, "", "main", true); err == nil || !strings.Contains(err.Error(), "full commit") {
 		t.Fatalf("moving-ref acceptance error = %v", err)
 	}
-	accepted, err := Update(manifestPath, "shared", url, newCommit, true)
+	accepted, err := Update(manifestPath, "shared", url, "", newCommit, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !accepted.Wrote {
 		t.Fatal("accepted update did not report write")
 	}
-	resolved, err := Resolve(manifestPath, "shared", url)
+	resolved, err := Resolve(manifestPath, "shared", url, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resolved != cachePath(manifestPath, "shared", newCommit) {
 		t.Fatalf("resolved = %q", resolved)
+	}
+}
+
+func TestResolveScopesVerificationToLockedSubdir(t *testing.T) {
+	temporary := t.TempDir()
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	commit := strings.Repeat("d", 40)
+	cache := cachePath(manifestPath, "shared", commit)
+	selected := filepath.Join(cache, "libraries", "cdint")
+	if err := os.MkdirAll(selected, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(selected, "rules.md"), []byte("# Rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cache, "unrelated.md"), []byte("# Duplicate\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hash, err := HashMarkdown(selected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeLock(lockPath(manifestPath), &Lock{Version: lockVersion, Sources: map[string]LockEntry{
+		"shared": {URL: "https://example.com/repo.git", Subdir: "libraries/cdint", Commit: commit, ContentSHA256: hash},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	resolved, err := Resolve(manifestPath, "shared", "https://example.com/repo.git", "libraries/cdint")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved != selected {
+		t.Fatalf("resolved = %q, want %q", resolved, selected)
+	}
+	if _, err := Resolve(manifestPath, "shared", "https://example.com/repo.git", "libraries/personal"); err == nil || !strings.Contains(err.Error(), "does not match") {
+		t.Fatalf("subdir mismatch error = %v", err)
 	}
 }

@@ -10,15 +10,77 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Qu1ncyRy4n/Agents/internal/sourcepath"
 	"gopkg.in/yaml.v3"
 )
 
 // Manifest is the complete, repository-local build specification.
 type Manifest struct {
-	Sources map[string]string `yaml:"sources"`
+	Sources map[string]Source `yaml:"sources"`
 	Vars    map[string]any    `yaml:"vars,omitempty"`
 	Output  string            `yaml:"output,omitempty"`
 	Doc     []Entry           `yaml:"doc"`
+}
+
+// Source normalizes compact scalar locations and explicit source options.
+type Source struct {
+	Location string `yaml:"location"`
+	Subdir   string `yaml:"subdir,omitempty"`
+}
+
+func (s *Source) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		if value.Tag != "!!str" {
+			return fmt.Errorf("source location must be a string")
+		}
+		s.Location = value.Value
+		return nil
+	case yaml.MappingNode:
+		if len(value.Content)%2 != 0 {
+			return fmt.Errorf("source options must be a mapping")
+		}
+		seen := make(map[string]bool, len(value.Content)/2)
+		for index := 0; index < len(value.Content); index += 2 {
+			key, item := value.Content[index].Value, value.Content[index+1]
+			if seen[key] {
+				return fmt.Errorf("duplicate source option %q", key)
+			}
+			seen[key] = true
+			if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
+				return fmt.Errorf("source option %q must be a string", key)
+			}
+			switch key {
+			case "location":
+				s.Location = item.Value
+			case "subdir":
+				s.Subdir = item.Value
+			default:
+				return fmt.Errorf("unknown source option %q", key)
+			}
+		}
+		return nil
+	default:
+		return fmt.Errorf("source must be a location string or options mapping")
+	}
+}
+
+func (s Source) MarshalYAML() (any, error) {
+	if s.Subdir == "" {
+		return s.Location, nil
+	}
+	return struct {
+		Location string `yaml:"location"`
+		Subdir   string `yaml:"subdir"`
+	}{Location: s.Location, Subdir: s.Subdir}, nil
+}
+
+// Display returns the declared location with its selected root when present.
+func (s Source) Display() string {
+	if s.Subdir == "" {
+		return s.Location
+	}
+	return s.Location + " (subdir: " + s.Subdir + ")"
 }
 
 // Entry owns one rendered heading and either composes source subtrees or owns
@@ -198,7 +260,7 @@ func Load(path string) (*Manifest, string, error) {
 // Clone returns an independent manifest draft.
 func (m *Manifest) Clone() *Manifest {
 	clone := &Manifest{
-		Sources: make(map[string]string, len(m.Sources)),
+		Sources: make(map[string]Source, len(m.Sources)),
 		Vars:    make(map[string]any, len(m.Vars)),
 		Output:  m.Output,
 		Doc:     cloneEntries(m.Doc),
@@ -308,12 +370,18 @@ func (m *Manifest) Validate() error {
 	if len(m.Sources) == 0 {
 		return fmt.Errorf("manifest requires at least one source")
 	}
-	for alias, sourcePath := range m.Sources {
+	for alias, source := range m.Sources {
 		if strings.TrimSpace(alias) == "" || strings.Contains(alias, ":") {
 			return fmt.Errorf("invalid source alias %q", alias)
 		}
-		if strings.TrimSpace(sourcePath) == "" {
+		if strings.TrimSpace(source.Location) == "" {
 			return fmt.Errorf("source %q has an empty path", alias)
+		}
+		if err := sourcepath.ValidateSubdir(source.Subdir); err != nil {
+			return fmt.Errorf("source %q: %w", alias, err)
+		}
+		if source.Subdir != "" && !strings.HasPrefix(source.Location, "http://") && !strings.HasPrefix(source.Location, "https://") {
+			return fmt.Errorf("source %q: subdir is supported only for HTTP(S) Git locations", alias)
 		}
 	}
 	if strings.TrimSpace(m.Output) == "" {

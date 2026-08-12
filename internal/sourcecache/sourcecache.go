@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/renderfs"
+	"github.com/Qu1ncyRy4n/Agents/internal/sourcepath"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,6 +33,7 @@ type Lock struct {
 
 type LockEntry struct {
 	URL           string `yaml:"url"`
+	Subdir        string `yaml:"subdir,omitempty"`
 	Commit        string `yaml:"commit"`
 	ContentSHA256 string `yaml:"content_sha256"`
 }
@@ -53,9 +55,12 @@ type Result struct {
 }
 
 // Resolve returns a verified local checkout and never performs network access.
-func Resolve(manifestPath, alias, sourceURL string) (string, error) {
+func Resolve(manifestPath, alias, sourceURL, subdir string) (string, error) {
 	if err := validateRemote(alias, sourceURL); err != nil {
 		return "", err
+	}
+	if err := sourcepath.ValidateSubdir(subdir); err != nil {
+		return "", fmt.Errorf("URL source %q: %w", alias, err)
 	}
 	lock, err := load(lockPath(manifestPath))
 	if errors.Is(err, os.ErrNotExist) {
@@ -68,14 +73,21 @@ func Resolve(manifestPath, alias, sourceURL string) (string, error) {
 	if !found {
 		return "", fmt.Errorf("URL source %q is not pinned; run `mogent source pin %s`", alias, alias)
 	}
-	if entry.URL != sourceURL {
+	if entry.URL != sourceURL || entry.Subdir != subdir {
 		return "", fmt.Errorf("URL source %q does not match mogent.lock.yaml; pin or update it explicitly", alias)
 	}
 	if err := validateLockEntry(alias, entry); err != nil {
 		return "", err
 	}
 	path := cachePath(manifestPath, alias, entry.Commit)
-	hash, err := HashMarkdown(path)
+	root, err := sourcepath.Resolve(path, entry.Subdir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("pinned cache for URL source %q is missing; run `mogent source pin %s`", alias, alias)
+		}
+		return "", fmt.Errorf("resolve URL source %q cache root: %w", alias, err)
+	}
+	hash, err := HashMarkdown(root)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "", fmt.Errorf("pinned cache for URL source %q is missing; run `mogent source pin %s`", alias, alias)
@@ -85,11 +97,11 @@ func Resolve(manifestPath, alias, sourceURL string) (string, error) {
 	if hash != entry.ContentSHA256 {
 		return "", fmt.Errorf("pinned cache for URL source %q failed content verification; expected %s, got %s", alias, entry.ContentSHA256, hash)
 	}
-	return path, nil
+	return root, nil
 }
 
 // Pin installs an initial source or restores the exact existing lock commit.
-func Pin(manifestPath, alias, sourceURL, requestedRef string) (*Result, error) {
+func Pin(manifestPath, alias, sourceURL, subdir, requestedRef string) (*Result, error) {
 	if err := validateRemote(alias, sourceURL); err != nil {
 		return nil, err
 	}
@@ -98,12 +110,15 @@ func Pin(manifestPath, alias, sourceURL, requestedRef string) (*Result, error) {
 		return nil, err
 	}
 	old, exists := lock.Sources[alias]
-	if exists && old.URL != sourceURL {
-		return nil, fmt.Errorf("URL source %q changed from %q to %q; use source update for review", alias, old.URL, sourceURL)
+	if err := sourcepath.ValidateSubdir(subdir); err != nil {
+		return nil, fmt.Errorf("URL source %q: %w", alias, err)
+	}
+	if exists && (old.URL != sourceURL || old.Subdir != subdir) {
+		return nil, fmt.Errorf("URL source %q identity changed; remove its lock only after reviewing the new location/subdir", alias)
 	}
 	ref := requestedRef
 	if ref == "" && exists {
-		if _, resolveErr := Resolve(manifestPath, alias, sourceURL); resolveErr == nil {
+		if _, resolveErr := Resolve(manifestPath, alias, sourceURL, subdir); resolveErr == nil {
 			copy := old
 			return &Result{Alias: alias, URL: sourceURL, Old: &copy, New: old, Wrote: false}, nil
 		}
@@ -112,7 +127,7 @@ func Pin(manifestPath, alias, sourceURL, requestedRef string) (*Result, error) {
 	if ref == "" {
 		ref = "HEAD"
 	}
-	candidate, cleanup, err := fetchCandidate(sourceURL, ref)
+	candidate, cleanup, err := fetchCandidate(sourceURL, ref, subdir)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +150,7 @@ func Pin(manifestPath, alias, sourceURL, requestedRef string) (*Result, error) {
 }
 
 // Update fetches a candidate. It mutates lock/cache only when accept is true.
-func Update(manifestPath, alias, sourceURL, requestedRef string, accept bool) (*Result, error) {
+func Update(manifestPath, alias, sourceURL, subdir, requestedRef string, accept bool) (*Result, error) {
 	if err := validateRemote(alias, sourceURL); err != nil {
 		return nil, err
 	}
@@ -147,7 +162,7 @@ func Update(manifestPath, alias, sourceURL, requestedRef string, accept bool) (*
 	if !found {
 		return nil, fmt.Errorf("URL source %q is not pinned; use source pin first", alias)
 	}
-	if old.URL != sourceURL {
+	if old.URL != sourceURL || old.Subdir != subdir {
 		return nil, fmt.Errorf("URL source %q does not match its lock", alias)
 	}
 	ref := requestedRef
@@ -157,7 +172,7 @@ func Update(manifestPath, alias, sourceURL, requestedRef string, accept bool) (*
 	if ref == "" {
 		ref = "HEAD"
 	}
-	candidate, cleanup, err := fetchCandidate(sourceURL, ref)
+	candidate, cleanup, err := fetchCandidate(sourceURL, ref, subdir)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +181,15 @@ func Update(manifestPath, alias, sourceURL, requestedRef string, accept bool) (*
 		return nil, fmt.Errorf("fetched commit %s does not match accepted commit %s", candidate.Commit, requestedRef)
 	}
 	oldPath := cachePath(manifestPath, alias, old.Commit)
-	changes, err := markdownChanges(oldPath, candidate.Path)
+	oldRoot, err := sourcepath.Resolve(oldPath, old.Subdir)
+	if err != nil {
+		return nil, fmt.Errorf("resolve locked source for review: %w", err)
+	}
+	newRoot, err := sourcepath.Resolve(candidate.Path, candidate.Subdir)
+	if err != nil {
+		return nil, fmt.Errorf("resolve candidate source for review: %w", err)
+	}
+	changes, err := markdownChanges(oldRoot, newRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +209,7 @@ type candidate struct {
 	Path string
 }
 
-func fetch(sourceURL, ref string) (candidate, func(), error) {
+func fetch(sourceURL, ref, subdir string) (candidate, func(), error) {
 	if strings.HasPrefix(ref, "-") || strings.TrimSpace(ref) == "" {
 		return candidate{}, func() {}, fmt.Errorf("invalid source ref %q", ref)
 	}
@@ -214,12 +237,17 @@ func fetch(sourceURL, ref string) (candidate, func(), error) {
 		return candidate{}, func() {}, fmt.Errorf("resolve fetched source commit: %w", err)
 	}
 	commit := strings.TrimSpace(string(commitOutput))
-	hash, err := HashMarkdown(temporary)
+	root, err := sourcepath.Resolve(temporary, subdir)
+	if err != nil {
+		cleanup()
+		return candidate{}, func() {}, fmt.Errorf("resolve fetched source root: %w", err)
+	}
+	hash, err := HashMarkdown(root)
 	if err != nil {
 		cleanup()
 		return candidate{}, func() {}, err
 	}
-	return candidate{LockEntry: LockEntry{URL: sourceURL, Commit: commit, ContentSHA256: hash}, Path: temporary}, cleanup, nil
+	return candidate{LockEntry: LockEntry{URL: sourceURL, Subdir: subdir, Commit: commit, ContentSHA256: hash}, Path: temporary}, cleanup, nil
 }
 
 func install(manifestPath, alias string, value candidate, lock *Lock) error {
@@ -227,12 +255,17 @@ func install(manifestPath, alias string, value candidate, lock *Lock) error {
 		return err
 	}
 	destination := cachePath(manifestPath, alias, value.Commit)
-	if existing, err := HashMarkdown(destination); err == nil {
+	existingRoot, rootErr := sourcepath.Resolve(destination, value.Subdir)
+	if rootErr == nil {
+		existing, err := HashMarkdown(existingRoot)
+		if err != nil {
+			return err
+		}
 		if existing != value.ContentSHA256 {
 			return fmt.Errorf("existing cache for %q commit %s has different content", alias, value.Commit)
 		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
+	} else if !errors.Is(rootErr, os.ErrNotExist) {
+		return rootErr
 	} else {
 		parent := filepath.Dir(destination)
 		if err := os.MkdirAll(parent, 0o755); err != nil {
@@ -414,6 +447,9 @@ func validateLockEntry(alias string, entry LockEntry) error {
 	}
 	if !isHex(entry.ContentSHA256, 64, 64) {
 		return fmt.Errorf("URL source %q lock has invalid content hash", alias)
+	}
+	if err := sourcepath.ValidateSubdir(entry.Subdir); err != nil {
+		return fmt.Errorf("URL source %q lock: %w", alias, err)
 	}
 	return nil
 }

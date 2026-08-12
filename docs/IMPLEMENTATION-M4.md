@@ -9,13 +9,28 @@ DI-fipam.
 
 ## Durable And Runtime Files
 
-- `agents.yaml` keeps `alias: https://...`.
+- `agents.yaml` keeps the compact `alias: https://...` form or uses an explicit
+  `location` plus optional `subdir` mapping.
 - `mogent.lock.yaml` is a strict, deterministic, reviewable file intended for
   version control.
 - `.mogent/sources/<alias>/<commit>/` is an ignored checkout/cache.
 
-Each lock entry records URL, full Git commit, and SHA-256 over sorted Markdown
-paths and bytes. Ordinary loads require all three to match.
+Each lock entry records URL, normalized subdirectory, full Git commit, and
+SHA-256 over sorted Markdown paths and bytes below the selected source root.
+Ordinary loads require all four to match.
+
+Example:
+
+```yaml
+sources:
+  shared:
+    location: https://github.com/Qu1ncyRy4n/Agents.git
+    subdir: libraries/cdint
+```
+
+Scalar source values normalize to the same representation with an empty
+subdirectory. Subdirectories are relative slash paths and may not contain
+empty, `.`, or `..` components, backslashes, or symlinked components.
 
 ## Commands
 

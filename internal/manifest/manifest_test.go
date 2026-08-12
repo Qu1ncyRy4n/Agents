@@ -49,6 +49,46 @@ func TestLoadNormalizesCompactAndExplicitEntries(t *testing.T) {
 	}
 }
 
+func TestLoadNormalizesCompactAndExplicitSources(t *testing.T) {
+	temporary := t.TempDir()
+	path := filepath.Join(temporary, "agents.yaml")
+	content := "sources:\n  local: ./library\n  shared:\n    location: https://example.com/agents.git\n    subdir: libraries/cdint\ndoc:\n  - Rules: shared:rules\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	value, _, err := manifest.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value.Sources["local"].Location != "./library" || value.Sources["local"].Subdir != "" {
+		t.Fatalf("compact source = %#v", value.Sources["local"])
+	}
+	if value.Sources["shared"].Location != "https://example.com/agents.git" || value.Sources["shared"].Subdir != "libraries/cdint" {
+		t.Fatalf("explicit source = %#v", value.Sources["shared"])
+	}
+	encoded, err := manifest.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), "local: ./library") || !strings.Contains(string(encoded), "subdir: libraries/cdint") {
+		t.Fatalf("encoded manifest:\n%s", encoded)
+	}
+}
+
+func TestLoadRejectsUnsafeSourceSubdirs(t *testing.T) {
+	temporary := t.TempDir()
+	path := filepath.Join(temporary, "agents.yaml")
+	for _, subdir := range []string{"/absolute", "../escape", "libraries\\cdint", "libraries//cdint"} {
+		content := "sources:\n  shared:\n    location: https://example.com/agents.git\n    subdir: " + subdir + "\ndoc:\n  - Rules: shared:rules\n"
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := manifest.Load(path); err == nil || !strings.Contains(err.Error(), "subdir") {
+			t.Fatalf("subdir %q error = %v", subdir, err)
+		}
+	}
+}
+
 func TestLoadDefaultsOutputAndRejectsAliases(t *testing.T) {
 	temporary := t.TempDir()
 	path := filepath.Join(temporary, "agents.yaml")

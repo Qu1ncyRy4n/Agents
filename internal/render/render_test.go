@@ -64,6 +64,37 @@ func TestBuildUsesVerifiedPinnedURLCacheOffline(t *testing.T) {
 	}
 }
 
+func TestBuildUsesOnlyPinnedURLSubdirOffline(t *testing.T) {
+	temporary := t.TempDir()
+	commit := strings.Repeat("e", 40)
+	cache := filepath.Join(temporary, ".mogent", "sources", "remote", commit)
+	selected := filepath.Join(cache, "libraries", "cdint")
+	if err := os.MkdirAll(selected, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(selected, "rules.md"), "# Rules\nSelected.\n")
+	writeFile(t, filepath.Join(cache, "unrelated.md"), "# Rules\nDuplicate outside selected root.\n")
+	hash, err := sourcecache.HashMarkdown(selected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock := "version: 1\nsources:\n  remote:\n    url: https://example.com/repository.git\n    subdir: libraries/cdint\n    commit: " + commit + "\n    content_sha256: " + hash + "\n"
+	writeFile(t, filepath.Join(temporary, "mogent.lock.yaml"), lock)
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  remote:\n    location: https://example.com/repository.git\n    subdir: libraries/cdint\ndoc:\n  - Rules: remote:rules\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.Build(value, loadedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Content != "# Rules\n\nSelected.\n" {
+		t.Fatalf("content = %q", result.Content)
+	}
+}
+
 func TestBuildProvidesRepositoryNameTemplateVariable(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

@@ -100,7 +100,7 @@ func (s *Session) sourceStatuses() []SourceStatus {
 		}
 		sources = append(sources, SourceStatus{
 			Alias: alias,
-			Path:  s.Saved.Sources[alias],
+			Path:  s.Saved.Sources[alias].Display(),
 			Nodes: nodes,
 		})
 	}

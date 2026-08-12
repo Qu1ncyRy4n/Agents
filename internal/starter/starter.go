@@ -36,12 +36,16 @@ func Get(name string) (Template, error) {
 }
 
 func (t Template) Manifest(sources map[string]string, output string) (*manifest.Manifest, error) {
+	normalized := make(map[string]manifest.Source, len(sources))
 	for _, alias := range t.Required {
 		if sources[alias] == "" {
 			return nil, fmt.Errorf("template %q requires --source %s=<path-or-url>", t.Name, alias)
 		}
 	}
-	value := &manifest.Manifest{Sources: sources, Output: output, Doc: cloneEntries(t.Doc)}
+	for alias, location := range sources {
+		normalized[alias] = manifest.Source{Location: location}
+	}
+	value := &manifest.Manifest{Sources: normalized, Output: output, Doc: cloneEntries(t.Doc)}
 	if err := value.Validate(); err != nil {
 		return nil, err
 	}

@@ -574,15 +574,23 @@ func runSourcePin(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	alias := strings.TrimSuffix(flags.Arg(0), ":")
-	sourceURL, found := value.Sources[alias]
+	source, found := value.Sources[alias]
 	if !found {
 		return fmt.Errorf("source %q is not declared in manifest", alias)
 	}
-	result, err := sourcecache.Pin(manifestPath, alias, sourceURL, *ref)
+	result, err := sourcecache.Pin(manifestPath, alias, source.Location, source.Subdir, *ref)
 	if err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(stdout, "Pinned %s\nURL: %s\nCommit: %s\nContent SHA-256: %s\n", alias, result.URL, result.New.Commit, result.New.ContentSHA256); err != nil {
+	if _, err := fmt.Fprintf(stdout, "Pinned %s\nURL: %s\n", alias, result.URL); err != nil {
+		return fmt.Errorf("write source pin result: %w", err)
+	}
+	if result.New.Subdir != "" {
+		if _, err := fmt.Fprintf(stdout, "Subdir: %s\n", result.New.Subdir); err != nil {
+			return fmt.Errorf("write source pin result: %w", err)
+		}
+	}
+	if _, err := fmt.Fprintf(stdout, "Commit: %s\nContent SHA-256: %s\n", result.New.Commit, result.New.ContentSHA256); err != nil {
 		return fmt.Errorf("write source pin result: %w", err)
 	}
 	if !result.Wrote {
@@ -611,11 +619,11 @@ func runSourceUpdate(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	alias := strings.TrimSuffix(flags.Arg(0), ":")
-	sourceURL, found := value.Sources[alias]
+	source, found := value.Sources[alias]
 	if !found {
 		return fmt.Errorf("source %q is not declared in manifest", alias)
 	}
-	result, err := sourcecache.Update(manifestPath, alias, sourceURL, *ref, *accept)
+	result, err := sourcecache.Update(manifestPath, alias, source.Location, source.Subdir, *ref, *accept)
 	if err != nil {
 		return err
 	}

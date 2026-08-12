@@ -107,7 +107,7 @@ func (s *Session) Localize(options LocalizeOptions) (*LocalizeResult, error) {
 	localReference := "local:" + sourcePath
 	entry.From[index] = localReference
 	entry.Exclude = localizeExclusions(entry.Exclude, alias, sourcePath)
-	s.Draft.Sources["local"] = ".mogent/library"
+	s.Draft.Sources["local"] = manifest.Source{Location: ".mogent/library"}
 
 	temporaryRoot, err := os.MkdirTemp("", "mogent-localize-")
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *Session) Localize(options LocalizeOptions) (*LocalizeResult, error) {
 		return nil, err
 	}
 	previewManifest := s.Draft.Clone()
-	previewManifest.Sources["local"] = temporaryRoot
+	previewManifest.Sources["local"] = manifest.Source{Location: temporaryRoot}
 	preview, err := render.Build(previewManifest, s.ManifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("validate localized render: %w", err)
@@ -256,12 +256,15 @@ func validateLocalSource(value *manifest.Manifest, manifestPath, expected string
 	if !exists {
 		return nil
 	}
-	resolved := declared
+	if declared.Subdir != "" {
+		return fmt.Errorf("source alias %q already uses subdir %q, not .mogent/library", "local", declared.Subdir)
+	}
+	resolved := declared.Location
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(filepath.Dir(manifestPath), resolved)
 	}
 	if filepath.Clean(resolved) != filepath.Clean(expected) {
-		return fmt.Errorf("source alias %q already points to %q, not .mogent/library", "local", declared)
+		return fmt.Errorf("source alias %q already points to %q, not .mogent/library", "local", declared.Location)
 	}
 	return nil
 }
@@ -310,11 +313,12 @@ func writeNewFile(path string, contents []byte) error {
 
 func (s *Session) provenanceRecord(reference string, node *SourceNode, markdown []byte) (provenanceRecord, error) {
 	alias, _, _ := manifest.SplitReference(reference)
-	root := s.Saved.Sources[alias]
+	source := s.Saved.Sources[alias]
+	root := source.Location
 	resolved := root
 	if strings.HasPrefix(resolved, "http://") || strings.HasPrefix(resolved, "https://") {
 		var err error
-		resolved, err = sourcecache.Resolve(s.ManifestPath, alias, resolved)
+		resolved, err = sourcecache.Resolve(s.ManifestPath, alias, resolved, source.Subdir)
 		if err != nil {
 			return provenanceRecord{}, err
 		}

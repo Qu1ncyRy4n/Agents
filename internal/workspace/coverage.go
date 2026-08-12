@@ -75,7 +75,7 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 		paths := sortedPaths(index)
 		source := SourceCoverage{
 			Alias: alias,
-			Path:  s.Saved.Sources[alias],
+			Path:  s.Saved.Sources[alias].Display(),
 		}
 		for _, path := range paths {
 			node := index.ByPath[path]

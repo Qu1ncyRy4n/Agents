@@ -77,9 +77,10 @@ func LoadSources(value *manifest.Manifest, manifestPath string) (map[string]*lib
 	sort.Strings(aliases)
 	indexes := make(map[string]*library.Index, len(aliases))
 	for _, alias := range aliases {
-		path := value.Sources[alias]
+		source := value.Sources[alias]
+		path := source.Location
 		if isURL(path) {
-			resolved, err := sourcecache.Resolve(manifestPath, alias, path)
+			resolved, err := sourcecache.Resolve(manifestPath, alias, path, source.Subdir)
 			if err != nil {
 				return nil, err
 			}
@@ -89,6 +90,9 @@ func LoadSources(value *manifest.Manifest, manifestPath string) (map[string]*lib
 			}
 			indexes[alias] = index
 			continue
+		}
+		if source.Subdir != "" {
+			return nil, fmt.Errorf("source %q: subdir is currently supported only for URL locations", alias)
 		}
 		path, err := expandHome(path)
 		if err != nil {
