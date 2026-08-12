@@ -355,6 +355,12 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [x] Add TLDR source browsing and coverage modes; coverage shows each file-level summary once rather than repeating inherited metadata on every heading.
 - [x] Add concise file-level TLDR metadata across the seed libraries. Heading-level summaries remain future metadata work.
 - [ ] Add paging or compact layouts for large command output, or first-class hints for piping through `less`, `rg`, and `fzf`.
+- [ ] Improve CLI presentation from real-project dogfooding: align `source list` fields, indent template requirements beneath each template, and use restrained color or separators without making color the only semantic cue.
+- [ ] Add a source-inventory tree view, likely `source list <alias> --tree`, distinct from coverage's manifest-selection overlay.
+- [ ] Add `mogent source add <alias> <path-or-url>` for extending an existing manifest, with dry-run preview, duplicate-alias validation, URL pinning guidance, and no implicit node selection.
+- [ ] When the first CLI argument looks like `alias:path`, suggest `mogent add alias:path`; if the alias is undeclared, explain how to declare it rather than only reporting an unknown command.
+- [ ] Make actionable hints configurable later (`--no-hints` and/or a persisted hint setting) while keeping hints enabled by default.
+- [ ] Add a core-first manifest reorder command with explicit relative placement (`--before`, `--after`, or `--under`) and dry-run previews; resolve the exact heading-path and nesting semantics before implementation.
 - [x] Add `source show --align-source` or equivalent rendered-preview mode that shows how a source node would align under a manifest heading, including shifted heading levels and optional `--under`/`--heading`.
 - [x] Add source-directory expansion for path-like refs such as `cdint:engineering`, `cdint:engineering/`, and `cdint:engineering/*`, or provide a better diagnostic that lists available descendant refs: implemented descendant diagnostics, not wildcard expansion.
 - [x] Improve diagnostics for failed source refs by suggesting close matches and descendant headings when the user names an organizational directory rather than a heading path.
