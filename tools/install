@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+# Mogent contains no C code. Terminal UI dependencies reach os/user, which makes
+# Go enable runtime/cgo when a host compiler is available or expected. Force the
+# portable pure-Go build so installation does not depend on GCC being in PATH.
+export CGO_ENABLED=0
+export GOCACHE="${GOCACHE:-/tmp/mogent-gocache}"
+export GOMODCACHE="${GOMODCACHE:-/tmp/mogent-gopath/pkg/mod}"
+
+go install ./cmd/mogent

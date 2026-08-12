@@ -19,26 +19,28 @@ work.
 From this repository:
 
 ```sh
-go install ./cmd/mogent
+tools/install
 ```
 
 That installs the `mogent` CLI built from your current checkout. It will not
-auto-update; run `go install ./cmd/mogent` again after pulling or making code
+auto-update; run `tools/install` again after pulling or making code
 changes.
 
-If you are already in `cmd/mogent`, `go install .` is equivalent. From the
-repository root it is not: the root has no Go package.
-
-If your environment has no C compiler and Go tries to use cgo through a
-terminal dependency, either enter the Nix dev shell or disable cgo:
+Mogent contains no C code, but its terminal UI dependency chain reaches the Go
+standard library's `os/user` package. With Go's default `CGO_ENABLED=1`, that can
+make `go install` invoke `gcc` even though Mogent does not need CGO. The install
+helper deliberately builds the portable pure-Go form. The equivalent manual
+command is:
 
 ```sh
-nix develop
-go install ./cmd/mogent
-
-# or
 CGO_ENABLED=0 go install ./cmd/mogent
 ```
+
+If you are already in `cmd/mogent`, `CGO_ENABLED=0 go install .` is equivalent.
+From the repository root, `go install .` is not: the root has no Go package.
+The Nix development shell includes GCC for diagnostics and dependencies that
+genuinely require a C compiler, but Mogent's supported install does not require
+it.
 
 The repository check entrypoint defaults to the pure-Go build and keeps its
 build cache under `/tmp`:
@@ -195,6 +197,13 @@ mogent source show shared:lang/go/testing --align-source --under Instructions
 
 Pin and later review a manifest-declared URL source:
 
+```yaml
+sources:
+  shared:
+    location: https://github.com/Qu1ncyRy4n/Agents.git
+    subdir: libraries/cdint
+```
+
 ```sh
 mogent source pin shared
 mogent source update shared
@@ -203,6 +212,8 @@ mogent source update shared --ref <full-previewed-commit> --accept
 
 Normal commands never fetch URL sources. They require the committed
 `mogent.lock.yaml` entry and verify the ignored `.mogent/sources/` checkout.
+Compact scalar source values remain valid. An explicit `subdir` is locked and
+makes source references relative to that selected repository directory.
 
 Show included and unused source modules:
 

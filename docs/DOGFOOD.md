@@ -36,7 +36,7 @@ project and optional disposable fixture during this dogfood pass.
 Install the current checkout from the Mogent repository:
 
 ```sh
-(cd "$mogent_repo" && go install ./cmd/mogent)
+(cd "$mogent_repo" && tools/install)
 ```
 
 Before allowing Mogent to write in the target, check its Git state and inspect
@@ -383,7 +383,17 @@ Promotion back to a trusted shared source remains future work.
 Purpose: verify that remote content is fetched only by explicit commands and is
 then consumed immutably offline.
 
-Use a disposable manifest with one HTTP(S) Git URL source, then run:
+Use a disposable manifest with one HTTP(S) Git URL source. To exercise a
+library within a larger repository, use the explicit source form:
+
+```yaml
+sources:
+  shared:
+    location: https://github.com/Qu1ncyRy4n/Agents.git
+    subdir: libraries/cdint
+```
+
+Then run:
 
 ```sh
 mogent source pin <alias> --manifest path/to/agents.yaml
