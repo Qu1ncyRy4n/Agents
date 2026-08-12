@@ -21,6 +21,18 @@ mogent_target=/home/qix/dev/omnicortex/todo_app_project
 mogent_manifest="$mogent_target/agents.yaml"
 ```
 
+If the terminal restarts, the simpler recovery path is to enter the target and
+use Mogent's default manifest name; no variables are required:
+
+```sh
+cd /home/qix/dev/omnicortex/todo_app_project
+mogent status
+```
+
+Target-specific examples should ultimately use this form. Variables below are
+retained only where the same command is intentionally switched between the real
+project and optional disposable fixture during this dogfood pass.
+
 Install the current checkout from the Mogent repository:
 
 ```sh
