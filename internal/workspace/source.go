@@ -10,6 +10,7 @@ import (
 )
 
 type SourceNode struct {
+	Kind      library.NodeKind
 	Alias     string
 	Reference string
 	Path      string
@@ -43,6 +44,7 @@ func (s *Session) SourceNode(reference string) (*SourceNode, error) {
 		return nil, missingSourcePathError(alias, path, index)
 	}
 	return &SourceNode{
+		Kind:      node.Kind,
 		Alias:     alias,
 		Reference: alias + ":" + path,
 		Path:      path,
@@ -89,6 +91,7 @@ func (s *Session) SourceNodes(options SourceListOptions) ([]SourceNode, error) {
 				continue
 			}
 			nodes = append(nodes, SourceNode{
+				Kind:      node.Kind,
 				Alias:     alias,
 				Reference: alias + ":" + path,
 				Path:      path,

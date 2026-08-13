@@ -12,16 +12,18 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
 	"github.com/Qu1ncyRy4n/Agents/internal/navigator"
+	"github.com/Qu1ncyRy4n/Agents/internal/presentation"
 	"github.com/Qu1ncyRy4n/Agents/internal/render"
 	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
 	"github.com/Qu1ncyRy4n/Agents/internal/starter"
 	"github.com/Qu1ncyRy4n/Agents/internal/state"
 	"github.com/Qu1ncyRy4n/Agents/internal/workspace"
+	"github.com/charmbracelet/x/term"
 )
 
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		if _, err := fmt.Fprintln(stdout, "Usage: mogent init [--template name] [--source alias=path]\n       mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent drift [--manifest agents.yaml]\n       mogent coverage [--manifest agents.yaml]\n       mogent source list [source] [--manifest agents.yaml]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent source pin <alias> [--ref ref]\n       mogent source update <alias> [--ref ref] [--accept]\n       mogent add <ref> [--under heading/path | --append]\n       mogent localize <manifest-heading-path> [--from source-ref]\n       mogent complete <kind> [--manifest agents.yaml]\n       mogent completion <bash|zsh>\n       mogent tui [--manifest agents.yaml]"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Usage: mogent init [--template name] [--source alias=path]\n       mogent build [--manifest agents.yaml] [--force]\n       mogent status [--manifest agents.yaml]\n       mogent drift [--manifest agents.yaml]\n       mogent coverage [source] [--manifest agents.yaml]\n       mogent source list [source] [--tree] [--coverage]\n       mogent source show <ref> [--manifest agents.yaml]\n       mogent source pin <alias> [--ref ref]\n       mogent source update <alias> [--ref ref] [--accept]\n       mogent add <ref> [--under path [--first|--last] | --before path | --after path | --append]\n       mogent localize <manifest-heading-path> [--from source-ref]\n       mogent complete <kind> [--manifest agents.yaml]\n       mogent completion <bash|zsh>\n       mogent tui [--manifest agents.yaml]"); err != nil {
 			return fmt.Errorf("write usage: %w", err)
 		}
 		return nil
@@ -384,156 +386,7 @@ func statusHint(status workspace.OutputStatus) string {
 }
 
 func runCoverage(args []string, stdout, stderr io.Writer) error {
-	flags := flag.NewFlagSet("coverage", flag.ContinueOnError)
-	flags.SetOutput(stderr)
-	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
-	sourceAlias := flags.String("source", "", "show only one source alias")
-	tag := flags.String("tag", "", "show only source nodes with this metadata tag")
-	contentOnly := flags.Bool("content-only", false, "hide source nodes without body content")
-	leavesOnly := flags.Bool("leaves-only", false, "show only terminal source nodes")
-	depth := flags.Int("depth", -1, "maximum source-tree depth to show; root headings are depth 0")
-	unusedOnly := flags.Bool("unused-only", false, "show only unused source references")
-	tree := flags.Bool("tree", false, "show unused source references as an ASCII tree")
-	showTLDR := flags.Bool("tldr", false, "show each source file's TLDR once beside its first visible node")
-	if err := parseFlags(flags, args); err != nil {
-		return err
-	}
-	if flags.NArg() != 0 {
-		return fmt.Errorf("coverage accepts no positional arguments")
-	}
-	session, err := workspace.New(*manifestFile)
-	if err != nil {
-		return err
-	}
-	coverage := session.CoverageWithOptions(workspace.CoverageOptions{
-		SourceAlias: *sourceAlias,
-		Tag:         *tag,
-		ContentOnly: *contentOnly,
-		LeavesOnly:  *leavesOnly,
-		LimitDepth:  *depth >= 0,
-		MaxDepth:    *depth,
-	})
-	if *sourceAlias != "" && len(coverage.Sources) == 0 {
-		if _, err := session.SourceReferences(*sourceAlias); err != nil {
-			return err
-		}
-		return fmt.Errorf("source %q has no coverage rows after filtering", *sourceAlias)
-	}
-	if *tree {
-		return writeTreeCoverage(stdout, coverage, *showTLDR)
-	}
-	if *unusedOnly {
-		return writeUnusedCoverage(stdout, coverage, *showTLDR)
-	}
-	for _, source := range coverage.Sources {
-		if _, err := fmt.Fprintf(stdout, "Source %s: %s\n", source.Alias, source.Path); err != nil {
-			return fmt.Errorf("write coverage: %w", err)
-		}
-		if _, err := fmt.Fprintf(stdout, "Included: %d/%d\n", source.Included, source.Total); err != nil {
-			return fmt.Errorf("write coverage: %w", err)
-		}
-		if len(source.Unused) == 0 {
-			if _, err := fmt.Fprintln(stdout, "Unused: none"); err != nil {
-				return fmt.Errorf("write coverage: %w", err)
-			}
-		} else {
-			if _, err := fmt.Fprintln(stdout, "Unused:"); err != nil {
-				return fmt.Errorf("write coverage: %w", err)
-			}
-			seenTLDRFiles := make(map[string]bool)
-			for _, node := range source.Unused {
-				if _, err := fmt.Fprintf(stdout, "- %s  %s:%s%s\n", node.Heading, source.Alias, node.Path, coverageTLDR(node, *showTLDR, seenTLDRFiles)); err != nil {
-					return fmt.Errorf("write coverage: %w", err)
-				}
-			}
-		}
-		if _, err := fmt.Fprintln(stdout); err != nil {
-			return fmt.Errorf("write coverage: %w", err)
-		}
-	}
-	return nil
-}
-
-func writeTreeCoverage(stdout io.Writer, coverage workspace.Coverage, showTLDR bool) error {
-	for _, source := range coverage.Sources {
-		seenTLDRFiles := make(map[string]bool)
-		if _, err := fmt.Fprintf(stdout, "%s  %s  included %d/%d, unused %d\n", source.Alias, source.Path, source.Included, source.Total, len(source.Unused)); err != nil {
-			return fmt.Errorf("write coverage: %w", err)
-		}
-		if len(source.Nodes) == 0 {
-			if _, err := fmt.Fprintln(stdout, "  (none)"); err != nil {
-				return fmt.Errorf("write coverage: %w", err)
-			}
-		}
-		for index, node := range source.Nodes {
-			depth := visibleDepth(source.Nodes, index)
-			connector := "`-- "
-			if hasNextAtDepth(source.Nodes, index, depth) {
-				connector = "|-- "
-			}
-			indent := strings.Repeat("|   ", depth)
-			if _, err := fmt.Fprintf(stdout, "%s%s[%s] %s  %s:%s%s\n", indent, connector, node.State, node.Heading, source.Alias, node.Path, coverageTLDR(node, showTLDR, seenTLDRFiles)); err != nil {
-				return fmt.Errorf("write coverage: %w", err)
-			}
-		}
-		if _, err := fmt.Fprintln(stdout); err != nil {
-			return fmt.Errorf("write coverage: %w", err)
-		}
-	}
-	return nil
-}
-
-func visibleDepth(nodes []workspace.CoverageNode, index int) int {
-	depth := 0
-	path := nodes[index].Path
-	for previous := 0; previous < index; previous++ {
-		prefix := nodes[previous].Path + "/"
-		if strings.HasPrefix(path, prefix) {
-			depth++
-		}
-	}
-	return depth
-}
-
-func hasNextAtDepth(nodes []workspace.CoverageNode, index int, depth int) bool {
-	for next := index + 1; next < len(nodes); next++ {
-		if visibleDepth(nodes, next) == depth {
-			return true
-		}
-		if visibleDepth(nodes, next) < depth {
-			return false
-		}
-	}
-	return false
-}
-
-func writeUnusedCoverage(stdout io.Writer, coverage workspace.Coverage, showTLDR bool) error {
-	for _, source := range coverage.Sources {
-		seenTLDRFiles := make(map[string]bool)
-		if len(source.Unused) == 0 {
-			continue
-		}
-		if _, err := fmt.Fprintf(stdout, "%s  %s  unused %d/%d\n", source.Alias, source.Path, len(source.Unused), source.Total); err != nil {
-			return fmt.Errorf("write coverage: %w", err)
-		}
-		for _, node := range source.Unused {
-			if _, err := fmt.Fprintf(stdout, "  %s  %s%s\n", source.Alias+":"+node.Path, node.Heading, coverageTLDR(node, showTLDR, seenTLDRFiles)); err != nil {
-				return fmt.Errorf("write coverage: %w", err)
-			}
-		}
-		if _, err := fmt.Fprintln(stdout); err != nil {
-			return fmt.Errorf("write coverage: %w", err)
-		}
-	}
-	return nil
-}
-
-func coverageTLDR(node workspace.CoverageNode, show bool, seenFiles map[string]bool) string {
-	if !show || node.TLDR == "" || seenFiles[node.File] {
-		return ""
-	}
-	seenFiles[node.File] = true
-	return "  - " + node.TLDR
+	return runSourceListMode(args, stdout, stderr, true)
 }
 
 func runSource(args []string, stdout, stderr io.Writer) error {
@@ -687,6 +540,14 @@ func writeSourceChange(stdout io.Writer, change sourcecache.Change) error {
 }
 
 func runSourceList(args []string, stdout, stderr io.Writer) error {
+	return runSourceListMode(args, stdout, stderr, false)
+}
+
+func runSourceListMode(args []string, stdout, stderr io.Writer, coveragePreset bool) error {
+	presentationConfig, err := presentation.Load()
+	if err != nil {
+		return err
+	}
 	flags := flag.NewFlagSet("source list", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
@@ -699,6 +560,16 @@ func runSourceList(args []string, stdout, stderr io.Writer) error {
 	showLine := flags.Bool("line", false, "show source heading line")
 	search := flags.String("search", "", "search source refs, headings, TLDRs, tags, and direct body text")
 	tldrOnly := flags.Bool("tldr", false, "show compact TLDR rows and skip Metadata: none lines")
+	showCoverage := flags.Bool("coverage", coveragePreset, "overlay manifest selection state")
+	tree := flags.Bool("tree", coveragePreset, "show source nodes as a hierarchy")
+	unusedOnly := flags.Bool("unused-only", false, "show only unused source headings")
+	contentOnly := flags.Bool("content-only", false, "hide organizational directories and headings without body content")
+	leavesOnly := flags.Bool("leaves-only", false, "show only terminal source nodes")
+	depth := flags.Int("depth", -1, "maximum source-tree depth to show; root nodes are depth 0")
+	chars := flags.String("chars", presentationConfig.Chars, "tree character set: ascii or unicode")
+	align := flags.Bool("align", presentationConfig.Align, "align fields into readable columns")
+	fit := flags.String("fit", presentationConfig.Fit, "fit long rows to the terminal: term or none")
+	width := flags.Int("width", presentationConfig.Width, "wrap output at this width; zero uses --fit")
 	args = reorderArgs(args, map[string]bool{
 		"-manifest":    true,
 		"--manifest":   true,
@@ -712,11 +583,22 @@ func runSourceList(args []string, stdout, stderr io.Writer) error {
 		"--sort":       true,
 		"-search":      true,
 		"--search":     true,
+		"-depth":       true,
+		"--depth":      true,
+		"-chars":       true,
+		"--chars":      true,
+		"-fit":         true,
+		"--fit":        true,
+		"-width":       true,
+		"--width":      true,
 	})
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
 	if flags.NArg() > 1 {
+		if coveragePreset {
+			return fmt.Errorf("coverage accepts at most one source alias positional argument")
+		}
 		return fmt.Errorf("source list accepts at most one source alias positional argument")
 	}
 	if flags.NArg() == 1 {
@@ -748,12 +630,72 @@ func runSourceList(args []string, stdout, stderr io.Writer) error {
 		}
 		return nil
 	}
-	for _, node := range nodes {
-		if err := writeSourceListNode(stdout, node, *showMetadata && !*tldrOnly, *showFile, *showLine); err != nil {
-			return err
+	if *chars != "ascii" && *chars != "unicode" {
+		return fmt.Errorf("unknown display character set %q; use ascii or unicode", *chars)
+	}
+	if *fit != "term" && *fit != "none" {
+		return fmt.Errorf("unknown display fit %q; use term or none", *fit)
+	}
+	if *width < 0 {
+		return fmt.Errorf("display width must be zero or greater")
+	}
+	if *tree && *sortMode != "path" {
+		return fmt.Errorf("tree display requires --sort path")
+	}
+	if *tree && (*showMetadata || *showFile || *showLine) {
+		return fmt.Errorf("tree display does not support --metadata, --file, or --line; use --tldr or omit --tree")
+	}
+	if *showCoverage || *tree || *unusedOnly || *contentOnly || *leavesOnly || *depth >= 0 {
+		coverage := session.CoverageWithOptions(workspace.CoverageOptions{
+			SourceAlias: *sourceAlias,
+			Tag:         *tag,
+			ContentOnly: *contentOnly,
+			LeavesOnly:  *leavesOnly,
+			LimitDepth:  *depth >= 0,
+			MaxDepth:    *depth,
+		})
+		return writeInventory(stdout, nodes, coverage, inventoryOptions{
+			Coverage:   *showCoverage,
+			Tree:       *tree,
+			UnusedOnly: *unusedOnly,
+			ShowTLDR:   *tldrOnly,
+			Align:      *align,
+			Chars:      *chars,
+			Width:      outputWidth(stdout, *fit, *width),
+		})
+	}
+	if err := writeAlignedSourceList(stdout, nodes, *align, *showFile, *showLine, *chars); err != nil {
+		return err
+	}
+	if *showMetadata && !*tldrOnly {
+		for _, node := range nodes {
+			if _, err := fmt.Fprintf(stdout, "\n%s\n", node.Reference); err != nil {
+				return fmt.Errorf("write source list: %w", err)
+			}
+			if err := writeIndentedSourceMetadata(stdout, node.Metadata); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func outputWidth(stdout io.Writer, fit string, configured int) int {
+	if configured > 0 {
+		return configured
+	}
+	if fit != "term" {
+		return 0
+	}
+	file, ok := stdout.(interface{ Fd() uintptr })
+	if !ok || !term.IsTerminal(file.Fd()) {
+		return 0
+	}
+	width, _, err := term.GetSize(file.Fd())
+	if err != nil || width <= 0 {
+		return 0
+	}
+	return width
 }
 
 func writeSourceListEmptyHint(stdout io.Writer, session *workspace.Session, sourceAlias string, tag string, tagSearch string, search string) error {
@@ -778,46 +720,6 @@ func writeSourceListEmptyHint(stdout io.Writer, session *workspace.Session, sour
 	}
 	if _, err := fmt.Fprintln(stdout, "Hint: try `mogent source list --search <text>` or `mogent source list <source-alias>`."); err != nil {
 		return fmt.Errorf("write source list: %w", err)
-	}
-	return nil
-}
-
-func writeSourceListNode(stdout io.Writer, node workspace.SourceNode, showMetadata bool, showFile bool, showLine bool) error {
-	if _, err := fmt.Fprintf(stdout, "%s  %s", node.Reference, node.Heading); err != nil {
-		return fmt.Errorf("write source list: %w", err)
-	}
-	if len(node.Metadata.Tags) > 0 {
-		if _, err := fmt.Fprintf(stdout, "  [%s]", strings.Join(node.Metadata.Tags, ", ")); err != nil {
-			return fmt.Errorf("write source list: %w", err)
-		}
-	}
-	if node.Metadata.Priority != nil {
-		if _, err := fmt.Fprintf(stdout, "  p=%.2f", *node.Metadata.Priority); err != nil {
-			return fmt.Errorf("write source list: %w", err)
-		}
-	}
-	if node.Metadata.TLDR != "" {
-		if _, err := fmt.Fprintf(stdout, "  - %s", node.Metadata.TLDR); err != nil {
-			return fmt.Errorf("write source list: %w", err)
-		}
-	}
-	if showFile {
-		if _, err := fmt.Fprintf(stdout, "  %s", node.File); err != nil {
-			return fmt.Errorf("write source list: %w", err)
-		}
-	}
-	if showLine {
-		if _, err := fmt.Fprintf(stdout, ":%d", node.Line); err != nil {
-			return fmt.Errorf("write source list: %w", err)
-		}
-	}
-	if _, err := fmt.Fprintln(stdout); err != nil {
-		return fmt.Errorf("write source list: %w", err)
-	}
-	if showMetadata {
-		if err := writeIndentedSourceMetadata(stdout, node.Metadata); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -882,12 +784,15 @@ func runSourceShow(args []string, stdout, stderr io.Writer) error {
 	if _, err := fmt.Fprintf(stdout, "Reference: %s\n", node.Reference); err != nil {
 		return fmt.Errorf("write source: %w", err)
 	}
-	if *showFile {
+	if _, err := fmt.Fprintf(stdout, "Kind: %s\n", node.Kind); err != nil {
+		return fmt.Errorf("write source: %w", err)
+	}
+	if *showFile && node.File != "" {
 		if _, err := fmt.Fprintf(stdout, "File: %s\n", node.File); err != nil {
 			return fmt.Errorf("write source: %w", err)
 		}
 	}
-	if *showLine {
+	if *showLine && node.Line > 0 {
 		if _, err := fmt.Fprintf(stdout, "Line: %d\n", node.Line); err != nil {
 			return fmt.Errorf("write source: %w", err)
 		}
@@ -1071,6 +976,10 @@ func runAdd(args []string, stdout, stderr io.Writer) error {
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
 	under := flags.String("under", "", "manifest heading path to append under")
 	appendRoot := flags.Bool("append", false, "append to the end of the document")
+	first := flags.Bool("first", false, "insert first beneath --under")
+	last := flags.Bool("last", false, "insert last beneath --under (default)")
+	before := flags.String("before", "", "insert before this manifest heading path")
+	after := flags.String("after", "", "insert after this manifest heading path")
 	heading := flags.String("heading", "", "rendered heading to use in the manifest")
 	dryRun := flags.Bool("dry-run", false, "preview the change without writing")
 	previewMode := flags.String("preview", "summary", "dry-run preview mode: summary, patch, tree, or full")
@@ -1082,6 +991,10 @@ func runAdd(args []string, stdout, stderr io.Writer) error {
 		"--under":    true,
 		"-heading":   true,
 		"--heading":  true,
+		"-before":    true,
+		"--before":   true,
+		"-after":     true,
+		"--after":    true,
 		"-preview":   true,
 		"--preview":  true,
 	})
@@ -1099,6 +1012,10 @@ func runAdd(args []string, stdout, stderr io.Writer) error {
 		Reference: flags.Arg(0),
 		Under:     *under,
 		Append:    *appendRoot,
+		First:     *first,
+		Last:      *last,
+		Before:    *before,
+		After:     *after,
 		Heading:   *heading,
 		Rebuild:   *rebuild,
 	}, *dryRun)
@@ -1131,6 +1048,12 @@ func runAdd(args []string, stdout, stderr io.Writer) error {
 	if _, err := fmt.Fprintf(stdout, "Under: %s\n", parentLabelForOutput(result.ParentPath)); err != nil {
 		return fmt.Errorf("write add result: %w", err)
 	}
+	if _, err := fmt.Fprintf(stdout, "Placement: %s\n", result.Placement); err != nil {
+		return fmt.Errorf("write add result: %w", err)
+	}
+	if err := writeAddRelations(stdout, result.Relations); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1161,6 +1084,12 @@ func writeAddSummary(stdout io.Writer, result *workspace.AddResult) error {
 	}
 	if _, err := fmt.Fprintf(stdout, "  From: %s\n", result.Reference); err != nil {
 		return fmt.Errorf("write add preview: %w", err)
+	}
+	if _, err := fmt.Fprintf(stdout, "  Placement: %s\n", result.Placement); err != nil {
+		return fmt.Errorf("write add preview: %w", err)
+	}
+	if err := writeAddRelations(stdout, result.Relations); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1211,6 +1140,36 @@ func writeAddTree(stdout io.Writer, result *workspace.AddResult) error {
 	}
 	if _, err := fmt.Fprintln(stdout, result.Tree); err != nil {
 		return fmt.Errorf("write add preview: %w", err)
+	}
+	if result.SourceTree != "" {
+		if _, err := fmt.Fprintln(stdout, "\nInherited source subtree:"); err != nil {
+			return fmt.Errorf("write add preview: %w", err)
+		}
+		if _, err := fmt.Fprintln(stdout, result.SourceTree); err != nil {
+			return fmt.Errorf("write add preview: %w", err)
+		}
+	}
+	if err := writeAddRelations(stdout, result.Relations); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeAddRelations(stdout io.Writer, relations []workspace.AddRelation) error {
+	if len(relations) == 0 {
+		return nil
+	}
+	if _, err := fmt.Fprintln(stdout, "\nRelated existing selections:"); err != nil {
+		return fmt.Errorf("write add preview: %w", err)
+	}
+	for _, relation := range relations {
+		label := "review"
+		if relation.Exact {
+			label = "overlap"
+		}
+		if _, err := fmt.Fprintf(stdout, "  - [%s] %s - %s\n", label, relation.Reference, relation.Reason); err != nil {
+			return fmt.Errorf("write add preview: %w", err)
+		}
 	}
 	return nil
 }
@@ -1324,7 +1283,7 @@ func commandCandidates() []string {
 }
 
 func flagCandidates() []string {
-	return []string{"--manifest", "--template", "--output", "--list-templates", "--build", "--force", "--source", "--from", "--import", "--reject", "--ref", "--accept", "--tag", "--tag-search", "--search", "--sort", "--metadata", "--tldr", "--file", "--line", "--content", "--lines", "--align-source", "--under", "--append", "--heading", "--dry-run", "--preview", "--rebuild", "--unused-only", "--tree", "--content-only", "--leaves-only", "--depth"}
+	return []string{"--manifest", "--template", "--output", "--list-templates", "--build", "--force", "--source", "--from", "--import", "--reject", "--ref", "--accept", "--tag", "--tag-search", "--search", "--sort", "--metadata", "--tldr", "--file", "--line", "--content", "--lines", "--align-source", "--align", "--chars", "--fit", "--width", "--coverage", "--under", "--append", "--first", "--last", "--before", "--after", "--heading", "--dry-run", "--preview", "--rebuild", "--unused-only", "--tree", "--content-only", "--leaves-only", "--depth"}
 }
 
 func bashCompletionScript() string {
@@ -1354,7 +1313,7 @@ _mogent_completion() {
       mapfile -t COMPREPLY < <(_mogent_complete_candidates source-aliases "$cur")
       return 0
       ;;
-		--under|-under)
+		--under|-under|--before|-before|--after|-after)
       mapfile -t COMPREPLY < <(_mogent_complete_candidates manifest-headings "$cur")
       return 0
 			;;
@@ -1420,7 +1379,7 @@ _mogent() {
       _describe 'source alias' candidates
       return
       ;;
-		--under|-under)
+		--under|-under|--before|-before|--after|-after)
       candidates=("${(@f)$(_mogent_complete_candidates manifest-headings "$PREFIX")}")
       _describe 'manifest heading' candidates
       return

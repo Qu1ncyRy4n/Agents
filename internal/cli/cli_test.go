@@ -10,6 +10,24 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/internal/cli"
 )
 
+var testConfigRoot string
+
+func TestMain(m *testing.M) {
+	configRoot, err := os.MkdirTemp("", "mogent-cli-config-")
+	if err != nil {
+		panic(err)
+	}
+	if err := os.Setenv("XDG_CONFIG_HOME", configRoot); err != nil {
+		panic(err)
+	}
+	testConfigRoot = configRoot
+	code := m.Run()
+	if err := os.RemoveAll(configRoot); err != nil && code == 0 {
+		code = 1
+	}
+	os.Exit(code)
+}
+
 func TestRunBuildWritesConfiguredOutput(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
@@ -132,11 +150,10 @@ func TestRunCoverageReportsUnusedSourceNodes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
-		"Source shared: library",
-		"Included: 1/3",
-		"Unused:",
-		"- Instructions  shared:instructions",
-		"- Workflow  shared:instructions/workflow",
+		"Key: / directory  # heading",
+		"# Identity      [included]  shared:identity",
+		"# Instructions  [unused]    shared:instructions",
+		"# Workflow  [unused]    shared:instructions/workflow",
 	} {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("coverage missing %q:\n%s", expected, stdout.String())
@@ -164,9 +181,8 @@ func TestRunCoverageUnusedOnlyReportsCompactList(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
-		"shared  library  unused 2/3",
-		"  shared:instructions  Instructions",
-		"  shared:instructions/workflow  Workflow",
+		"shared:instructions",
+		"shared:instructions/workflow",
 	} {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("unused coverage missing %q:\n%s", expected, stdout.String())
@@ -210,7 +226,7 @@ func TestRunCoverageFiltersSourceAndContentOnly(t *testing.T) {
 	if strings.Contains(output, "first:parent  Parent") {
 		t.Fatalf("content-only should hide empty parent:\n%s", output)
 	}
-	if !strings.Contains(output, "first:parent/child  Child") {
+	if !strings.Contains(output, "# Child  [unused]  first:parent/child") {
 		t.Fatalf("coverage should include content-bearing child:\n%s", output)
 	}
 }
@@ -240,7 +256,7 @@ func TestRunCoverageFiltersByTag(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := stdout.String()
-	if !strings.Contains(output, "shared:go/testing  Testing") {
+	if !strings.Contains(output, "# Testing  [unused]  shared:go/testing") {
 		t.Fatalf("tagged node missing:\n%s", output)
 	}
 	if strings.Contains(output, "shared:docs") {
@@ -268,14 +284,87 @@ func TestRunCoverageTreeOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
-		"shared  library  included 1/3, unused 2",
-		"[included] Identity  shared:identity",
-		"[unused] Instructions  shared:instructions",
-		"[unused] Workflow  shared:instructions/workflow",
+		"Key: / directory  # heading",
+		"# Identity      [included]  shared:identity",
+		"# Instructions  [unused]    shared:instructions",
+		"# Workflow  [unused]    shared:instructions/workflow",
 	} {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("tree coverage missing %q:\n%s", expected, stdout.String())
 		}
+	}
+}
+
+func TestCoverageIsSourceListCoveragePresetAndUnicodeIsPresentationOnly(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "engineering")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "testing.md"), []byte("# Testing\nTest behavior.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	if err := os.WriteFile(manifestPath, []byte("sources:\n  shared: library\ndoc:\n  - Engineering: shared:engineering\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var coverageOutput, listOutput, stderr bytes.Buffer
+	if err := cli.Run([]string{"coverage", "--manifest", manifestPath}, &coverageOutput, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.Run([]string{"source", "list", "--manifest", manifestPath, "--coverage", "--tree"}, &listOutput, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if coverageOutput.String() != listOutput.String() {
+		t.Fatalf("coverage alias differs:\ncoverage:\n%s\nsource list:\n%s", coverageOutput.String(), listOutput.String())
+	}
+	listOutput.Reset()
+	if err := cli.Run([]string{"source", "list", "--manifest", manifestPath, "--coverage", "--tree", "--chars", "unicode"}, &listOutput, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"▸ directory", "└──", "shared:engineering/testing"} {
+		if !strings.Contains(listOutput.String(), expected) {
+			t.Fatalf("unicode tree missing %q:\n%s", expected, listOutput.String())
+		}
+	}
+}
+
+func TestSourceListCLICharactersOverrideXDGConfig(t *testing.T) {
+	configDir := filepath.Join(testConfigRoot, "mogent")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configPath := filepath.Join(configDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("display:\n  chars: unicode\n  align: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(configPath) })
+
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "lang")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "go.md"), []byte("# Go\nUse Go.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	if err := os.WriteFile(manifestPath, []byte("sources:\n  shared: library\ndoc:\n  - Go: shared:lang/go\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "list", "--manifest", manifestPath, "--tree"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "▸ directory") {
+		t.Fatalf("XDG character setting not applied:\n%s", stdout.String())
+	}
+	stdout.Reset()
+	if err := cli.Run([]string{"source", "list", "--manifest", manifestPath, "--tree", "--chars", "ascii"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "/ directory") || strings.Contains(stdout.String(), "▸ directory") {
+		t.Fatalf("CLI character override not applied:\n%s", stdout.String())
 	}
 }
 
@@ -304,6 +393,35 @@ func TestRunCoverageTLDRShowsFileSummaryOnce(t *testing.T) {
 	}
 }
 
+func TestRunSourceTreeFitsTLDRToExplicitWidth(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "communication")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := "---\ntldr: Choose an optional communication voice without changing engineering policy or repository safety rules.\n---\n# Personas\nChoose deliberately.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "personas.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	if err := os.WriteFile(manifestPath, []byte("sources:\n  personal: library\ndoc:\n  - Personas: personal:communication/personas\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "list", "personal", "--manifest", manifestPath, "--tree", "--tldr", "--width", "64"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "TLDR: Choose an optional communication voice") {
+		t.Fatalf("fitted TLDR missing continuation:\n%s", output)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+		if len(line) > 64 {
+			t.Fatalf("line exceeds width (%d): %q\n%s", len(line), line, output)
+		}
+	}
+}
+
 func TestRunCoverageLeavesOnlyAndDepth(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
@@ -325,10 +443,10 @@ func TestRunCoverageLeavesOnlyAndDepth(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := stdout.String()
-	if strings.Contains(output, "shared:root  Root") || strings.Contains(output, "shared:root/branch  Branch") {
+	if strings.Contains(output, "shared:root\n") || strings.Contains(output, "shared:root/branch\n") {
 		t.Fatalf("leaves-only should hide parent nodes:\n%s", output)
 	}
-	if !strings.Contains(output, "shared:root/branch/leaf  Leaf") {
+	if !strings.Contains(output, "# Leaf  [unused]  shared:root/branch/leaf") {
 		t.Fatalf("leaves-only should include terminal leaf:\n%s", output)
 	}
 
@@ -338,10 +456,10 @@ func TestRunCoverageLeavesOnlyAndDepth(t *testing.T) {
 		t.Fatal(err)
 	}
 	output = stdout.String()
-	if !strings.Contains(output, "shared:root  Root") || !strings.Contains(output, "shared:root/branch  Branch") {
+	if !strings.Contains(output, "shared:root") || !strings.Contains(output, "shared:root/branch") {
 		t.Fatalf("depth should include root and first child:\n%s", output)
 	}
-	if strings.Contains(output, "shared:root/branch/leaf  Leaf") {
+	if strings.Contains(output, "shared:root/branch/leaf") {
 		t.Fatalf("depth should hide deeper leaf:\n%s", output)
 	}
 }
@@ -405,7 +523,7 @@ func TestRunSourceListShowsCompactRowsAndFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 	output := stdout.String()
-	if !strings.Contains(output, "shared:go/testing  Testing  [lang/go, testing/unit]  p=0.90  - Prefer table tests.") {
+	if !strings.Contains(output, "#  shared:go/testing  Testing  lang/go,testing/unit  p=0.90  Prefer table tests.") {
 		t.Fatalf("source list missing tagged row:\n%s", output)
 	}
 	if strings.Contains(output, "shared:docs") {
@@ -435,7 +553,7 @@ func TestRunSourceListShowsMetadataAndLocation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
-		"shared:security  Security  [risk/security]  p=1.00  - Lock down dangerous changes.  " + sourcePath + ":9",
+		"#  shared:security  Security  risk/security  p=1.00  Lock down dangerous changes.  " + sourcePath + ":9",
 		"  Metadata:",
 		"    TLDR: Lock down dangerous changes.",
 		"    Tags: risk/security",
@@ -563,12 +681,13 @@ func TestRunSourceShowAlignsSourceAndSuggestsDescendants(t *testing.T) {
 
 	stdout.Reset()
 	stderr.Reset()
-	err := cli.Run([]string{"source", "show", "shared:engineering", "--manifest", manifestPath}, &stdout, &stderr)
-	if err == nil {
-		t.Fatal("expected missing organizational path to fail")
+	if err := cli.Run([]string{"source", "show", "shared:engineering", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(err.Error(), "Try a descendant such as engineering/runtime-artifacts") {
-		t.Fatalf("missing descendant suggestion:\n%v", err)
+	for _, expected := range []string{"Kind: directory", "## Runtime Artifacts", "Keep caches out."} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("directory inspection missing %q:\n%s", expected, stdout.String())
+		}
 	}
 }
 
@@ -808,6 +927,8 @@ func TestRunAddDryRunPreviewModes(t *testing.T) {
 		"  `- Instructions",
 		"     |- Workflow  <shared:instructions/workflow>",
 		"+    `- Testing  <shared:instructions/testing>",
+		"Inherited source subtree:",
+		"`-- # Testing",
 	} {
 		if !strings.Contains(stdout.String(), expected) {
 			t.Fatalf("tree preview missing %q:\n%s", expected, stdout.String())
@@ -821,6 +942,24 @@ func TestRunAddDryRunPreviewModes(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "Rendered preview:") || !strings.Contains(stdout.String(), "## Tests") {
 		t.Fatalf("full preview missing rendered content:\n%s", stdout.String())
+	}
+}
+
+func TestRunAddSupportsBeforeAndFirstPlacement(t *testing.T) {
+	_, manifestPath := writeAddCLIFixture(t)
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--before", "Identity", "--heading", "Tests", "--dry-run", "--preview=tree"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "+ |- Tests  <shared:instructions/testing>\n  |- Identity") {
+		t.Fatalf("before preview has wrong order:\n%s", stdout.String())
+	}
+	stdout.Reset()
+	if err := cli.Run([]string{"add", "shared:instructions/testing", "--manifest", manifestPath, "--under", "Instructions", "--first", "--heading", "Tests", "--dry-run", "--preview=tree"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "+    |- Tests  <shared:instructions/testing>\n     `- Workflow") {
+		t.Fatalf("first preview has wrong order:\n%s", stdout.String())
 	}
 }
 

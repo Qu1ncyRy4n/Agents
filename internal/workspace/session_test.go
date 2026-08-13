@@ -168,6 +168,37 @@ func TestSessionCoverageCountsSubtreeAndExclude(t *testing.T) {
 	}
 }
 
+func TestSessionCoverageAggregatesExcludedDirectorySelectionAsPartial(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "engineering")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "errors.md"), []byte("# Errors\nWrap them.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "testing.md"), []byte("# Testing\nTest them.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	config := "sources:\n  shared: library\ndoc:\n  - heading: Engineering\n    from: [shared:engineering]\n    exclude: [shared:engineering/testing]\n"
+	if err := os.WriteFile(manifestPath, []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	session, err := New(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coverage := session.Coverage()
+	states := make(map[string]CoverageState)
+	for _, node := range coverage.Sources[0].Nodes {
+		states[node.Path] = node.State
+	}
+	if states["engineering"] != CoveragePartial || states["engineering/errors"] != CoverageInherited || states["engineering/testing"] != CoverageExcluded {
+		t.Fatalf("states = %#v", states)
+	}
+}
+
 func TestSessionSourceNodeReturnsLocationAndSubtreeContent(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
@@ -308,6 +339,103 @@ func TestSessionAddSourceAppendAddsTopLevelEntry(t *testing.T) {
 	}
 	if result.ParentPath != "" || !strings.Contains(result.Preview, "# Testing") {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestSessionAddSourceSupportsStableRelativePlacement(t *testing.T) {
+	_, manifestPath := writeAddFixture(t)
+	tests := []struct {
+		name    string
+		options AddOptions
+		want    []string
+	}{
+		{
+			name:    "first child",
+			options: AddOptions{Reference: "shared:instructions/testing", Under: "Instructions", First: true, Heading: "Testing"},
+			want:    []string{"Testing", "Workflow"},
+		},
+		{
+			name:    "before top-level anchor",
+			options: AddOptions{Reference: "shared:instructions/testing", Before: "Identity", Heading: "Testing"},
+			want:    []string{"Testing", "Identity", "Instructions"},
+		},
+		{
+			name:    "after nested anchor",
+			options: AddOptions{Reference: "shared:instructions/testing", After: "Instructions/Workflow", Heading: "Testing"},
+			want:    []string{"Workflow", "Testing"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			session, err := New(manifestPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := session.AddSource(test.options, true); err != nil {
+				t.Fatal(err)
+			}
+			entries := session.Draft.Doc
+			if test.name == "first child" || test.name == "after nested anchor" {
+				entries = entries[1].Children
+			}
+			var headings []string
+			for _, entry := range entries {
+				headings = append(headings, entry.Heading)
+			}
+			if strings.Join(headings, ",") != strings.Join(test.want, ",") {
+				t.Fatalf("headings = %#v, want %#v", headings, test.want)
+			}
+		})
+	}
+}
+
+func TestSessionAddDirectoryPreviewExpandsSourceAndReportsRelations(t *testing.T) {
+	temporary := t.TempDir()
+	sharedPath := filepath.Join(temporary, "shared", "engineering")
+	personalPath := filepath.Join(temporary, "personal", "engineering")
+	if err := os.MkdirAll(sharedPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(personalPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sharedPath, "testing.md"), []byte("# Test Strategy\nShared tests.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(personalPath, "migration.md"), []byte("# Staged Migration\nMigrate safely.\n\n## Cutover\nReview cutover.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	config := "sources:\n  shared: shared\n  personal: personal\ndoc:\n  - heading: Instructions\n    children:\n      - Tests: shared:engineering/test-strategy\n"
+	if err := os.WriteFile(manifestPath, []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	session, err := New(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := session.AddSource(AddOptions{Reference: "personal:engineering", Under: "Instructions", Heading: "Engineering"}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"/ engineering/", "# Staged Migration", "# Cutover"} {
+		if !strings.Contains(result.SourceTree, expected) {
+			t.Fatalf("source tree missing %q:\n%s", expected, result.SourceTree)
+		}
+	}
+	if len(result.Relations) != 1 || result.Relations[0].Reference != "shared:engineering/test-strategy" || result.Relations[0].Exact {
+		t.Fatalf("relations = %#v", result.Relations)
+	}
+	session, err = New(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err = session.AddSource(AddOptions{Reference: "shared:engineering", Under: "Instructions", Heading: "Shared Engineering"}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Relations) != 1 || !result.Relations[0].Exact || result.Relations[0].Reference != "shared:engineering/test-strategy" {
+		t.Fatalf("exact relations = %#v", result.Relations)
 	}
 }
 

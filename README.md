@@ -152,6 +152,44 @@ doc:
 The manifest owns the rendered headings. Source headings help find content, but
 the manifest decides where content appears in the final document.
 
+## Organization Adoption
+
+For a team repository, treat the manifest, lock, and rendered agent file as
+reviewed project configuration:
+
+- Commit `agents.yaml` so the selected guidance and document structure are
+  explicit.
+- Commit `mogent.lock.yaml` when URL sources are used. It pins the exact Git
+  commit, source subdirectory, and Markdown content hash.
+- Commit the generated `AGENTS.md` so agents can use it without installing
+  Mogent and reviewers can see policy changes in ordinary diffs.
+- Commit `.mogent/library/` and `.mogent/provenance.yaml` only when localized
+  modules are intentional, repository-owned policy.
+
+Ignore machine-local state and downloaded source checkouts:
+
+```gitignore
+.mogent/sources/
+.mogent/state.json
+```
+
+Avoid ignoring all of `.mogent/` if the repository tracks localized modules.
+Never commit credentials, private source contents, or other personal material
+just because Mogent can resolve them locally.
+
+Keep personal guidance in a separate, explicitly named source such as
+`personal`. That source can be a local path or its own access-controlled Git
+repository. A repository should only select personal modules that are suitable
+for every intended collaborator; broadly applicable additions should go
+through the organization's normal review process before becoming shared
+policy.
+
+For organization-owned libraries, prefer stable source aliases, narrow
+repository `subdir` roots, immutable lock updates, and code review of both the
+lock diff and changed rendered output. Updating a URL source is an explicit
+`mogent source update` operation; ordinary builds remain offline and never
+silently consume upstream changes.
+
 ## Common Commands
 
 Build `AGENTS.md`:
@@ -180,10 +218,15 @@ List available source modules:
 ```sh
 mogent source list
 mogent source list cdint
+mogent source list personal --tree
 mogent source list --search python --tldr
 mogent source list --tag-search go
 mogent source list --sort priority --metadata
 ```
+
+Source directories are selectable subtrees. For example,
+`personal:engineering` selects every module beneath `engineering/`; a manifest
+entry may use `exclude` to remove a narrower directory or heading subtree.
 
 `--tag-search` searches metadata tags only. Use `--search` to search source
 references, headings, TLDRs, tags, and direct body text.
@@ -218,15 +261,36 @@ makes source references relative to that selected repository directory.
 Show included and unused source modules:
 
 ```sh
+mogent source list --coverage --tree
+mogent source list --coverage --tree --unused-only
+mogent source list --coverage --tree --tldr
 mogent coverage
-mogent coverage --unused-only
-mogent coverage --tree
-mogent coverage --tree --tldr
 ```
 
-`coverage --tree` shows text state markers such as `[included]`, `[inherited]`,
+`coverage` is a compatibility alias for `source list --coverage --tree`.
+The unified tree distinguishes directories, headings, and combined
+directory/headings, and shows text states such as `[included]`, `[inherited]`,
 `[excluded]`, `[partial]`, and `[unused]`. Add `--tldr` to show each source
 file's compact summary once beside its first visible node.
+
+Source inventory output uses aligned ASCII by default. Personal presentation preferences can
+be placed in `$XDG_CONFIG_HOME/mogent/config.yaml` (normally
+`~/.config/mogent/config.yaml`):
+
+```yaml
+display:
+  chars: unicode
+  align: true
+  fit: term
+  width: 0
+```
+
+Use `--chars ascii|unicode`, `--align=false`, `--fit term|none`, or an explicit
+`--width <columns>` for a one-command override. Terminal fitting wraps long
+references and TLDRs onto labeled continuation lines; redirected output stays
+unbounded unless a width is explicitly configured.
+These settings only affect display; they never change the manifest or rendered
+agent document.
 
 Add a source module to the manifest:
 
@@ -239,7 +303,13 @@ Preview before writing:
 ```sh
 mogent add shared:lang/go/testing --under Instructions --dry-run --preview=tree
 mogent add shared:lang/go/testing --under Instructions --dry-run --preview=patch
+mogent add shared:lang/go/testing --before Instructions/Workflow --dry-run --preview=tree
 ```
+
+`--under` inserts last by default and accepts `--first` or `--last`.
+`--before` and `--after` use full manifest heading paths and infer the parent.
+Directory tree previews list inherited source headings separately and flag
+exact overlap or related existing selections for review.
 
 Write the manifest and rebuild `AGENTS.md`:
 
@@ -309,7 +379,9 @@ Mogent writes `agents.yaml` and `AGENTS.md` conservatively.
 ## Testing Ground
 
 For a feature-by-feature exercise sequence and issue template, see
-[`docs/DOGFOOD.md`](docs/DOGFOOD.md).
+[`docs/DOGFOOD.md`](docs/DOGFOOD.md). For only the newest selectable-directory
+and unified-tree behavior, use
+[`docs/DOGFOOD-SESSION-3.md`](docs/DOGFOOD-SESSION-3.md).
 
 Try the metadata-oriented sandbox:
 
@@ -330,6 +402,7 @@ Ready for basic local usage:
 - deterministic `AGENTS.md` rendering,
 - atomic module libraries with file-level metadata,
 - source browsing,
+- selectable directory subtrees and unified inventory/coverage trees,
 - metadata/tag filtering,
 - source coverage,
 - simple manifest additions,
@@ -355,7 +428,10 @@ for stricter Claude behavior, while `GEMINI.md` might simply symlink to
 
 - [docs/DESIGN.md](docs/DESIGN.md) is the design of record.
 - [docs/DOGFOOD.md](docs/DOGFOOD.md) stages current features for dogfooding and issue reporting.
+- [docs/DOGFOOD-SESSION-3.md](docs/DOGFOOD-SESSION-3.md) exercises only the new directory-tree and display work.
 - [docs/HANDOFF.md](docs/HANDOFF.md) is the compact current resume point.
+- [docs/AUTHORING-PLAN.md](docs/AUTHORING-PLAN.md) stages source declaration, move/reorder, and guided module creation.
+- [docs/ORIGIN-RECONCILIATION-PLAN.md](docs/ORIGIN-RECONCILIATION-PLAN.md) stages preservation, inheritance, and proposal workflows.
 - [TODO/TODO-jusuk-mogent-agent-modules.md](TODO/TODO-jusuk-mogent-agent-modules.md)
   tracks implementation and open decisions.
 - [docs/thought-experiments/TE-kavam-metadata-tags-and-library-shape.md](docs/thought-experiments/TE-kavam-metadata-tags-and-library-shape.md)

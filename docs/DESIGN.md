@@ -65,10 +65,14 @@ library/instructions/testing.md
   path; renaming a file inside the same directory does not. A node may opt into a rename-proof anchor with a one-line
   comment — `## Testing  <!-- id: strict-testing -->` — useful for widely-referenced
   nodes in shared libraries. Most nodes need no id.
-- Atomic files are not currently stitched into one implicit cross-file subtree.
-  If a document wants several atomic modules under one local heading, the
-  manifest should group those entries explicitly. This keeps the authored
-  document outline visible while cross-file subtree behavior remains unsettled.
+- Atomic files are grouped only through their explicit source-relative
+  directory paths; filenames do not invent hierarchy. A document can select a
+  directory subtree or group unrelated modules explicitly in the manifest.
+- Source-relative directories are first-class organizational nodes. Selecting
+  `personal:engineering` selects every descendant heading in deterministic path
+  order; `exclude` can remove a narrower directory or heading subtree. A path
+  that is both a physical directory and a Markdown heading has one combined
+  identity and retains both its own content and directory descendants.
 - Never content hashes as identity: a hash changes on every prose edit — the common
   case — so it breaks references exactly when you improve content. (A hash is fine
   later as *lockfile* integrity data.)
@@ -291,8 +295,19 @@ underlying model:
 - `source list --coverage --leaves-only` hides parent nodes and shows only terminal nodes.
 - `source list --coverage --depth <n>` limits displayed source-tree depth; root headings are
   depth 0.
-- `source list --coverage --tree` renders an ASCII hierarchy rather than a flat list.
+- `source list --tree` renders the source hierarchy with directory and heading
+  markers. `--coverage` adds manifest-selection state to the same rows.
 - `source list --coverage --tag <tag>` filters once metadata tags exist.
+
+Presentation preferences are user-local YAML at
+`$XDG_CONFIG_HOME/mogent/config.yaml` (or the platform user config directory).
+Compiled defaults are overridden by that file, and explicit CLI flags override
+both. The first supported preferences are `display.chars: ascii|unicode` and
+`display.align: true|false`. `display.fit: term|none` controls terminal-aware
+wrapping and `display.width` supplies an explicit width that takes precedence
+when greater than zero. ASCII is the portable default. Character choice
+changes connectors and node markers only; it never changes references,
+selection, rendering, or other project behavior.
 
 Single-node source inspection stays separate. `source show <ref>` owns
 file paths, heading line numbers, metadata/tags, TLDR fields, first-N-line
@@ -360,12 +375,18 @@ Dry-run output should offer several review views:
 - `--preview=patch` shows the manifest insertion and rendered section addition
   in standard unified-diff style.
 - `--preview=tree` shows the full document tree with the new node marked in
-  place. CLI tree output defaults to ASCII pipes with a row-level `+` marker;
-  Unicode tree characters can be a later display option.
+  place. Directory selections also show a separately labeled inherited source
+  subtree and related existing selections. CLI tree output defaults to ASCII
+  pipes with a row-level `+` marker.
 - `--preview=full` shows the complete rendered `AGENTS.md`.
 
 The default should be compact enough for repeated CLI use; full output remains
 available for debugging and careful review.
+
+Addition placement is manifest-relative and stable: `--under` defaults to last
+child and accepts `--first` or `--last`; `--before` and `--after` identify a
+manifest heading path and infer its parent. Numeric insertion indexes are not a
+public contract because they become stale as the manifest changes.
 
 Localization should preserve upstream provenance without pretending the local
 copy still inherits changes automatically. The exact names remain unsettled:

@@ -150,8 +150,16 @@ func renderEntry(output *strings.Builder, entry manifest.Entry, level int, vars 
 		return err
 	}
 	seenRelative := make(map[string]string)
+	selectedRoots := make(map[string]string)
 	for _, reference := range entry.From {
 		alias, path, _ := manifest.SplitReference(reference)
+		for selectedReference, selectedPath := range selectedRoots {
+			selectedAlias, _, _ := manifest.SplitReference(selectedReference)
+			if alias == selectedAlias && (path == selectedPath || strings.HasPrefix(path, selectedPath+"/") || strings.HasPrefix(selectedPath, path+"/")) {
+				return fmt.Errorf("entry %q composes overlapping source roots %s and %s", entry.Heading, selectedReference, reference)
+			}
+		}
+		selectedRoots[reference] = path
 		node, err := lookup(sources, alias, path)
 		if err != nil {
 			return fmt.Errorf("entry %q: %w", entry.Heading, err)

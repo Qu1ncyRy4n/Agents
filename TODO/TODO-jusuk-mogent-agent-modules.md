@@ -193,6 +193,47 @@ Intent: Let one Git repository publish several clean libraries without changing 
 Constraints: Subdirectories are relative slash paths with no `.`, `..`, empty components, backslashes, absolute form, or symlinked components. Ordinary loads remain offline-only. Exact behavior is recorded in TE-vurap and the updated M4 contract.
 Affects: agents.yaml source values, mogent.lock.yaml, internal/manifest/, internal/sourcecache/, internal/render/, docs/IMPLEMENTATION-M4.md
 
+ID: DI-folar
+Date: 2026-08-12
+Status: active
+Author: user
+Decision: Make source-relative directories first-class selectable subtree nodes
+and present source inventory plus manifest coverage through one aligned tree
+model. Keep `mogent coverage` as the compatibility preset for
+`mogent source list --coverage --tree`. Every tree uses explicit textual node
+kind and state indicators. Use portable ASCII by default and allow presentation
+choice through `display.chars: ascii|unicode`, with explicit CLI flags taking
+precedence over user-local XDG YAML.
+Intent: Preserve the actual library hierarchy during discovery and selection,
+avoid separately evolving overlapping list/coverage commands, and improve
+readability without making color or Unicode carry required meaning.
+Constraints: Selecting a directory includes every descendant in deterministic
+path order; `exclude` narrows that selection. Directory/heading identity
+collisions are represented explicitly rather than silently choosing one.
+Presentation settings cannot affect manifest resolution or rendered output.
+Source overlap remains an error. ASCII references and state words remain stable
+regardless of character-set preference.
+Affects: docs/DESIGN.md, internal/library/, internal/workspace/, internal/cli/,
+internal/presentation/, README.md, docs/DOGFOOD-SESSION-3.md
+
+ID: DI-norim
+Date: 2026-08-12
+Status: active
+Author: user
+Decision: Refine source-tree and authoring previews with terminal-width-aware
+wrapping, expanded inherited source subtrees, related-selection review, and
+stable named placement. `--under` accepts `--first|--last`; `--before` and
+`--after` use manifest heading paths and infer their parent. Presentation uses
+`display.fit: term|none` plus an optional explicit width; redirected output is
+unbounded unless that width is configured.
+Intent: Keep large inventories readable in real terminals and make directory
+additions reveal their actual effect and likely redundancy before any write.
+Constraints: Fitting changes presentation only. Numeric manifest indexes are
+not a public interface. Exact source ancestry is labeled overlap; cross-source
+path similarity is labeled for review rather than asserted as a conflict.
+Affects: internal/presentation/, internal/cli/, internal/workspace/add.go,
+docs/DESIGN.md, docs/AUTHORING-PLAN.md, docs/DOGFOOD-SESSION-3.md
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -207,7 +248,9 @@ Affects: agents.yaml source values, mogent.lock.yaml, internal/manifest/, intern
 - [x] jusuk.10 Dogfood - Use mogent on this repo's AGENTS.md
 - [x] jusuk.11 Lock the milestone-one manifest schema, source scope, and rebuilt Go module location (DI-vukam; TE-vorum).
 - [x] jusuk.12 Resolve the first source-boundary review: move Nix under `personal` while leaving broader boundaries provisional (DI-pesun; DR-garom).
-- [ ] Reconcile the post-merge Nix conflict: remote atomic-library commit `fb8f007` reintroduced `libraries/nix/nix/*` while active DI-pesun places Nix only at `personal:lang/nix`. Do not publish both as canonical sources or delete either copy until ownership/history and the newer intended boundary are confirmed.
+- [x] Reconcile the post-merge Nix conflict by retaining the DI-pesun canonical
+  module at `personal:lang/nix` and removing the redundant top-level `nix`
+  source after user confirmation.
 - [x] jusuk.13 Seed sanitized CDINT, UCD research, and Nix source libraries (DI-voraz).
 
 ## Feature Backlog
@@ -373,21 +416,35 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [x] Add TLDR source browsing and coverage modes; coverage shows each file-level summary once rather than repeating inherited metadata on every heading.
 - [x] Add concise file-level TLDR metadata across the seed libraries. Heading-level summaries remain future metadata work.
 - [ ] Add paging or compact layouts for large command output, or first-class hints for piping through `less`, `rg`, and `fzf`.
-- [ ] Improve CLI presentation from real-project dogfooding: align `source list` fields, indent template requirements beneath each template, and use restrained color or separators without making color the only semantic cue.
-- [ ] Keep normal list/tree output useful ASCII by default, including an inline key where states need explanation. Do not require a vague `--pretty-print` mode; color and alignment preferences may enhance the same stable information design.
-- [ ] Unify source inventory and coverage around one reusable listing/tree model. `source list` supplies available nodes and metadata; `source list --coverage` overlays included, inherited, excluded, partial, and unused state. Keep `mogent coverage` as a compatibility alias/preset for that mode rather than developing two presentations.
+- [x] Add terminal-width-aware inventory formatting. Keep the tree label and
+  source reference together when practical, then wrap a long TLDR onto an
+  indented continuation line instead of creating a very wide sparse row.
+  Provide an explicit CLI/config preference (for example a width of `term`, a
+  numeric width, or unbounded output), and keep redirected/machine output
+  deterministic when no terminal width is available.
+- [ ] Finish CLI presentation from real-project dogfooding: source-list fields are aligned; still indent template requirements beneath each template and consider restrained color or separators without making color the only semantic cue.
+- [x] Keep normal list/tree output useful ASCII by default, including an inline key where states need explanation. Add `display.chars: ascii|unicode` and `--chars` without a vague `--pretty-print` mode.
+- [x] Unify source inventory and coverage around one listing/tree presenter. `source list` supplies available nodes and metadata; `source list --coverage` overlays included, inherited, excluded, partial, and unused state. `mogent coverage` is the compatibility preset for the same tree.
 - [ ] Design user-level presentation config with explicit precedence for color, field alignment, TLDR display, hints, and preferred preview mode. Respect `NO_COLOR`; keep durable project composition out of personal display preferences.
-- [ ] Use XDG discovery with YAML for the first user presentation-config design, and wire the same defaults into Nix/Home Manager from the start. Proposed preferences are `color`, `align`, `tldr`, `hints`, `preview`, and `legend`; finalize precedence and `auto` behavior before implementation.
+- [ ] Extend the XDG YAML presentation config beyond implemented `display.chars` and `display.align`; wire defaults into Nix/Home Manager and design color, TLDR, hints, preview, legend, and `auto` behavior.
 - [ ] Revisit the CLI inspection surface: make `status` the concise aggregate workspace view and keep drift-specific mutation under an explicit resolution command or subcommand rather than maintaining two overlapping read-only reports.
 - [ ] Clarify `help`, `complete`, and `completion`: human help explains commands; the machine-readable candidate backend should be internal or clearly documented; add a safe shell-specific installation path instead of only printing a completion script.
 - [ ] Package zsh/bash completion through Nix in the shells' normal completion directories. An explicit install command may help non-Nix users; generated completion text should remain available for package managers without encouraging users to paste it into shell startup files.
 - [ ] Generate human help, shell candidates, and future agent-readable command descriptions from one command schema rather than maintaining separate human and LLM documentation. Prefer explicit output modes or aliases where the same information differs only in presentation.
-- [ ] Add a source-inventory tree view, likely `source list <alias> --tree`, distinct from coverage's manifest-selection overlay.
-- [ ] Make source directories first-class selectable subtree nodes. Current indexing stores directory prefixes in reference paths but creates nodes only for Markdown headings, so `communication`, `domain`, `engineering`, and `lang` disappear and their file roots flatten together. `personal:engineering` should select every descendant module, while users may still select individual heading paths; coverage must aggregate directory state and exclusions must support narrowing a selected directory.
+- [x] Add `source list <alias> --tree` using the same presenter as the coverage overlay.
+- [x] Make source directories first-class selectable subtree nodes. `personal:engineering` selects every descendant module, individual headings remain selectable, and exclusions narrow a selected directory.
 - [ ] Add `mogent source add <alias> <path-or-url>` for extending an existing manifest, with dry-run preview, duplicate-alias validation, URL pinning guidance, and no implicit node selection.
 - [ ] When the first CLI argument looks like `alias:path`, suggest `mogent add alias:path`; if the alias is undeclared, explain how to declare it rather than only reporting an unknown command.
 - [ ] Make actionable hints configurable later (`--no-hints` and/or a persisted hint setting) while keeping hints enabled by default.
 - [ ] Add a core-first manifest reorder command with explicit relative placement (`--before`, `--after`, or `--under`) and dry-run previews; resolve the exact heading-path and nesting semantics before implementation.
+- [x] Extend `add` placement beyond parent selection: use `--first` or `--last`
+  within `--under`, and `--before <manifest-heading-path>` or
+  `--after <manifest-heading-path>` for stable relative placement. Prefer named
+  anchors over fragile numeric indexes.
+- [x] Make directory additions informative in `add --preview=tree`: expand the
+  selected source subtree beneath the proposed manifest node, distinguish
+  inherited source headings from authored manifest headings, and identify
+  already-selected descendants or likely semantic overlap before writing.
 - [ ] Extend localization provenance for pinned URL sources with the immutable source revision/lock identity. Keep one canonical sidecar record unless a later export feature deliberately embeds a portable copy in Markdown; do not add redundant `localized: true` metadata.
 - [ ] Design promote-local-to-shared separately from localization: preview the local-vs-upstream diff, require an explicit writable source, and preserve Git review rather than silently editing a shared library.
 - [ ] Later integrate `propose` with Git or another version-control adapter so a reviewed local-to-shared change can become a branch/commit/change request; keep the first reconciliation model independent of any one forge.
@@ -434,14 +491,12 @@ Observed friction:
   correct by implementation but misleading for a newcomer.
 - `source list --sort priority --metadata` prints a large dense stream of
   `Metadata: none`, which makes it hard to discover useful modules.
-- `coverage --tree` currently focuses on unused refs and does not clearly show
-  which source nodes are already included, inherited by a selected parent, or
-  excluded.
+- At the time, `coverage --tree` focused on unused refs and did not clearly show
+  included, inherited, or excluded nodes. DI-folar resolved this with the
+  unified state-overlay tree.
 - The user tried `mogent add cdint:engineering` and `mogent add
-  cdint:engineering/`. Both failed because `engineering` is an organizational
-  directory, not a heading path. The diagnostic is technically correct but does
-  not help the user discover descendants such as
-  `cdint:engineering/code-quality`.
+  cdint:engineering/`. Organizational directories were not selectable then;
+  DI-folar now makes `cdint:engineering` a subtree reference.
 - `--manifest` is unclear to new users. It means "use this agents.yaml instead
   of `./agents.yaml`", but the help text does not explain when or why to use it.
 - The current source-library structure makes `CDINT And PromiseGrid` appear as a

@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 This is the compact resume point for another agent. Read `AGENTS.md` and
 `docs/DESIGN.md`, then inspect the current Git status before changing anything.
@@ -39,14 +39,23 @@ ChatGPT, Codex, or another product to share conversation history.
   subdirectories are required before `libraries/cdint` or `libraries/personal`
   can be clean remote aliases.
 - Source libraries are now split into atomic metadata-bearing Markdown files.
-- The remote atomic split also reintroduced `libraries/nix/nix/*`, conflicting
-  with active DI-pesun's `personal:lang/nix` boundary. Both currently exist;
-  reconcile the intended canonical location before publishing library URLs.
+- Source directories are first-class selectable subtrees. Inventory and
+  coverage share one aligned tree presenter with explicit directory/heading
+  markers; `coverage` is the compatibility preset for
+  `source list --coverage --tree`.
+- User-local XDG YAML supports `display.chars: ascii|unicode` and
+  `display.align`, terminal-aware fitting, and explicit widths; CLI flags
+  override it and ASCII remains the default.
+- `add --preview=tree` expands directory selections, distinguishes inherited
+  source structure, and reports exact or related existing selections. Additions
+  support `--first`, `--last`, `--before`, and `--after` placement.
+- The post-merge duplicate top-level Nix source has been removed. DI-pesun's
+  `personal:lang/nix` remains the sole canonical Nix module and is independently
+  selectable.
 - Current work is on `codex/url-source-subdir`. DI-vurap is implemented: compact
   scalar sources remain compatible, explicit sources accept `location` plus a
   locked `subdir`, and hashing/resolution/update review operate from that root.
-  Unit and offline integration checks pass; the live HTTPS combined smoke test
-  was blocked before execution by the approval service.
+  Unit/offline integration checks and real-project HTTPS dogfooding pass.
 - The apparent GCC requirement is traced to TUI dependencies reaching
   `os/user`, which activates standard-library CGO. Mogent contains no C code;
   `tools/install` now forces the supported pure-Go build and was verified with
@@ -54,6 +63,8 @@ ChatGPT, Codex, or another product to share conversation history.
 - Multiple outputs remain unimplemented; `docs/MULTIPLE-OUTPUTS-PLAN.md` records
   the proposed schema, transactions, state migration, CLI work, and decisions
   required before implementation.
+- `docs/AUTHORING-PLAN.md` and `docs/ORIGIN-RECONCILIATION-PLAN.md` now provide
+  implementation sequences and decision gates for the next two phases.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.
@@ -76,15 +87,15 @@ the same workspace operations later.
 
 ## Next Steps
 
-Immediate closure: finish live remote subdirectory dogfooding, reconcile the
-duplicate Nix source boundary, and merge `codex/url-source-subdir`.
+Immediate closure: dogfood the new directory/unified-tree work from
+`docs/DOGFOOD-SESSION-3.md`, commit the current focused changes, and merge
+`codex/url-source-subdir` when the output is satisfactory.
 
 After that, the user-prioritized development order is:
 
-1. Make directory paths selectable subtrees and unify the ASCII source-list and
-   coverage tree presentation around real directory/heading hierarchy.
-2. Add authoring workflows: `source add`, reorder, guided module creation, and
-   reference-aware suggestions.
+1. Dogfood and commit the completed directory-tree refinements.
+2. Implement the authoring contract: `source add`, move/reorder, guided
+   module creation, and reference-aware suggestions.
 3. Replace the directionless `drift` surface with
    origin/reconcile/inherit/propose workflows and three-way provenance checks.
 4. Resolve and implement the multiple-output plan for `CLAUDE.md`, `GEMINI.md`,

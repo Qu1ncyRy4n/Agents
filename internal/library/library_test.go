@@ -107,6 +107,36 @@ func TestLoadUsesDirectoryPathAsHeadingPrefix(t *testing.T) {
 	if _, found := index.ByPath["testing"]; found {
 		t.Fatalf("unexpected unprefixed node path: %#v", index.ByPath)
 	}
+	if index.ByPath["lang"].Kind != library.NodeDirectory || index.ByPath["lang/go"].Kind != library.NodeDirectory {
+		t.Fatalf("directory nodes = %#v, %#v", index.ByPath["lang"], index.ByPath["lang/go"])
+	}
+	if len(index.Roots) != 1 || index.Roots[0].Path != "lang" || len(index.Roots[0].Children) != 1 {
+		t.Fatalf("directory tree = %#v", index.Roots)
+	}
+}
+
+func TestLoadMergesCollidingDirectoryAndHeadingIdentity(t *testing.T) {
+	temporary := t.TempDir()
+	if err := os.Mkdir(filepath.Join(temporary, "lang"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(temporary, "lang.md"), []byte("# Lang\nLanguage policy.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(temporary, "lang", "go.md"), []byte("# Go\nGo policy.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	index, err := library.Load(temporary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lang := index.ByPath["lang"]
+	if lang.Kind != library.NodeDirectoryHeading || lang.Body != "Language policy.\n" {
+		t.Fatalf("lang = %#v", lang)
+	}
+	if len(lang.Children) != 1 || lang.Children[0].Path != "lang/go" {
+		t.Fatalf("lang children = %#v", lang.Children)
+	}
 }
 
 func TestLoadRejectsInvalidFrontmatterMetadata(t *testing.T) {

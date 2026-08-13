@@ -31,6 +31,7 @@ type SourceCoverage struct {
 }
 
 type CoverageNode struct {
+	Kind    library.NodeKind
 	Path    string
 	Heading string
 	File    string
@@ -59,6 +60,7 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 	states := make(map[string]CoverageState)
 	markEntries(s.Draft.Doc, s.Sources, states)
 	markPartialAncestors(states)
+	markPartiallyExcludedDirectories(s.Sources, states)
 
 	aliases := make([]string, 0, len(s.Sources))
 	for alias := range s.Sources {
@@ -92,12 +94,12 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 			if options.LimitDepth && depth > options.MaxDepth {
 				continue
 			}
-			source.Total++
 			state := states[alias+":"+path]
 			if state == "" {
 				state = CoverageUnused
 			}
 			coverageNode := CoverageNode{
+				Kind:    node.Kind,
 				Path:    path,
 				Heading: node.Heading,
 				File:    node.File,
@@ -106,17 +108,48 @@ func (s *Session) CoverageWithOptions(options CoverageOptions) Coverage {
 				State:   state,
 			}
 			source.Nodes = append(source.Nodes, coverageNode)
+			if node.Kind != library.NodeDirectory {
+				source.Total++
+			}
 			if state == CoverageIncluded || state == CoverageInherited {
-				source.Included++
+				if node.Kind != library.NodeDirectory {
+					source.Included++
+				}
 				continue
 			}
-			if state == CoverageUnused {
+			if state == CoverageUnused && node.Kind != library.NodeDirectory {
 				source.Unused = append(source.Unused, coverageNode)
 			}
 		}
 		result.Sources = append(result.Sources, source)
 	}
 	return result
+}
+
+func markPartiallyExcludedDirectories(sources map[string]*library.Index, states map[string]CoverageState) {
+	for alias, index := range sources {
+		for _, node := range index.ByPath {
+			if node.Kind == library.NodeHeading {
+				continue
+			}
+			reference := alias + ":" + node.Path
+			if states[reference] != CoverageIncluded && states[reference] != CoverageInherited {
+				continue
+			}
+			if descendantHasState(alias, node, states, CoverageExcluded) {
+				states[reference] = CoveragePartial
+			}
+		}
+	}
+}
+
+func descendantHasState(alias string, node *library.Node, states map[string]CoverageState, target CoverageState) bool {
+	for _, child := range node.Children {
+		if states[alias+":"+child.Path] == target || descendantHasState(alias, child, states, target) {
+			return true
+		}
+	}
+	return false
 }
 
 func markPartialAncestors(states map[string]CoverageState) {

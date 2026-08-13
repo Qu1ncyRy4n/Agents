@@ -35,6 +35,48 @@ func TestBuildUsesManifestHeadingsTemplatesAndExclusions(t *testing.T) {
 	}
 }
 
+func TestBuildSelectsDirectorySubtreeAndNarrowsItWithExclude(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "engineering")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "errors.md"), "# Error Handling\nWrap errors.\n")
+	writeFile(t, filepath.Join(libraryPath, "tests.md"), "# Testing\nTest behavior.\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: library\ndoc:\n  - heading: Engineering\n    from: [shared:engineering]\n    exclude: [shared:engineering/testing]\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.Build(value, loadedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# Engineering\n\n## Error Handling\n\nWrap errors.\n"
+	if result.Content != want {
+		t.Fatalf("rendered content:\n%s\nwant:\n%s", result.Content, want)
+	}
+}
+
+func TestBuildRejectsDirectoryAndDescendantInSameEntry(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "engineering")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "tests.md"), "# Testing\nTest behavior.\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: library\ndoc:\n  - heading: Engineering\n    from: [shared:engineering, shared:engineering/testing]\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := render.Build(value, loadedPath); err == nil || !strings.Contains(err.Error(), "overlapping source roots") {
+		t.Fatalf("Build error = %v, want overlapping source roots", err)
+	}
+}
+
 func TestBuildUsesVerifiedPinnedURLCacheOffline(t *testing.T) {
 	temporary := t.TempDir()
 	commit := strings.Repeat("d", 40)

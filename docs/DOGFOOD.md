@@ -5,6 +5,11 @@ unexpectedly and record the command, output, manifest, and expected behavior.
 Do not work around a failure by editing generated `AGENTS.md` unless the stage
 specifically tests drift handling.
 
+For only the newly implemented directory-tree, unified-coverage, alignment,
+and display-character work, start with
+[`DOGFOOD-SESSION-3.md`](DOGFOOD-SESSION-3.md). The longer staged guide below
+also includes older regression exercises.
+
 ## Current Dogfood Target
 
 The current real-project dogfood target is:

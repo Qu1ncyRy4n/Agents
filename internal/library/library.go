@@ -16,8 +16,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Node is one Markdown heading and the plain content directly beneath it.
+// Node is a selectable source directory, Markdown heading, or combined
+// directory/heading identity. Only heading kinds own Markdown body content.
 type Node struct {
+	Kind     NodeKind
 	Path     string
 	Heading  string
 	Body     string
@@ -26,6 +28,16 @@ type Node struct {
 	Metadata Metadata
 	Children []*Node
 }
+
+// NodeKind distinguishes selectable organizational directories from Markdown
+// headings. Both have stable source paths, but only headings own content.
+type NodeKind string
+
+const (
+	NodeDirectory        NodeKind = "directory"
+	NodeHeading          NodeKind = "heading"
+	NodeDirectoryHeading NodeKind = "directory-heading"
+)
 
 // Metadata is tool-only source metadata. It is useful for browsing and
 // filtering source modules, but is never rendered into AGENTS.md.
@@ -38,7 +50,7 @@ type Metadata struct {
 	ConflictsWith []string `yaml:"conflicts_with,omitempty"`
 }
 
-// Index permits exact heading-path lookup within one library.
+// Index permits exact source-path lookup within one library.
 type Index struct {
 	Roots  []*Node
 	ByPath map[string]*Node
@@ -75,32 +87,82 @@ func Load(root string) (*Index, error) {
 		return nil, fmt.Errorf("source %q contains no Markdown files", root)
 	}
 	index := &Index{ByPath: make(map[string]*Node)}
+	directories := make(map[string]bool)
 	for _, path := range files {
+		prefix, err := directoryPrefix(root, path)
+		if err != nil {
+			return nil, err
+		}
+		parts := strings.Split(prefix, "/")
+		for end := 1; prefix != "" && end <= len(parts); end++ {
+			directories[strings.Join(parts[:end], "/")] = true
+		}
 		roots, err := parseFile(root, path)
 		if err != nil {
 			return nil, err
 		}
 		for _, node := range roots {
-			if err := index.add(node); err != nil {
+			if err := index.addHeadings(node); err != nil {
 				return nil, err
 			}
-			index.Roots = append(index.Roots, node)
 		}
 	}
+	index.buildTree(directories)
 	return index, nil
 }
 
-func (i *Index) add(node *Node) error {
+func (i *Index) addHeadings(node *Node) error {
 	if _, found := i.ByPath[node.Path]; found {
 		return fmt.Errorf("duplicate heading path %q", node.Path)
 	}
+	node.Kind = NodeHeading
 	i.ByPath[node.Path] = node
 	for _, child := range node.Children {
-		if err := i.add(child); err != nil {
+		if err := i.addHeadings(child); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (i *Index) buildTree(directories map[string]bool) {
+	for path := range directories {
+		if existing, found := i.ByPath[path]; found {
+			if existing.Kind == NodeHeading {
+				existing.Kind = NodeDirectoryHeading
+			}
+		} else {
+			i.ByPath[path] = &Node{
+				Kind:    NodeDirectory,
+				Path:    path,
+				Heading: lastPathPart(path),
+			}
+		}
+	}
+	for _, node := range i.ByPath {
+		node.Children = nil
+	}
+	paths := make([]string, 0, len(i.ByPath))
+	for path := range i.ByPath {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	for _, path := range paths {
+		node := i.ByPath[path]
+		parentPath, found := strings.CutSuffix(path, "/"+lastPathPart(path))
+		if found && parentPath != "" {
+			i.ByPath[parentPath].Children = append(i.ByPath[parentPath].Children, node)
+			continue
+		}
+		i.Roots = append(i.Roots, node)
+	}
+}
+
+func lastPathPart(path string) string {
+	if index := strings.LastIndexByte(path, '/'); index >= 0 {
+		return path[index+1:]
+	}
+	return path
 }
 
 type parsedNode struct {
@@ -167,7 +229,7 @@ func parseFile(root string, path string) ([]*Node, error) {
 		if slug == "" {
 			return nil, fmt.Errorf("Markdown %q has an empty heading slug", path)
 		}
-		node := &Node{Heading: heading, Path: slug, File: path, Line: lineNumber, Metadata: metadata}
+		node := &Node{Kind: NodeHeading, Heading: heading, Path: slug, File: path, Line: lineNumber, Metadata: metadata}
 		if parentPath != "" {
 			node.Path = parentPath + "/" + slug
 			stack[len(stack)-1].node.Children = append(stack[len(stack)-1].node.Children, node)
