@@ -47,6 +47,24 @@ empty, `.`, or `..` components, backslashes, or symlinked components.
 Refs beginning with `-`, non-HTTP(S) URLs, non-commit lock revisions, cache path
 escapes, duplicate YAML keys, and hash mismatches are errors.
 
+## Git Server Compatibility
+
+Pinning uses ordinary Git smart HTTP(S), not a GitHub-specific API. Public
+GitLab, Gitea, Forgejo, and comparable servers should work when they support a
+shallow fetch of the requested ref and present a certificate valid for the URL
+hostname.
+
+Authenticated/private sources are not yet a supported contract. Mogent rejects
+credentials embedded in URLs and does not manage tokens, SSH keys, interactive
+prompts, or forge-specific login flows. A preconfigured noninteractive Git
+credential helper may happen to work because the Git subprocess inherits its
+environment, but users must not rely on that behavior until authentication is
+designed and tested explicitly.
+
+TLS hostname, trust-chain, DNS, proxy, VPN, and server-side failures occur below
+Mogent. Mogent reports Git's failure and must never recommend disabling TLS
+verification as a workaround.
+
 ## Acceptance Checks
 
 - Local-source behavior is unchanged.

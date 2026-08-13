@@ -45,8 +45,10 @@ shape without inventing selectable nodes that do not exist.
 
 Observed baseline: file roots and their descendant headings render correctly,
 but category directories such as `communication`, `domain`, `engineering`, and
-`lang` disappear. The intended follow-up view inserts those as visibly
-non-selectable groups with aggregate state. For example:
+`lang` disappear. The intended follow-up makes those directories selectable
+subtrees with aggregate state. Selecting `personal:engineering` should include
+every descendant module while narrower heading selections remain available.
+For example:
 
 ```text
 personal
@@ -76,7 +78,15 @@ the same insertion; no target files change.
 
 ## C. URL Subdirectory Pinning
 
-Run this section only after the feature build has landed and been installed.
+Install the pushed feature branch before running this section:
+
+```sh
+cd /home/qix/dev/cdint/Agents
+git switch codex/url-source-subdir
+tools/install
+cd /home/qix/dev/omnicortex/todo_app_project
+```
+
 Keep existing local aliases so the current generated document remains stable.
 Add a temporary, unused source to `agents.yaml`:
 

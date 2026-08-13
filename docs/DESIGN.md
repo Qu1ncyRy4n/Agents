@@ -282,16 +282,19 @@ underlying model:
   `go` can match `lang/go`.
 - `source list --metadata` shows the full metadata block for each listed node.
 - `source list --sort path|priority` controls source browsing order.
-- `coverage --source <alias>` filters to one source.
-- `coverage --unused-only` prints a compact list of unused references.
-- `coverage --content-only` hides empty organizational headings.
-- `coverage --leaves-only` hides parent nodes and shows only terminal nodes.
-- `coverage --depth <n>` limits displayed source-tree depth; root headings are
+- `source list --coverage` overlays current manifest-selection state on the
+  same inventory/tree model. The existing `coverage` command remains a concise
+  compatibility alias for this mode rather than a separately developed view.
+- `source list --coverage --source <alias>` filters to one source.
+- `source list --coverage --unused-only` prints a compact list of unused references.
+- `source list --coverage --content-only` hides empty organizational headings.
+- `source list --coverage --leaves-only` hides parent nodes and shows only terminal nodes.
+- `source list --coverage --depth <n>` limits displayed source-tree depth; root headings are
   depth 0.
-- `coverage --tree` renders an ASCII hierarchy rather than a flat list.
-- `coverage --tag <tag>` filters once metadata tags exist.
+- `source list --coverage --tree` renders an ASCII hierarchy rather than a flat list.
+- `source list --coverage --tag <tag>` filters once metadata tags exist.
 
-Source inspection should stay separate from coverage. `source show <ref>` owns
+Single-node source inspection stays separate. `source show <ref>` owns
 file paths, heading line numbers, metadata/tags, TLDR fields, first-N-line
 snippets, full content, and later source-vs-local diffs.
 
@@ -312,7 +315,7 @@ conflicts_with: [shared:testing/fast-only]
 ---
 ```
 
-`coverage --tag <tag>` currently matches exact tag strings. Hierarchical tags
+Coverage tag filtering currently matches exact tag strings. Hierarchical tags
 using slash paths, such as `lang/go`, `scope/org`, `risk/security`, and
 `testing/unit`, are the preferred direction because they support both exact
 filtering and later prefix-style browsing. Keep the syntax light: tags should

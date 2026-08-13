@@ -212,6 +212,10 @@ Affects: agents.yaml source values, mogent.lock.yaml, internal/manifest/, intern
 
 ## Feature Backlog
 
+### User Review Queue
+
+- [ ] User: read the full agent-module library and make content corrections, metadata adjustments, and source-boundary notes based on actual intended use.
+
 Rebuild milestones now proceed core-first: 1. manifest parse/resolve/render, 2.
 navigator proof of concept, 3. extract reusable workspace operations, 4. add
 copy-on-write localization, source browsing, drift/import, and URL pinning on top
@@ -371,7 +375,7 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Add paging or compact layouts for large command output, or first-class hints for piping through `less`, `rg`, and `fzf`.
 - [ ] Improve CLI presentation from real-project dogfooding: align `source list` fields, indent template requirements beneath each template, and use restrained color or separators without making color the only semantic cue.
 - [ ] Keep normal list/tree output useful ASCII by default, including an inline key where states need explanation. Do not require a vague `--pretty-print` mode; color and alignment preferences may enhance the same stable information design.
-- [ ] Unify source inventory and coverage presentation around one reusable listing/tree model: `source list` supplies available nodes and metadata, while an optional selection-state/coverage overlay supplies included, inherited, excluded, partial, and unused state. Preserve clear command aliases if both names remain.
+- [ ] Unify source inventory and coverage around one reusable listing/tree model. `source list` supplies available nodes and metadata; `source list --coverage` overlays included, inherited, excluded, partial, and unused state. Keep `mogent coverage` as a compatibility alias/preset for that mode rather than developing two presentations.
 - [ ] Design user-level presentation config with explicit precedence for color, field alignment, TLDR display, hints, and preferred preview mode. Respect `NO_COLOR`; keep durable project composition out of personal display preferences.
 - [ ] Use XDG discovery with YAML for the first user presentation-config design, and wire the same defaults into Nix/Home Manager from the start. Proposed preferences are `color`, `align`, `tldr`, `hints`, `preview`, and `legend`; finalize precedence and `auto` behavior before implementation.
 - [ ] Revisit the CLI inspection surface: make `status` the concise aggregate workspace view and keep drift-specific mutation under an explicit resolution command or subcommand rather than maintaining two overlapping read-only reports.
@@ -379,7 +383,7 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Package zsh/bash completion through Nix in the shells' normal completion directories. An explicit install command may help non-Nix users; generated completion text should remain available for package managers without encouraging users to paste it into shell startup files.
 - [ ] Generate human help, shell candidates, and future agent-readable command descriptions from one command schema rather than maintaining separate human and LLM documentation. Prefer explicit output modes or aliases where the same information differs only in presentation.
 - [ ] Add a source-inventory tree view, likely `source list <alias> --tree`, distinct from coverage's manifest-selection overlay.
-- [ ] Preserve organizational hierarchy in source trees for atomic modules. Current indexing stores directory prefixes in reference paths but creates nodes only for Markdown headings, so `communication`, `domain`, `engineering`, and `lang` disappear and their file roots flatten together. Render visibly synthetic, non-selectable directory groups with aggregate state (`unused`, `included`, or `partial`), a trailing `/` or group label, and an ASCII key; never present a directory group as a selectable source reference.
+- [ ] Make source directories first-class selectable subtree nodes. Current indexing stores directory prefixes in reference paths but creates nodes only for Markdown headings, so `communication`, `domain`, `engineering`, and `lang` disappear and their file roots flatten together. `personal:engineering` should select every descendant module, while users may still select individual heading paths; coverage must aggregate directory state and exclusions must support narrowing a selected directory.
 - [ ] Add `mogent source add <alias> <path-or-url>` for extending an existing manifest, with dry-run preview, duplicate-alias validation, URL pinning guidance, and no implicit node selection.
 - [ ] When the first CLI argument looks like `alias:path`, suggest `mogent add alias:path`; if the alias is undeclared, explain how to declare it rather than only reporting an unknown command.
 - [ ] Make actionable hints configurable later (`--no-hints` and/or a persisted hint setting) while keeping hints enabled by default.

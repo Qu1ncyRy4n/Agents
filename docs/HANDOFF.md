@@ -76,19 +76,22 @@ the same workspace operations later.
 
 ## Next Steps
 
-1. Reconcile the Nix source-boundary conflict introduced by the remote atomic
-   split; do not expose two canonical Nix sources accidentally.
-2. Repeat live remote pin/build/browse dogfooding against `libraries/cdint` or
-   `libraries/personal` when network-command approval works, then commit and
-   merge the subdirectory branch.
-3. Design the ASCII-first shared list/coverage presenter and XDG YAML personal
-   presentation config, including Nix-installed shell completion.
-4. Run a thought experiment replacing the directionless `drift` surface with
+Immediate closure: finish live remote subdirectory dogfooding, reconcile the
+duplicate Nix source boundary, and merge `codex/url-source-subdir`.
+
+After that, the user-prioritized development order is:
+
+1. Make directory paths selectable subtrees and unify the ASCII source-list and
+   coverage tree presentation around real directory/heading hierarchy.
+2. Add authoring workflows: `source add`, reorder, guided module creation, and
+   reference-aware suggestions.
+3. Replace the directionless `drift` surface with
    origin/reconcile/inherit/propose workflows and three-way provenance checks.
-5. Add the guided module-creation workflow after its destination and metadata
-   contract are recorded.
-6. Resolve the questions in `docs/MULTIPLE-OUTPUTS-PLAN.md` before implementation.
-7. Later, design `mogent handoff` to generate a compact agent-readable summary
+4. Resolve and implement the multiple-output plan for `CLAUDE.md`, `GEMINI.md`,
+   `.codex/AGENTS.md`, and similar explicit targets.
+5. Add XDG YAML presentation configuration, alignment/color/TLDR/hint controls,
+   and Nix-installed shell completion.
+6. Later, design `mogent handoff` to generate a compact agent-readable summary
    from explicit Git, manifest, output, source, coverage, TODO, and design state.
 
 ## Privacy Boundary
