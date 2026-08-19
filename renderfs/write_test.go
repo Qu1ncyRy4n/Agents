@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/renderfs"
+	"github.com/Qu1ncyRy4n/Agents/renderfs"
 )
 
 func TestWriteAtomicallyCreatesParentAndReplacesContent(t *testing.T) {

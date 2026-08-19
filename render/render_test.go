@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
-	"github.com/Qu1ncyRy4n/Agents/internal/render"
-	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
+	"github.com/Qu1ncyRy4n/Agents/manifest"
+	"github.com/Qu1ncyRy4n/Agents/render"
+	"github.com/Qu1ncyRy4n/Agents/sourcecache"
 )
 
 func TestBuildUsesManifestHeadingsTemplatesAndExclusions(t *testing.T) {

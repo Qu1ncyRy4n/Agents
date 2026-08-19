@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/library"
-	"github.com/Qu1ncyRy4n/Agents/internal/workspace"
+	"github.com/Qu1ncyRy4n/Agents/library"
+	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
 
 type inventoryOptions struct {

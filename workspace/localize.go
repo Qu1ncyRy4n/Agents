@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/library"
-	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
-	"github.com/Qu1ncyRy4n/Agents/internal/render"
-	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
-	"github.com/Qu1ncyRy4n/Agents/internal/state"
+	"github.com/Qu1ncyRy4n/Agents/library"
+	"github.com/Qu1ncyRy4n/Agents/manifest"
+	"github.com/Qu1ncyRy4n/Agents/render"
+	"github.com/Qu1ncyRy4n/Agents/sourcecache"
+	"github.com/Qu1ncyRy4n/Agents/state"
 	"gopkg.in/yaml.v3"
 )
 

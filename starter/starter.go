@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
+	"github.com/Qu1ncyRy4n/Agents/manifest"
 )
 
 type Template struct {

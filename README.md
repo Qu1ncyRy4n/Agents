@@ -369,6 +369,31 @@ mogent completion zsh
 The TUI is useful for browsing and proof-of-concept editing, but the CLI is the
 more reliable surface for basic usage today.
 
+## Go API
+
+Mogent's reusable core is available through public Go packages. The CLI uses
+the same `workspace` operations available to other callers:
+
+```go
+session, err := workspace.New("agents.yaml")
+if err != nil {
+    return err
+}
+status, err := session.Status()
+if err != nil {
+    return err
+}
+preview, err := session.AddSource(workspace.AddOptions{
+    Reference: "shared:lang/go/testing",
+    Under:     "Instructions",
+}, true) // true means dry-run
+```
+
+`workspace` is the supported orchestration facade. Packages such as `manifest`,
+`library`, `render`, `sourcecache`, and `state` expose the lower-level model used
+by that facade and the CLI. Mogent is still pre-v1; changes to exported package
+contracts must be deliberate and documented.
+
 ## Safety Behavior
 
 Mogent writes `agents.yaml` and `AGENTS.md` conservatively.

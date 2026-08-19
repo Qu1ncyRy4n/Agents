@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/starter"
+	"github.com/Qu1ncyRy4n/Agents/starter"
 )
 
 func TestInitializeDryRunAndBuild(t *testing.T) {

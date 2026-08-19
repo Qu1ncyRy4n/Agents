@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/library"
+	"github.com/Qu1ncyRy4n/Agents/library"
 )
 
 func TestLoadUsesOptionalIDAsAPathSegmentAndOmitsMetadata(t *testing.T) {

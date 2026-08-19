@@ -11,8 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
-	"github.com/Qu1ncyRy4n/Agents/internal/workspace"
+	"github.com/Qu1ncyRy4n/Agents/manifest"
+	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
 
 type focus int

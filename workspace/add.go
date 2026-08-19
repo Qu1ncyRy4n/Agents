@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/library"
-	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
-	"github.com/Qu1ncyRy4n/Agents/internal/render"
+	"github.com/Qu1ncyRy4n/Agents/library"
+	"github.com/Qu1ncyRy4n/Agents/manifest"
+	"github.com/Qu1ncyRy4n/Agents/render"
 )
 
 type AddOptions struct {

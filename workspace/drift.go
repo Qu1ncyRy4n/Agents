@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/render"
-	"github.com/Qu1ncyRy4n/Agents/internal/state"
+	"github.com/Qu1ncyRy4n/Agents/render"
+	"github.com/Qu1ncyRy4n/Agents/state"
 )
 
 type DriftReport struct {

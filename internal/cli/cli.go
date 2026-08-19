@@ -10,15 +10,15 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/library"
-	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
 	"github.com/Qu1ncyRy4n/Agents/internal/navigator"
 	"github.com/Qu1ncyRy4n/Agents/internal/presentation"
-	"github.com/Qu1ncyRy4n/Agents/internal/render"
-	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
-	"github.com/Qu1ncyRy4n/Agents/internal/starter"
-	"github.com/Qu1ncyRy4n/Agents/internal/state"
-	"github.com/Qu1ncyRy4n/Agents/internal/workspace"
+	"github.com/Qu1ncyRy4n/Agents/library"
+	"github.com/Qu1ncyRy4n/Agents/manifest"
+	"github.com/Qu1ncyRy4n/Agents/render"
+	"github.com/Qu1ncyRy4n/Agents/sourcecache"
+	"github.com/Qu1ncyRy4n/Agents/starter"
+	"github.com/Qu1ncyRy4n/Agents/state"
+	"github.com/Qu1ncyRy4n/Agents/workspace"
 	"github.com/charmbracelet/x/term"
 )
 

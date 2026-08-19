@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
+	"github.com/Qu1ncyRy4n/Agents/manifest"
 )
 
 func TestLoadRejectsDuplicateKeysAndMixedEntryKinds(t *testing.T) {

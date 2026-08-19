@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
+	"github.com/Qu1ncyRy4n/Agents/sourcecache"
 )
 
 func TestLocalizeDryRunWritesNothing(t *testing.T) {

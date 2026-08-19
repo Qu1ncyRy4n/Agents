@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/renderfs"
+	"github.com/Qu1ncyRy4n/Agents/renderfs"
 )
 
 type generated struct {

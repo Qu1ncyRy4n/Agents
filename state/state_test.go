@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/state"
+	"github.com/Qu1ncyRy4n/Agents/state"
 )
 
 func TestCheckOverwriteProtectsUntrackedAndEditedOutput(t *testing.T) {

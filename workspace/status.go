@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/state"
+	"github.com/Qu1ncyRy4n/Agents/state"
 )
 
 // OutputStatus is the user-facing state of the generated document.

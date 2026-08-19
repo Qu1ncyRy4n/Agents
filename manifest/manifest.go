@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Qu1ncyRy4n/Agents/internal/renderfs"
-	"github.com/Qu1ncyRy4n/Agents/internal/sourcepath"
+	"github.com/Qu1ncyRy4n/Agents/renderfs"
+	"github.com/Qu1ncyRy4n/Agents/sourcepath"
 	"gopkg.in/yaml.v3"
 )
 
