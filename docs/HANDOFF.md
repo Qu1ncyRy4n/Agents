@@ -21,8 +21,21 @@ ChatGPT, Codex, or another product to share conversation history.
 
 - Architecture is core/CLI-first. The TUI remains a client of reusable workspace
   operations, not the only home of product behavior.
-- `main` is synchronized with `origin/main` at `bec8996`. The URL-source
-  subdirectory and selectable-directory work is merged.
+- Reusable core packages now live at public top-level import paths. `workspace`
+  is the supported orchestration facade; the CLI and navigator import the same
+  public manifest, library, render, source, state, and workspace packages.
+- Local source roots and descendants reject symlinks consistently with pinned
+  sources. Errors name the link/target and recommend ordinary content or a
+  separately declared source.
+- Builds use only explicit manifest template variables. `init` discovers and
+  materializes `repo_name` and `repo_url`, with repeatable `--var` overrides.
+- Atomic replacement is centralized in `renderfs`; cleanup errors are joined
+  rather than discarded. CLI dispatch, usage, command completion, and typo
+  suggestions share one command registry. XDG config precedence now works
+  consistently on macOS and other platforms.
+- Local `main` contains the focused public-API and cleanup commit series on top
+  of `origin/main` at `bec8996`; it has not been pushed by this workflow. The
+  URL-source subdirectory and selectable-directory work was already merged.
 - `mogent status`, `mogent source show`, source listing/discovery, and
   `mogent coverage` exist. Real-project dogfooding is active in
   `/home/qix/dev/omnicortex/todo_app_project`.
@@ -98,8 +111,8 @@ After that, the user-prioritized development order is:
 1. Quincy reads the checked-in agent modules in bounded sections and records
    content, metadata, overlap, and source-boundary corrections. Keep this as a
    recurring reminder until complete.
-2. Decide the public Go API/package boundary, then move reusable code out of
-   `internal/` so the CLI dogfoods the same supported API as other callers.
+2. Continue public-API dogfooding and compatibility review. Split the remaining
+   large CLI handler file by command family without duplicating behavior.
 3. Implement the authoring contract: `source add`, move/reorder, guided
    module creation, and reference-aware suggestions.
 4. Make `status` canonical for read-only workspace state, retain `drift` as a

@@ -3,6 +3,28 @@
 Status: implementation direction approved by DI-zunap; detailed exported types
 remain subject to compatibility review during each slice.
 
+## Implementation Progress
+
+Completed on 2026-08-18:
+
+- Public `workspace`, `manifest`, `library`, `render`, `renderfs`,
+  `sourcecache`, `sourcepath`, `starter`, and `state` packages; CLI and navigator
+  adapters import these packages.
+- An external-package workspace test that exercises load, status, source
+  discovery, and dry-run addition through the same API used by the CLI.
+- Default rejection of symlinked local source roots, files, and directories,
+  with actionable errors and focused tests.
+- Explicit, materialized `repo_name` and `repo_url` manifest variables; builds
+  no longer inspect checkout directory names or Git remotes.
+- One atomic file writer with joined cleanup errors, used by manifest, render,
+  state, provenance, and source-lock paths.
+- A single CLI command registry for dispatch, usage, completion candidates, and
+  typo suggestions. Purpose-based splitting of the remaining large handler file
+  is still open.
+- Explicit `XDG_CONFIG_HOME` precedence on every platform.
+
+The complete `tools/check` suite passed after these slices.
+
 ## User Direction
 
 - Move the reusable implementation out of Go's `internal/` boundary.

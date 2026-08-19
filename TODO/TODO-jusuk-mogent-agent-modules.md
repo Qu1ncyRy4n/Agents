@@ -513,14 +513,17 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Add formatting preferences for generated Markdown, including sentence/paragraph-oriented source lines and avoiding arbitrary hard wraps when the user wants display wrapping to be handled by the viewer.
 - [ ] Add stale-doc review support: compare docs claims against code-visible surfaces where possible, or at least provide a checklist for public-surface docs such as sockets, commands, prefs/state files, service lifecycle, and implemented roadmap items.
 - [ ] Add `mogent handoff`: generate a compact, agent-readable project-state summary from explicit repository and workspace data. Include current manifest/output state, source and coverage summaries, Git state, maintained TODO/design pointers, and next actions; never scrape chat history or protected/private corpora.
-- [ ] Design and publish Mogent's Go API so the CLI is a thin client of the same
+- [x] Design and publish Mogent's initial Go API so the CLI is a thin client of the same
   supported workspace operations available to other callers. Resolve package,
   compatibility, effects, error, and transaction contracts before moving code
   out of `internal/`; see `docs/PUBLIC-API-AND-CLEANUP-PLAN.md`.
-- [ ] Execute the focused code-cleanup backlog in
-  `docs/PUBLIC-API-AND-CLEANUP-PLAN.md`: CLI decomposition, one atomic writer,
-  ignored-error audit, local-source symlink safety, deterministic tool vars,
-  public examples, and stale dogfood/doc cleanup.
+- [ ] Continue the focused code-cleanup backlog in
+  `docs/PUBLIC-API-AND-CLEANUP-PLAN.md`. Completed: public core packages and
+  external API dogfood, local-source symlink rejection, deterministic manifest
+  variables, one atomic writer, a shared CLI command registry, and portable XDG
+  config precedence. Remaining: split the large command-handler file, finish
+  the ignored-cleanup-error audit, migrate root dogfood to `agents.yaml`, and
+  settle status/drift mutation vocabulary.
 - [ ] Research how each major agent ecosystem manages skills before designing
   `.agents/skills/` support. Compare discovery scopes, formats, trust,
   dependencies, pinning, precedence, and interoperability using current primary
