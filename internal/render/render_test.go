@@ -137,7 +137,7 @@ func TestBuildUsesOnlyPinnedURLSubdirOffline(t *testing.T) {
 	}
 }
 
-func TestBuildProvidesRepositoryNameTemplateVariable(t *testing.T) {
+func TestBuildRequiresExplicitRepositoryTemplateVariables(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")
 	if err := os.Mkdir(libraryPath, 0o755); err != nil {
@@ -150,12 +150,9 @@ func TestBuildProvidesRepositoryNameTemplateVariable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := render.Build(value, loadedPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(result.Content, "Repository: "+filepath.Base(temporary)) {
-		t.Fatalf("missing repo_name template value: %q", result.Content)
+	_, err = render.Build(value, loadedPath)
+	if err == nil || !strings.Contains(err.Error(), "repo_name") {
+		t.Fatalf("Build error = %v, want missing repo_name", err)
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -33,10 +32,9 @@ func Build(value *manifest.Manifest, manifestPath string) (*Result, error) {
 		return nil, err
 	}
 	result := &Result{}
-	vars := toolVars(value.Vars, filepath.Dir(manifestPath))
 	var output strings.Builder
 	for _, entry := range value.Doc {
-		if err := renderEntry(&output, entry, 1, vars, sources, result); err != nil {
+		if err := renderEntry(&output, entry, 1, value.Vars, sources, result); err != nil {
 			return nil, err
 		}
 	}
@@ -46,24 +44,6 @@ func Build(value *manifest.Manifest, manifestPath string) (*Result, error) {
 	}
 	result.Content = trimmed + "\n"
 	return result, nil
-}
-
-func toolVars(user map[string]any, repository string) map[string]any {
-	vars := make(map[string]any, len(user)+2)
-	for name, value := range user {
-		vars[name] = value
-	}
-	if _, exists := vars["repo_name"]; !exists {
-		vars["repo_name"] = filepath.Base(repository)
-	}
-	if _, exists := vars["repo_url"]; !exists {
-		vars["repo_url"] = ""
-		command := exec.Command("git", "-C", repository, "config", "--get", "remote.origin.url")
-		if output, err := command.Output(); err == nil {
-			vars["repo_url"] = strings.TrimSpace(string(output))
-		}
-	}
-	return vars
 }
 
 // LoadSources resolves the manifest's named local libraries using the same

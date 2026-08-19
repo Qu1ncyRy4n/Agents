@@ -128,12 +128,13 @@ silent skips. Source: DI-sufok.
 
 ### 3.4 Templates
 
-Nodes are Go `text/template`s rendered at build:
-
-- tool-provided vars (`repo_name`, `repo_url`, …),
-- user vars from the manifest's `vars` section,
-- e.g. a shared identity node says `You are working on {{ .repo_name }}` and serves
-  every repo unedited.
+Nodes are Go `text/template`s rendered at build from variables in the manifest's
+`vars` section. For example, a shared identity node says
+`You are working on {{ .repo_name }}` and serves every repo unedited. `init`
+discovers `repo_name` and `repo_url`, allows explicit `--var name=value`
+overrides, and writes the resolved values into the manifest. `build` never
+derives template values from the checkout directory or Git configuration, so
+identical libraries and manifest bytes render identically.
 
 ### 3.5 Editing = copy-on-write localization
 

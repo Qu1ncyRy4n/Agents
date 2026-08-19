@@ -64,6 +64,9 @@ mogent init --template minimal --source shared=./libraries/cdint
 
 Templates are ordinary manifest starting points, not hidden presets. `init`
 validates their source references and rendered output before writing.
+It materializes discovered `repo_name` and `repo_url` values under manifest
+`vars`, where they remain reviewable and reproducible. Override either value
+with a repeatable `--var name=value` flag.
 
 A source library is a directory of Markdown files:
 
@@ -138,6 +141,10 @@ subtree. That keeps source selection explicit while the library model settles.
 ```yaml
 sources:
   shared: library
+
+vars:
+  repo_name: example
+  repo_url: https://example.test/example
 
 output: AGENTS.md
 

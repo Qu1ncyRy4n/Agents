@@ -84,6 +84,9 @@ func TestRunInitGuidesAndWritesStarter(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "shared: library") {
 		t.Fatalf("init dry run:\n%s", stdout.String())
 	}
+	if !strings.Contains(stdout.String(), "repo_name:") || !strings.Contains(stdout.String(), filepath.Base(temporary)) || !strings.Contains(stdout.String(), "repo_url: \"\"") {
+		t.Fatalf("init did not materialize repository variables:\n%s", stdout.String())
+	}
 	if _, err := os.Stat(manifestPath); !os.IsNotExist(err) {
 		t.Fatalf("init dry run wrote manifest: %v", err)
 	}
@@ -94,6 +97,33 @@ func TestRunInitGuidesAndWritesStarter(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "Wrote starter manifest") {
 		t.Fatalf("init output:\n%s", stdout.String())
+	}
+}
+
+func TestRunInitAcceptsExplicitRepositoryVariables(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "# Shared Baseline\n\n## Identity\n\n### Role\nWork on {{ .repo_name }} at {{ .repo_url }}.\n\n### Source Of Truth\nRead docs.\n\n## Instructions\n\n### Focused Change Loop\nWork.\n\n## Constraints\n\n### Safe Defaults\nSafe.\n\n## Format\n\n### Clear Handoff\nReport.\n"
+	if err := os.WriteFile(filepath.Join(libraryPath, "baseline.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	var stdout, stderr bytes.Buffer
+	err := cli.Run([]string{
+		"init", "--template", "minimal", "--source", "shared=library",
+		"--manifest", manifestPath, "--var", "repo_name=Example",
+		"--var", "repo_url=https://example.test/repo", "--dry-run",
+	}, &stdout, &stderr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"repo_name: Example", "repo_url: https://example.test/repo"} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("init output missing %q:\n%s", expected, stdout.String())
+		}
 	}
 }
 
