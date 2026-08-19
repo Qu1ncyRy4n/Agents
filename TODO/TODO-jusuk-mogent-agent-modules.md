@@ -443,7 +443,14 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [x] Add `source list <source-prefix>` shorthand for filtering one or more sources, for example `mogent source list cdint` instead of requiring `--source cdint`.
 - [ ] Add filters for metadata fields beyond tags: `requires`, `conflicts_with`, `scope`, urgency/risk/status, and update/review age once those fields exist.
 - [x] Add TLDR source browsing and coverage modes; coverage shows each file-level summary once rather than repeating inherited metadata on every heading.
-- [x] Add concise file-level TLDR metadata across the seed libraries. Heading-level summaries remain future metadata work.
+- [x] Add concise file-level TLDR metadata across the seed libraries.
+- [ ] Add heading-level TLDR metadata using a one-line
+  `<!-- tldr: One-sentence summary. -->` comment immediately after the heading
+  (and after any inline `<!-- id: ... -->`). Parse it as tool-only metadata,
+  strip it from rendered output bytes, let it override file-level TLDR for that
+  heading, and keep inherited file metadata as the fallback. Validate duplicate,
+  misplaced, empty, and malformed TLDR comments loudly before encouraging
+  library authors to depend on the syntax.
 - [ ] Add paging or compact layouts for large command output, or first-class hints for piping through `less`, `rg`, and `fzf`.
 - [x] Add terminal-width-aware inventory formatting. Keep the tree label and
   source reference together when practical, then wrap a long TLDR onto an
