@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-08-12
+Updated: 2026-08-18
 
 This is the compact resume point for another agent. Read `AGENTS.md` and
 `docs/DESIGN.md`, then inspect the current Git status before changing anything.
@@ -21,10 +21,8 @@ ChatGPT, Codex, or another product to share conversation history.
 
 - Architecture is core/CLI-first. The TUI remains a client of reusable workspace
   operations, not the only home of product behavior.
-- `main` is synchronized with `origin/main` at merge commit `7efe946`. The
-  localization/pinning branch, real-project dogfood feedback, and the remote
-  atomic-library split are all merged. The current feature work and retained
-  follow-up documentation are on `codex/url-source-subdir`.
+- `main` is synchronized with `origin/main` at `bec8996`. The URL-source
+  subdirectory and selectable-directory work is merged.
 - `mogent status`, `mogent source show`, source listing/discovery, and
   `mogent coverage` exist. Real-project dogfooding is active in
   `/home/qix/dev/omnicortex/todo_app_project`.
@@ -52,10 +50,10 @@ ChatGPT, Codex, or another product to share conversation history.
 - The post-merge duplicate top-level Nix source has been removed. DI-pesun's
   `personal:lang/nix` remains the sole canonical Nix module and is independently
   selectable.
-- Current work is on `codex/url-source-subdir`. DI-vurap is implemented: compact
-  scalar sources remain compatible, explicit sources accept `location` plus a
-  locked `subdir`, and hashing/resolution/update review operate from that root.
-  Unit/offline integration checks and real-project HTTPS dogfooding pass.
+- DI-vurap is implemented: compact scalar sources remain compatible, explicit
+  sources accept `location` plus a locked `subdir`, and
+  hashing/resolution/update review operate from that root. Unit/offline
+  integration checks and real-project HTTPS dogfooding pass.
 - The apparent GCC requirement is traced to TUI dependencies reaching
   `os/user`, which activates standard-library CGO. Mogent contains no C code;
   `tools/install` now forces the supported pure-Go build and was verified with
@@ -65,6 +63,11 @@ ChatGPT, Codex, or another product to share conversation history.
   required before implementation.
 - `docs/AUTHORING-PLAN.md` and `docs/ORIGIN-RECONCILIATION-PLAN.md` now provide
   implementation sequences and decision gates for the next two phases.
+- `docs/PUBLIC-API-AND-CLEANUP-PLAN.md` records the user direction to expose the
+  same supported Go API used by the CLI, the decisions required before moving
+  packages out of `internal/`, a focused cleanup list, local-source symlink and
+  template-determinism concerns, status/drift direction, and future comparative
+  research into agent skill ecosystems.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.
@@ -87,22 +90,28 @@ the same workspace operations later.
 
 ## Next Steps
 
-Immediate closure: dogfood the new directory/unified-tree work from
-`docs/DOGFOOD-SESSION-3.md`, commit the current focused changes, and merge
-`codex/url-source-subdir` when the output is satisfactory.
+Immediate closure: continue dogfooding the directory/unified-tree work from
+`docs/DOGFOOD-SESSION-3.md` and record remaining friction.
 
 After that, the user-prioritized development order is:
 
-1. Dogfood and commit the completed directory-tree refinements.
-2. Implement the authoring contract: `source add`, move/reorder, guided
+1. Quincy reads the checked-in agent modules in bounded sections and records
+   content, metadata, overlap, and source-boundary corrections. Keep this as a
+   recurring reminder until complete.
+2. Decide the public Go API/package boundary, then move reusable code out of
+   `internal/` so the CLI dogfoods the same supported API as other callers.
+3. Implement the authoring contract: `source add`, move/reorder, guided
    module creation, and reference-aware suggestions.
-3. Replace the directionless `drift` surface with
-   origin/reconcile/inherit/propose workflows and three-way provenance checks.
-4. Resolve and implement the multiple-output plan for `CLAUDE.md`, `GEMINI.md`,
+4. Make `status` canonical for read-only workspace state, retain `drift` as a
+   shorthand for its direct-edit view, and move mutations toward directional
+   origin/reconcile/inherit/propose workflows with three-way provenance checks.
+5. Resolve and implement the multiple-output plan for `CLAUDE.md`, `GEMINI.md`,
    `.codex/AGENTS.md`, and similar explicit targets.
-5. Add XDG YAML presentation configuration, alignment/color/TLDR/hint controls,
+6. Add XDG YAML presentation configuration, alignment/color/TLDR/hint controls,
    and Nix-installed shell completion.
-6. Later, design `mogent handoff` to generate a compact agent-readable summary
+7. Research native skill management across agent ecosystems before designing
+   later `.agents/skills/` composition or projection support.
+8. Later, design `mogent handoff` to generate a compact agent-readable summary
    from explicit Git, manifest, output, source, coverage, TODO, and design state.
 
 ## Privacy Boundary

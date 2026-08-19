@@ -234,6 +234,31 @@ path similarity is labeled for review rather than asserted as a conflict.
 Affects: internal/presentation/, internal/cli/, internal/workspace/add.go,
 docs/DESIGN.md, docs/AUTHORING-PLAN.md, docs/DOGFOOD-SESSION-3.md
 
+ID: DI-zunap
+Date: 2026-08-18
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Publish a supported Go workspace API and make the CLI a thin client
+of that same API. Move reusable implementation out of Go's `internal/`
+boundary, but export lower-level packages selectively rather than treating
+every existing symbol as a compatibility promise. Keep CLI and TUI presentation
+as adapters unless a concrete external use justifies their own public API.
+Reject symlinked local source roots, directories, and Markdown files by default,
+matching pinned-source safety. Make repository template values reproducible by
+materializing discovered values in the manifest rather than silently deriving
+build output from the checkout directory or Git remote.
+Intent: Let agents, scripts, the CLI, and future clients use one safe,
+dogfooded implementation without exposing accidental internals or allowing
+machine-local filesystem and Git state to change trusted source content or
+rendered output.
+Constraints: Public operations preserve strict validation, preview/dry-run,
+offline ordinary commands, atomic apply, rollback, and overwrite protection.
+Symlink rejection must produce actionable diagnostics. Public types and package
+paths require compatibility review before release. The detailed decision and
+cleanup sequence is `docs/PUBLIC-API-AND-CLEANUP-PLAN.md`.
+Affects: go.mod, cmd/mogent/, internal/, future public Go packages,
+docs/PUBLIC-API-AND-CLEANUP-PLAN.md, README.md
+
 ## Subtasks
 
 - [x] jusuk.1 Project scaffolding - Go module, CLI skeleton, basic build
@@ -257,7 +282,11 @@ docs/DESIGN.md, docs/AUTHORING-PLAN.md, docs/DOGFOOD-SESSION-3.md
 
 ### User Review Queue
 
-- [ ] User: read the full agent-module library and make content corrections, metadata adjustments, and source-boundary notes based on actual intended use.
+- [ ] **Recurring owner reminder:** Quincy must read every checked-in module
+  under `libraries/` and record content corrections, metadata adjustments,
+  overlap, and source-boundary notes. Mention this in substantive project
+  handoffs until complete, and offer the next bounded library section rather
+  than letting the review disappear into the general backlog.
 
 Rebuild milestones now proceed core-first: 1. manifest parse/resolve/render, 2.
 navigator proof of concept, 3. extract reusable workspace operations, 4. add
@@ -428,6 +457,9 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Design user-level presentation config with explicit precedence for color, field alignment, TLDR display, hints, and preferred preview mode. Respect `NO_COLOR`; keep durable project composition out of personal display preferences.
 - [ ] Extend the XDG YAML presentation config beyond implemented `display.chars` and `display.align`; wire defaults into Nix/Home Manager and design color, TLDR, hints, preview, legend, and `auto` behavior.
 - [ ] Revisit the CLI inspection surface: make `status` the concise aggregate workspace view and keep drift-specific mutation under an explicit resolution command or subcommand rather than maintaining two overlapping read-only reports.
+- [ ] Make read-only `drift` a compatibility alias for the direct-edit view of
+  `status`; move import/reject/inherit/propose behavior to directional mutation
+  commands with migration guidance.
 - [ ] Clarify `help`, `complete`, and `completion`: human help explains commands; the machine-readable candidate backend should be internal or clearly documented; add a safe shell-specific installation path instead of only printing a completion script.
 - [ ] Package zsh/bash completion through Nix in the shells' normal completion directories. An explicit install command may help non-Nix users; generated completion text should remain available for package managers without encouraging users to paste it into shell startup files.
 - [ ] Generate human help, shell candidates, and future agent-readable command descriptions from one command schema rather than maintaining separate human and LLM documentation. Prefer explicit output modes or aliases where the same information differs only in presentation.
@@ -474,6 +506,18 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Add formatting preferences for generated Markdown, including sentence/paragraph-oriented source lines and avoiding arbitrary hard wraps when the user wants display wrapping to be handled by the viewer.
 - [ ] Add stale-doc review support: compare docs claims against code-visible surfaces where possible, or at least provide a checklist for public-surface docs such as sockets, commands, prefs/state files, service lifecycle, and implemented roadmap items.
 - [ ] Add `mogent handoff`: generate a compact, agent-readable project-state summary from explicit repository and workspace data. Include current manifest/output state, source and coverage summaries, Git state, maintained TODO/design pointers, and next actions; never scrape chat history or protected/private corpora.
+- [ ] Design and publish Mogent's Go API so the CLI is a thin client of the same
+  supported workspace operations available to other callers. Resolve package,
+  compatibility, effects, error, and transaction contracts before moving code
+  out of `internal/`; see `docs/PUBLIC-API-AND-CLEANUP-PLAN.md`.
+- [ ] Execute the focused code-cleanup backlog in
+  `docs/PUBLIC-API-AND-CLEANUP-PLAN.md`: CLI decomposition, one atomic writer,
+  ignored-error audit, local-source symlink safety, deterministic tool vars,
+  public examples, and stale dogfood/doc cleanup.
+- [ ] Research how each major agent ecosystem manages skills before designing
+  `.agents/skills/` support. Compare discovery scopes, formats, trust,
+  dependencies, pinning, precedence, and interoperability using current primary
+  documentation and small fixtures.
 
 ## Dogfood Feedback - Vroca setup, 2026-08-06
 

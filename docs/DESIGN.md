@@ -501,6 +501,7 @@ summary. Git state and these maintained documents win when a chat recap is stale
 | `docs/IMPLEMENTATION-M3.md` | Core-first localization and drift contract | active |
 | `docs/IMPLEMENTATION-M4.md` | Immutable URL source pinning contract | active |
 | `docs/MULTIPLE-OUTPUTS-PLAN.md` | Planned schema, transaction, drift, and decision work for multiple outputs | planning |
+| `docs/PUBLIC-API-AND-CLEANUP-PLAN.md` | Public Go API decisions, cleanup backlog, skills research, and owner dogfood tasks | planning |
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
 | `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | historical — block/id framing superseded by §3 |
 | `docs/brainstorn.md` | Raw brainstorm; taxonomy + fork-import notes | partial — config section superseded by §4 |
