@@ -36,9 +36,13 @@ type displayConfig struct {
 // directory when XDG_CONFIG_HOME is unset. A missing file uses stable defaults.
 func Load() (Config, error) {
 	result := Config{Chars: "ascii", Align: true, Fit: "term"}
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return Config{}, fmt.Errorf("resolve user config directory: %w", err)
+	configDir := os.Getenv("XDG_CONFIG_HOME")
+	if configDir == "" {
+		var err error
+		configDir, err = os.UserConfigDir()
+		if err != nil {
+			return Config{}, fmt.Errorf("resolve user config directory: %w", err)
+		}
 	}
 	path := filepath.Join(configDir, "mogent", "config.yaml")
 	contents, err := os.ReadFile(path)
