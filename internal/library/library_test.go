@@ -3,6 +3,7 @@ package library_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
@@ -147,5 +148,92 @@ func TestLoadRejectsInvalidFrontmatterMetadata(t *testing.T) {
 	}
 	if _, err := library.Load(temporary); err == nil {
 		t.Fatal("expected invalid priority error")
+	}
+}
+
+func TestLoadRejectsSymlinks(t *testing.T) {
+	tests := []struct {
+		name       string
+		createLink func(t *testing.T, temporary string) string
+		want       []string
+	}{
+		{
+			name: "source root",
+			createLink: func(t *testing.T, temporary string) string {
+				t.Helper()
+				target := filepath.Join(temporary, "real-library")
+				if err := os.Mkdir(target, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				writeTestFile(t, filepath.Join(target, "rules.md"), "# Rules\nBody.\n")
+				root := filepath.Join(temporary, "linked-library")
+				createTestSymlink(t, target, root)
+				return root
+			},
+			want: []string{"is an unsupported symlink", "declare the target directory directly"},
+		},
+		{
+			name: "Markdown file",
+			createLink: func(t *testing.T, temporary string) string {
+				t.Helper()
+				root := filepath.Join(temporary, "library")
+				if err := os.Mkdir(root, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				target := filepath.Join(temporary, "private.md")
+				writeTestFile(t, target, "# Private\nDo not import.\n")
+				createTestSymlink(t, target, filepath.Join(root, "linked.md"))
+				return root
+			},
+			want: []string{"contains unsupported symlink", "linked.md", "declare the target directory as a separate source"},
+		},
+		{
+			name: "directory",
+			createLink: func(t *testing.T, temporary string) string {
+				t.Helper()
+				root := filepath.Join(temporary, "library")
+				if err := os.Mkdir(root, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				target := filepath.Join(temporary, "shared-directory")
+				if err := os.Mkdir(target, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				writeTestFile(t, filepath.Join(target, "rules.md"), "# Rules\nBody.\n")
+				createTestSymlink(t, target, filepath.Join(root, "linked-directory"))
+				return root
+			},
+			want: []string{"contains unsupported symlink", "linked-directory", "ordinary source content"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			temporary := t.TempDir()
+			root := test.createLink(t, temporary)
+			_, err := library.Load(root)
+			if err == nil {
+				t.Fatal("expected symlink error")
+			}
+			for _, want := range test.want {
+				if !strings.Contains(err.Error(), want) {
+					t.Fatalf("error %q does not contain %q", err, want)
+				}
+			}
+		})
+	}
+}
+
+func writeTestFile(t *testing.T, path, contents string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func createTestSymlink(t *testing.T, target, path string) {
+	t.Helper()
+	if err := os.Symlink(target, path); err != nil {
+		t.Skipf("symlink creation is unavailable: %v", err)
 	}
 }

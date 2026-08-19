@@ -59,9 +59,12 @@ type Index struct {
 // Load recursively reads Markdown files. A source must be a directory, and
 // duplicate heading paths are errors rather than arbitrary source precedence.
 func Load(root string) (*Index, error) {
-	info, err := os.Stat(root)
+	info, err := os.Lstat(root)
 	if err != nil {
 		return nil, fmt.Errorf("read source %q: %w", root, err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil, symlinkError(root, root)
 	}
 	if !info.IsDir() {
 		return nil, fmt.Errorf("source %q is not a directory", root)
@@ -70,6 +73,9 @@ func Load(root string) (*Index, error) {
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return symlinkError(root, path)
 		}
 		if entry.IsDir() {
 			return nil
@@ -109,6 +115,21 @@ func Load(root string) (*Index, error) {
 	}
 	index.buildTree(directories)
 	return index, nil
+}
+
+func symlinkError(root, path string) error {
+	target, err := os.Readlink(path)
+	if err != nil {
+		return fmt.Errorf("source %q contains unsupported symlink %q: inspect or replace the link with ordinary source content: %w", root, path, err)
+	}
+	display := path
+	if relative, err := filepath.Rel(root, path); err == nil && relative != "." {
+		display = relative
+	}
+	if path == root {
+		return fmt.Errorf("source %q is an unsupported symlink to %q; declare the target directory directly instead", root, target)
+	}
+	return fmt.Errorf("source %q contains unsupported symlink %q -> %q; replace it with ordinary source content or declare the target directory as a separate source", root, display, target)
 }
 
 func (i *Index) addHeadings(node *Node) error {
