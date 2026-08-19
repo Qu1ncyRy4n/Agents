@@ -1,5 +1,8 @@
 sources:
   shared: ../../libraries/cdint
+vars:
+  repo_name: basic-org
+  repo_url: ""
 output: AGENTS.md
 doc:
   - Identity:

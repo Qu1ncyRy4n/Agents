@@ -238,6 +238,9 @@ func executeTemplate(name, content string, vars map[string]any) (string, error) 
 	}
 	var output bytes.Buffer
 	if err := tmpl.Execute(&output, vars); err != nil {
+		if strings.Contains(err.Error(), "map has no entry for key") {
+			return "", fmt.Errorf("render template %q: %w; declare the missing value under manifest vars (init materializes repo_name and repo_url)", name, err)
+		}
 		return "", fmt.Errorf("render template %q: %w", name, err)
 	}
 	return output.String(), nil

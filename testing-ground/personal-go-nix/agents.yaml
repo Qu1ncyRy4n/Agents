@@ -2,6 +2,9 @@ sources:
   shared: ../../libraries/cdint
   go: ../../libraries/cdint
   personal: ../../libraries/personal
+vars:
+  repo_name: personal-go-nix
+  repo_url: ""
 output: AGENTS.md
 doc:
   - Identity:

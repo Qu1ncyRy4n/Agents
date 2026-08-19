@@ -151,7 +151,7 @@ func TestBuildRequiresExplicitRepositoryTemplateVariables(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = render.Build(value, loadedPath)
-	if err == nil || !strings.Contains(err.Error(), "repo_name") {
+	if err == nil || !strings.Contains(err.Error(), "repo_name") || !strings.Contains(err.Error(), "manifest vars") {
 		t.Fatalf("Build error = %v, want missing repo_name", err)
 	}
 }

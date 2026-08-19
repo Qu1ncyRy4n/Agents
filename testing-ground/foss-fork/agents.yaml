@@ -1,6 +1,9 @@
 sources:
   shared: ../../libraries/cdint
   go: ../../libraries/cdint
+vars:
+  repo_name: foss-fork
+  repo_url: ""
 output: AGENTS.md
 doc:
   - Identity:
