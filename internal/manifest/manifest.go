@@ -3,13 +3,13 @@ package manifest
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Qu1ncyRy4n/Agents/internal/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/internal/sourcepath"
 	"gopkg.in/yaml.v3"
 )
@@ -297,29 +297,8 @@ func WriteAtomically(path string, value *Manifest) error {
 	if err != nil {
 		return err
 	}
-	directory := filepath.Dir(path)
-	temporary, err := os.CreateTemp(directory, ".mogent-manifest-*")
-	if err != nil {
-		return fmt.Errorf("create temporary manifest: %w", err)
-	}
-	temporaryName := temporary.Name()
-	if _, err := temporary.Write(output); err != nil {
-		return cleanupTemporary(fmt.Errorf("write temporary manifest: %w", err), temporary, temporaryName)
-	}
-	if err := temporary.Chmod(0o644); err != nil {
-		return cleanupTemporary(fmt.Errorf("set manifest permissions: %w", err), temporary, temporaryName)
-	}
-	if err := temporary.Close(); err != nil {
-		if removeErr := os.Remove(temporaryName); removeErr != nil {
-			return errors.Join(fmt.Errorf("close temporary manifest: %w", err), fmt.Errorf("remove temporary manifest: %w", removeErr))
-		}
-		return fmt.Errorf("close temporary manifest: %w", err)
-	}
-	if err := os.Rename(temporaryName, path); err != nil {
-		if removeErr := os.Remove(temporaryName); removeErr != nil {
-			return errors.Join(fmt.Errorf("replace manifest: %w", err), fmt.Errorf("remove temporary manifest: %w", removeErr))
-		}
-		return fmt.Errorf("replace manifest: %w", err)
+	if err := renderfs.WriteAtomically(path, output); err != nil {
+		return fmt.Errorf("write manifest: %w", err)
 	}
 	return nil
 }
@@ -341,15 +320,6 @@ func Marshal(value *Manifest) ([]byte, error) {
 		return nil, fmt.Errorf("finish manifest serialization: %w", err)
 	}
 	return output.Bytes(), nil
-}
-
-func cleanupTemporary(buildErr error, temporary *os.File, path string) error {
-	closeErr := temporary.Close()
-	removeErr := os.Remove(path)
-	if closeErr != nil || removeErr != nil {
-		return errors.Join(buildErr, closeErr, removeErr)
-	}
-	return buildErr
 }
 
 func ensureEOF(decoder *yaml.Decoder) error {

@@ -3,7 +3,6 @@ package render
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/Qu1ncyRy4n/Agents/internal/library"
 	"github.com/Qu1ncyRy4n/Agents/internal/manifest"
+	"github.com/Qu1ncyRy4n/Agents/internal/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/internal/sourcecache"
 )
 
@@ -270,38 +270,5 @@ func descendantPaths(node *library.Node, rootPath string) []string {
 
 // WriteAtomically replaces output only after a successful full build.
 func WriteAtomically(path, content string) error {
-	directory := filepath.Dir(path)
-	temporary, err := os.CreateTemp(directory, ".mogent-*")
-	if err != nil {
-		return fmt.Errorf("create temporary output: %w", err)
-	}
-	temporaryName := temporary.Name()
-	if _, err := temporary.WriteString(content); err != nil {
-		return cleanupTemporary(fmt.Errorf("write temporary output: %w", err), temporary, temporaryName)
-	}
-	if err := temporary.Chmod(0o644); err != nil {
-		return cleanupTemporary(fmt.Errorf("set output permissions: %w", err), temporary, temporaryName)
-	}
-	if err := temporary.Close(); err != nil {
-		if removeErr := os.Remove(temporaryName); removeErr != nil {
-			return errors.Join(fmt.Errorf("close temporary output: %w", err), fmt.Errorf("remove temporary output: %w", removeErr))
-		}
-		return fmt.Errorf("close temporary output: %w", err)
-	}
-	if err := os.Rename(temporaryName, path); err != nil {
-		if removeErr := os.Remove(temporaryName); removeErr != nil {
-			return errors.Join(fmt.Errorf("replace output: %w", err), fmt.Errorf("remove temporary output: %w", removeErr))
-		}
-		return fmt.Errorf("replace output: %w", err)
-	}
-	return nil
-}
-
-func cleanupTemporary(buildErr error, temporary *os.File, path string) error {
-	closeErr := temporary.Close()
-	removeErr := os.Remove(path)
-	if closeErr != nil || removeErr != nil {
-		return errors.Join(buildErr, closeErr, removeErr)
-	}
-	return buildErr
+	return renderfs.WriteAtomically(path, []byte(content))
 }

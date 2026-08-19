@@ -8,7 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
+
+	"github.com/Qu1ncyRy4n/Agents/internal/renderfs"
 )
 
 type generated struct {
@@ -82,15 +83,15 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 
 // Write records exactly the content just written to the generated output.
 func Write(statePath, output string) error {
-	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
-		return fmt.Errorf("create generated-output state directory: %w", err)
-	}
 	contents, err := json.MarshalIndent(generated{SHA256: Hash([]byte(output))}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode generated-output state: %w", err)
 	}
 	contents = append(contents, '\n')
-	return writeAtomically(statePath, contents)
+	if err := renderfs.WriteAtomically(statePath, contents); err != nil {
+		return fmt.Errorf("write generated-output state: %w", err)
+	}
+	return nil
 }
 
 func Hash(content []byte) string {
@@ -104,32 +105,4 @@ func decode(contents []byte) (generated, error) {
 		return generated{}, fmt.Errorf("read generated-output state: invalid state file")
 	}
 	return previous, nil
-}
-
-func writeAtomically(path string, contents []byte) error {
-	temporary, err := os.CreateTemp(filepath.Dir(path), ".mogent-state-")
-	if err != nil {
-		return fmt.Errorf("create temporary state: %w", err)
-	}
-	temporaryPath := temporary.Name()
-	if _, err := temporary.Write(contents); err != nil {
-		return cleanup(fmt.Errorf("write temporary state: %w", err), temporary, temporaryPath)
-	}
-	if err := temporary.Close(); err != nil {
-		if removeErr := os.Remove(temporaryPath); removeErr != nil {
-			return errors.Join(fmt.Errorf("close temporary state: %w", err), removeErr)
-		}
-		return fmt.Errorf("close temporary state: %w", err)
-	}
-	if err := os.Rename(temporaryPath, path); err != nil {
-		if removeErr := os.Remove(temporaryPath); removeErr != nil {
-			return errors.Join(fmt.Errorf("replace state: %w", err), removeErr)
-		}
-		return fmt.Errorf("replace state: %w", err)
-	}
-	return nil
-}
-
-func cleanup(original error, temporary *os.File, path string) error {
-	return errors.Join(original, temporary.Close(), os.Remove(path))
 }
