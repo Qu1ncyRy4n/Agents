@@ -287,6 +287,10 @@ docs/PUBLIC-API-AND-CLEANUP-PLAN.md, README.md
   overlap, and source-boundary notes. Mention this in substantive project
   handoffs until complete, and offer the next bounded library section rather
   than letting the review disappear into the general backlog.
+- [x] Quincy reviewed `libraries/cdint/engineering/`; detailed questions and
+  proposed TLDR/content changes remain in owner-authored working-tree notes
+  pending deliberate integration. Do not stage or rewrite those notes without
+  explicit direction.
 
 Rebuild milestones now proceed core-first: 1. manifest parse/resolve/render, 2.
 navigator proof of concept, 3. extract reusable workspace operations, 4. add
@@ -474,7 +478,12 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [x] Make source directories first-class selectable subtree nodes. `personal:engineering` selects every descendant module, individual headings remain selectable, and exclusions narrow a selected directory.
 - [ ] Add `mogent source add <alias> <path-or-url>` for extending an existing manifest, with dry-run preview, duplicate-alias validation, URL pinning guidance, and no implicit node selection.
 - [ ] When the first CLI argument looks like `alias:path`, suggest `mogent add alias:path`; if the alias is undeclared, explain how to declare it rather than only reporting an unknown command.
-- [ ] Make actionable hints configurable later (`--no-hints` and/or a persisted hint setting) while keeping hints enabled by default.
+- [ ] Make actionable helper hints configurable while keeping them enabled by
+  default. Prefer an explicit user-level `display.hints: true|false` plus
+  `--hints`/`--no-hints`; structured machine output should omit prose hints.
+  Hints should continue to say what happened, why it matters, and the safest
+  likely next command. This is a presentation/token-budget preference, never a
+  project composition setting.
 - [ ] Add a core-first manifest reorder command with explicit relative placement (`--before`, `--after`, or `--under`) and dry-run previews; resolve the exact heading-path and nesting semantics before implementation.
 - [x] Extend `add` placement beyond parent selection: use `--first` or `--last`
   within `--under`, and `--before <manifest-heading-path>` or
@@ -490,6 +499,14 @@ preset guidance rather than rendering library-maintenance prose into prompts.
 - [ ] Replace or broaden the `drift` command vocabulary after a workflow thought experiment. The command family must express direction: preserve a hand edit locally, compare with origin, inherit upstream changes into a customized node, or propose/promote a local change to a shared source. Consider Promise Theory/Grid vocabulary, but prefer terms that remain understandable without that background.
 - [ ] Add origin freshness to status: pinned revision, last explicit upstream check, available reviewed update when known, and whether a localized node has diverged from its recorded origin. Never perform a network check as a side effect of status.
 - [ ] Design explicit local/upstream reconciliation using the provenance base: three-way compare original content, current upstream, and local content; support an inherit/rebase-like flow and a reviewable change-request/promote flow without silently overwriting either side.
+- [ ] Add preserve-as-sibling design: retain the origin selection and add the
+  direct edit as a local sibling using `--as <heading>` plus normal placement
+  flags. Reserve `--branch` for an optional Git adapter.
+- [ ] Define inheritance strategies explicitly: fast-forward-only first,
+  reviewed non-overlapping three-way merge later, and an explicit replace-local
+  path for discarding customization.
+- [ ] Keep `propose` transport-neutral: emit a local patch/change bundle first;
+  add opt-in Git branch/commit, forge, or Promise Grid delivery adapters later.
 - [ ] Add a guided module-creation command independent of init: prompt or accept flags for heading, Markdown content, TLDR, destination/source, and optional metadata; preview the resulting file/reference before writing.
 - [ ] Run a privacy/security thought experiment for cross-agent activity and memory interoperability. Prefer explicit workspace event/handoff records; do not scrape private Claude, Codex, or other product histories by default.
 - [ ] Revisit the product name before a broader public release. Explore respectful psychology/neuroscience references involving plurality, integration, memory, or perspective; avoid stigmatizing "multiple personality" framing and check project/package-name availability before choosing.
@@ -521,9 +538,9 @@ preset guidance rather than rendering library-maintenance prose into prompts.
   `docs/PUBLIC-API-AND-CLEANUP-PLAN.md`. Completed: public core packages and
   external API dogfood, local-source symlink rejection, deterministic manifest
   variables, one atomic writer, a shared CLI command registry, and portable XDG
-  config precedence. Remaining: split the large command-handler file, finish
-  the ignored-cleanup-error audit, migrate root dogfood to `agents.yaml`, and
-  settle status/drift mutation vocabulary.
+  config precedence, plus purpose-based CLI handler files. Remaining: finish the
+  ignored-cleanup-error audit, migrate root dogfood to `agents.yaml`, and settle
+  status/drift mutation vocabulary.
 - [ ] Research how each major agent ecosystem manages skills before designing
   `.agents/skills/` support. Compare discovery scopes, formats, trust,
   dependencies, pinning, precedence, and interoperability using current primary

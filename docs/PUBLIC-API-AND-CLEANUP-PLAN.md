@@ -19,8 +19,9 @@ Completed on 2026-08-18:
 - One atomic file writer with joined cleanup errors, used by manifest, render,
   state, provenance, and source-lock paths.
 - A single CLI command registry for dispatch, usage, completion candidates, and
-  typo suggestions. Purpose-based splitting of the remaining large handler file
-  is still open.
+  typo suggestions, followed by purpose-based handler files for init,
+  workspace/status, source browsing, manifest addition, completion, and shared
+  flag parsing.
 - Explicit `XDG_CONFIG_HOME` precedence on every platform.
 
 The complete `tools/check` suite passed after these slices.

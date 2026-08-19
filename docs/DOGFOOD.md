@@ -10,9 +10,12 @@ and display-character work, start with
 [`DOGFOOD-SESSION-3.md`](DOGFOOD-SESSION-3.md). The longer staged guide below
 also includes older regression exercises.
 
-## Current Dogfood Target
+## Choose An Active Dogfood Target
 
-The current real-project dogfood target is:
+Maintain the real-project list and the question being tested in
+[`ACTIVE-DOGFOOD.md`](ACTIVE-DOGFOOD.md). Choose one target from that registry
+before running this guide. The path below is a retained example from the
+original dogfood session, not the canonical active-repository list:
 
 ```text
 /home/qix/dev/omnicortex/todo_app_project
@@ -34,9 +37,10 @@ cd /home/qix/dev/omnicortex/todo_app_project
 mogent status
 ```
 
-Target-specific examples should ultimately use this form. Variables below are
-retained only where the same command is intentionally switched between the real
-project and optional disposable fixture during this dogfood pass.
+Target-specific examples should ultimately use this form after substituting the
+chosen active repository. Variables below are retained only where the same
+command is intentionally switched between the real project and optional
+disposable fixture during a dogfood pass.
 
 Install the current checkout from the Mogent repository:
 

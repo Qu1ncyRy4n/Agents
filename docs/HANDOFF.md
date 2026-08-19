@@ -81,6 +81,13 @@ ChatGPT, Codex, or another product to share conversation history.
   packages out of `internal/`, a focused cleanup list, local-source symlink and
   template-determinism concerns, status/drift direction, and future comparative
   research into agent skill ecosystems.
+- `docs/ACTIVE-DOGFOOD.md` is the owner-maintained registry for real working
+  repositories. Keep `testing-ground/` only as disposable smoke coverage unless
+  real dogfooding shows it still earns a larger role.
+- Quincy has completed the `libraries/cdint/engineering/` review and is keeping
+  detailed questions in the untracked user-authored
+  `docs/notes_on_lib_mods.md`. Preserve that file and do not stage it without
+  explicit direction.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.
@@ -111,8 +118,9 @@ After that, the user-prioritized development order is:
 1. Quincy reads the checked-in agent modules in bounded sections and records
    content, metadata, overlap, and source-boundary corrections. Keep this as a
    recurring reminder until complete.
-2. Continue public-API dogfooding and compatibility review. Split the remaining
-   large CLI handler file by command family without duplicating behavior.
+2. Continue public-API dogfooding and compatibility review. The large CLI
+   handler was split by command family; continue focused cleanup without
+   duplicating behavior.
 3. Implement the authoring contract: `source add`, move/reorder, guided
    module creation, and reference-aware suggestions.
 4. Make `status` canonical for read-only workspace state, retain `drift` as a
