@@ -97,6 +97,11 @@ ChatGPT, Codex, or another product to share conversation history.
   prior source paths. Testing, error, Git, coordination, documentation, request
   conflict, and usage-evidence guidance now includes the compact context and
   examples requested in the owner notes.
+- `TE-lusim` recommends reserved `self:` references for intrinsic same-source
+  relationships, manifest-owned cross-source integration rules, source-scoped
+  alternative families, and staged strict enforcement. `DR-lusim` is the open
+  owner decision gate; do not change the public metadata format or move library
+  directories until it is resolved.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.

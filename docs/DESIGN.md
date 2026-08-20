@@ -505,6 +505,8 @@ summary. Git state and these maintained documents win when a chat recap is stale
 | `docs/PUBLIC-API-AND-CLEANUP-PLAN.md` | Public Go API decisions, cleanup backlog, skills research, and owner dogfood tasks | planning |
 | `docs/LIBRARY-REVIEW-PLAN.md` | Owner-notes triage, library cleanup sequence, relationship decisions, and protected source-comparison method | planning |
 | `docs/LIBRARY-COVERAGE-AUDIT.md` | Sanitized first-pass comparison of the current libraries with authorized original source guides | active audit |
+| `docs/thought-experiments/TE-lusim-...md` | Relationship references, alternatives, enforcement, diagnostics, and source-path evolution analysis | awaiting decision |
+| `DR/DR-lusim-library-relationships.md` | Owner choices required before relationship metadata becomes enforceable | open |
 | `docs/ACTIVE-DOGFOOD.md` | Owner-maintained registry of real repositories and active Mogent experiments | active |
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
 | `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | historical — block/id framing superseded by §3 |

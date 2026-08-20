@@ -202,3 +202,7 @@ global semantic conflict guessing.
 Prefer atomic module files for shared libraries, organized by directory. Add a
 future split/import command that can turn a complete `AGENTS.md` into a draft
 library directory for review.
+
+`TE-lusim` extends this analysis with an alias-independent `self:` reference,
+source-scoped alternative families, staged enforcement, structured diagnostics,
+and a separate manifest ownership boundary for cross-source relationships.

@@ -161,9 +161,10 @@ conflicts with current Mogent decisions.
    decisions, Mogent behavior, and intentionally repo-local material.
 4. Make a focused clarity pass: remove extraction residue, explain unfamiliar
    terms, and add small examples without moving paths.
-5. Run a thought experiment for taxonomy and relationship metadata; ask the
-   user to resolve durable alternatives and record the resulting Decision
-   Intent before changing source paths or public metadata.
+5. Resolve `DR-lusim` using the completed relationship-metadata thought
+   experiment. Run a separate taxonomy/source-evolution analysis before moving
+   source paths, then record the resulting Decision Intent before changing
+   public metadata or paths.
 6. Reorganize one bounded module family at a time, with an old-to-new path map
    and manifest compatibility review.
 7. Implement relationship diagnostics through the public workspace API, then
@@ -192,6 +193,10 @@ For metadata or behavior changes:
   reviewed migration.
 
 ## Decisions Still Needed
+
+`docs/thought-experiments/TE-lusim-library-relationships.md` analyzes decisions
+1-3 and the source-path portion of decision 4. `DR/DR-lusim-library-relationships.md`
+is the owner decision gate for that implementation.
 
 1. Whether relationship references use source-local paths, stable library
    identities, or another alias-independent form.
