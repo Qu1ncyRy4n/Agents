@@ -92,6 +92,11 @@ ChatGPT, Codex, or another product to share conversation history.
   clarity, taxonomy, relationship-metadata, ownership, and source-audit work.
   `docs/LIBRARY-COVERAGE-AUDIT.md` records the first sanitized comparison with
   the now-authorized protected original guides.
+- The first library clarity slice replaces extraction-facing `Corpus Variants`
+  labels with meaningful visible headings while explicit IDs preserve their
+  prior source paths. Testing, error, Git, coordination, documentation, request
+  conflict, and usage-evidence guidance now includes the compact context and
+  examples requested in the owner notes.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.

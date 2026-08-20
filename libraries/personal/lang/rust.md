@@ -42,9 +42,9 @@ Keep tests deterministic. Prefer whole-object equality when it makes failures
 clear. Avoid tests for static constants or negative tests for behavior that was
 removed.
 
-## Corpus Variants
+## Workspace Fit <!-- id: corpus-variants -->
 
-Rust guidance ranges from early CLI prototypes to large multi-crate workspaces.
-Small projects emphasize `cargo check` and plain output; large workspaces may
-require `just test -p <crate>`, snapshot updates, schema generation, or Bazel
-lock refreshes.
+Match validation to the repository's scale and documented wrappers. A small CLI
+may need only focused Cargo commands; a multi-crate workspace may require a
+package-specific task, snapshot review, schema generation, or another
+repository-owned build step.

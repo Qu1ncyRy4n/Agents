@@ -36,8 +36,9 @@ Use focused checks such as `python -m py_compile <file>`, `uv run ...`,
 `pytest`, or a documented smoke command. For data-affecting changes, validate on
 a fixture, temporary copy, or safe subset before touching authoritative data.
 
-## Corpus Variants
+## Environment Fit <!-- id: corpus-variants -->
 
-The corpus includes research pipelines, local review UIs, scrape tools, and
-experiment frameworks. Some use `uv`; others use an existing `.venv`. The module
-should preserve that difference rather than forcing one Python workflow.
+Use the environment and workflow the repository declares. Do not replace an
+existing virtual environment, `uv` project, Nix development shell, or
+domain-specific runner merely to make the repository match a preferred Python
+workflow.

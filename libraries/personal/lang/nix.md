@@ -36,10 +36,9 @@ Prefer non-activating checks and builds before any activation. Run `nix flake
 check` when the repository supports it. Build the affected host, package, or
 home configuration when practical.
 
-## Corpus Variants
+## Selection Boundary <!-- id: corpus-variants -->
 
-The captured Nix guidance appears in two styles: machine-safety rules for
-dotfiles and general validation rules for projects that merely use Nix as a dev
-environment. Keep these selectable. A repo using `nix develop` for tools should
-not automatically inherit host-activation caution unless it can affect the
-active machine.
+Distinguish machine configuration from projects that use Nix only as a
+development environment. Select host-activation safeguards when work can affect
+the active machine. A project that only uses `nix develop` for tools needs the
+environment and validation rules, not unrelated host policy.
