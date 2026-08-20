@@ -90,6 +90,8 @@ ChatGPT, Codex, or another product to share conversation history.
   `docs/notes_on_lib_mods.md`. Preserve that file and do not stage it without
   explicit direction. `docs/LIBRARY-REVIEW-PLAN.md` classifies the resulting
   clarity, taxonomy, relationship-metadata, ownership, and source-audit work.
+  `docs/LIBRARY-COVERAGE-AUDIT.md` records the first sanitized comparison with
+  the now-authorized protected original guides.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.

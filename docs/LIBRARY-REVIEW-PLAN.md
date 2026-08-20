@@ -1,6 +1,7 @@
 # Agent Library Review Plan
 
-Status: active planning and content-audit plan.
+Status: active planning and content-audit plan. The first sanitized comparison
+pass is recorded in `docs/LIBRARY-COVERAGE-AUDIT.md`.
 
 ## Goal
 
