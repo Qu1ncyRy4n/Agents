@@ -84,10 +84,12 @@ ChatGPT, Codex, or another product to share conversation history.
 - `docs/ACTIVE-DOGFOOD.md` is the owner-maintained registry for real working
   repositories. Keep `testing-ground/` only as disposable smoke coverage unless
   real dogfooding shows it still earns a larger role.
-- Quincy has completed the `libraries/cdint/engineering/` review and is keeping
+- Quincy has completed a first note-taking pass across the current library,
+  with some language/domain modules intentionally deferred, and is keeping the
   detailed questions in the untracked user-authored
   `docs/notes_on_lib_mods.md`. Preserve that file and do not stage it without
-  explicit direction.
+  explicit direction. `docs/LIBRARY-REVIEW-PLAN.md` classifies the resulting
+  clarity, taxonomy, relationship-metadata, ownership, and source-audit work.
 - DI-pesun resolves the Nix portion of DR-garom: Nix now lives at
   `personal:lang/nix`, remains independently selectable, and retains explicit
   machine-safety guidance.
@@ -115,9 +117,11 @@ Immediate closure: continue dogfooding the directory/unified-tree work from
 
 After that, the user-prioritized development order is:
 
-1. Quincy reads the checked-in agent modules in bounded sections and records
-   content, metadata, overlap, and source-boundary corrections. Keep this as a
-   recurring reminder until complete.
+1. Continue Quincy's bounded review of the intentionally deferred language and
+   domain modules. In parallel, follow `docs/LIBRARY-REVIEW-PLAN.md`: preserve
+   the current library as a baseline, compare the authorized protected source
+   guides locally, then make focused clarity changes before taxonomy or public
+   metadata changes.
 2. Continue public-API dogfooding and compatibility review. The large CLI
    handler was split by command family; continue focused cleanup without
    duplicating behavior.

@@ -503,6 +503,7 @@ summary. Git state and these maintained documents win when a chat recap is stale
 | `docs/IMPLEMENTATION-M4.md` | Immutable URL source pinning contract | active |
 | `docs/MULTIPLE-OUTPUTS-PLAN.md` | Planned schema, transaction, drift, and decision work for multiple outputs | planning |
 | `docs/PUBLIC-API-AND-CLEANUP-PLAN.md` | Public Go API decisions, cleanup backlog, skills research, and owner dogfood tasks | planning |
+| `docs/LIBRARY-REVIEW-PLAN.md` | Owner-notes triage, library cleanup sequence, relationship decisions, and protected source-comparison method | planning |
 | `docs/ACTIVE-DOGFOOD.md` | Owner-maintained registry of real repositories and active Mogent experiments | active |
 | `docs/thought-experiments/TE-bakom-...md` | TUI-first rationale | active (basis) |
 | `docs/thought-experiments/TE-tavim-...md` | Reference-model exploration | historical — block/id framing superseded by §3 |
