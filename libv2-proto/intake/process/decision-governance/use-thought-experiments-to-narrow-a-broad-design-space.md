@@ -26,7 +26,7 @@ few. Narrowing is its central job.
 <!-- tldr: Define what is being tested before comparing designs. -->
 
 Verbatim source from
-[`TE Intake Requirements`](../../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-intake-requirements):
+[`TE Intake Requirements`](../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-intake-requirements):
 
 > Before locking decisions or asking final DF questions, the agent must identify:
 >
@@ -45,7 +45,7 @@ it.
 <!-- tldr: Hold assumptions constant and test normal, failure, evolution, trust, concurrency, and scale behavior. -->
 
 Verbatim source from
-[`TE Execution Requirements`](../../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-execution-requirements):
+[`TE Execution Requirements`](../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-execution-requirements):
 
 > Each TE must evaluate the same decision across multiple concrete scenarios.
 > Scenarios must include, when relevant:
@@ -64,7 +64,7 @@ Verbatim source from
 <!-- tldr: Reject weak options, retain viable ones, and expose the exact remaining choices. -->
 
 Verbatim source from
-[`TE Output to DF`](../../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-output-to-df):
+[`TE Output to DF`](../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-output-to-df):
 
 > After the TE, the agent must identify:
 >
@@ -79,7 +79,7 @@ Verbatim source from
 <!-- tldr: A recommendation may follow the analysis, but a TE is not a locked decision. -->
 
 Verbatim source from
-[`TE Decision Rules`](../../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-decision-rules):
+[`TE Decision Rules`](../../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-decision-rules):
 
 > A TE does not by itself lock a decision.
 > After the TE, the agent must either:
