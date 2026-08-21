@@ -29,6 +29,9 @@ libv2-proto/
   SPEC.md
   PROVENANCE.md
   proposals/
+  intake/
+    <semantic-area>/
+      <candidate>.md
   orgs/
     <owning-library>/
       <semantic-area>/
@@ -37,10 +40,14 @@ libv2-proto/
           <option>.md
 ```
 
-The first directory axis is the organization or library that owns and
-publishes the guidance. Semantic areas below it use a loose recommended
-vocabulary such as `identity`, `workflow`, `process`, `engineering`,
-`documentation`, `communication`, `security`, `language`, and `domain`.
+New extraction begins under `intake/`, organized by semantic subject so
+overlapping guidance can be compared before ownership is decided. Semantic
+areas use a loose recommended vocabulary such as `identity`, `workflow`,
+`process`, `engineering`, `documentation`, `communication`, `security`,
+`languages`, `tools`, and `domain`.
+
+Reviewed modules move under `orgs/<owning-library>/`. The organization is the
+publishing and policy boundary, not the first-pass classification system.
 
 Source provenance is independent of destination ownership. A module owned by
 `cdint` may have evidence from several repositories or organizations, and each

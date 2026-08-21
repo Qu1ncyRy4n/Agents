@@ -56,7 +56,7 @@ its containing directory name or initial quality label.
 | Source heading | Candidate module | Treatment | Coverage |
 |---|---|---|---|
 | [`Decision-First Specification and Compliance Protocol`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#decision-first-specification-and-compliance-protocol-required) | `orgs/cdint/process/decision-governance/` | preserve as a strict option; do not make universal | partial |
-| [`Thought Experiment Protocol`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#thought-experiment-protocol-required) | `orgs/cdint/process/decision-governance/use-thought-experiments-to-narrow-a-broad-design-space.md` | preserve workflow and correct the v1 reversal | represented |
+| [`Thought Experiment Protocol`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#thought-experiment-protocol-required) | `intake/process/decision-governance/use-thought-experiments-to-narrow-a-broad-design-space.md` | preserve workflow and correct the v1 reversal | represented |
 | [`TE Intake Requirements`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-intake-requirements) | same module | verbatim evidence | represented |
 | [`TE Execution Requirements`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-execution-requirements) | same module | verbatim evidence | represented |
 | [`TE Output to DF`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#te-output-to-df) | same module | verbatim evidence | represented |
