@@ -26,13 +26,14 @@ Silence is not a coverage state.
 ```text
 libv2-proto/
   README.md
+  SPEC.md
   PROVENANCE.md
   proposals/
   orgs/
     <owning-library>/
       <semantic-area>/
         <compatible-bundle>.md
-        <swappable-family>/
+        <choice-group>/
           <option>.md
 ```
 
@@ -44,6 +45,9 @@ vocabulary such as `identity`, `workflow`, `process`, `engineering`,
 Source provenance is independent of destination ownership. A module owned by
 `cdint` may have evidence from several repositories or organizations, and each
 source remains cited.
+
+Terminology and provisional syntax live in `SPEC.md`. Keeping them there avoids
+turning this intake README into an accidental permanent product specification.
 
 ## Module Boundary
 
@@ -152,21 +156,10 @@ Source text and editorial text must be visibly distinguishable:
 
 ## Relationship Semantics
 
-The protolibrary records these meanings without relying on source order:
-
-- `requires`: every named target must also render;
-- `requires_one_of`: at least one named target must render;
-- `conflicts_with`: the exact pair cannot render together coherently;
-- `exclusive_group`: at most one selected member of the group may render;
-- `see_also`: discovery only;
-- `sources`: evidence and provenance only.
-
-Compatible content is the default and needs no relationship tag. “Optional” is
-a discoverability or preset property, not the opposite of `requires`.
-
-No first-match or first-file-wins behavior is allowed. A violated hard
-relationship should produce a warning during migration and an error once its
-syntax is stable and the library has been validated.
+Use the plain-language relationship vocabulary in `SPEC.md`: requires all,
+requires one choice, mutually exclusive, optional, and any combination. Do not
+invent a new relationship term when one of those describes the real selection
+rule.
 
 ## Identity and Cross-Library References
 
@@ -210,7 +203,6 @@ examples rather than executable `[[import:...]]` directives.
 
 ## Useful Ideas That Are Not Source-Derived
 
-Do not mix invented modules into corpus coverage. Record potentially useful
+Do not mix invented modules into source-guide coverage. Record potentially useful
 future content under `proposals/upcoming-content.md`; promote it only after
 review and label its origin when it becomes a module.
-
