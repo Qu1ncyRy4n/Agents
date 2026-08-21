@@ -1,4 +1,90 @@
-# PICKUP: Library Split Checkpoint
+# PICKUP: Library V2 Protolibrary
+
+Date updated: 2026-08-21
+
+## Current Work
+
+The August 5 atomic-library split below is historical context. The active work
+is now a separate exhaustive protolibrary under `libv2-proto/`. Do not delete or
+broadly rewrite `libraries/` while v2 intake and owner review are in progress.
+
+Current model:
+
+```text
+protected source guides
+        ↓
+PROVENANCE.md file and heading ledger
+        ↓
+intake/<semantic-area>/ source-grounded candidates
+        ↓
+owner review and explicit decisions
+        ↓
+orgs/<owner>/<semantic-area>/ reviewed modules
+        ↓
+representative manifests and rendered-output validation
+        ↓
+eventual v1 retirement decision
+```
+
+Current status:
+
+- all 37 source-guide files are listed in the file-level ledger;
+- heading-level exhaustive mapping is active but incomplete;
+- workflow and decision-governance are the first review area;
+- the current candidate batch and progress report are intentionally uncommitted
+  pending owner review;
+- v1 remains a comparison target, not an authoritative source for v2 unless its
+  source-guide derivation is recovered;
+- generated repository assessments remain visibly distinguished from captured
+  authoritative guides.
+
+Read in this order:
+
+1. `docs/LIBV2-PROTO-PROGRESS-REPORT.md`
+2. `libv2-proto/WORKLIST.md`
+3. `libv2-proto/SPEC.md`
+4. `libv2-proto/PROVENANCE.md`
+5. candidates under `libv2-proto/intake/workflow/`
+6. candidates under `libv2-proto/intake/process/decision-governance/`
+
+## Resume Instructions
+
+1. Wait for owner notes on the current workflow/decision candidate batch.
+2. Revise source coverage, wording, module boundaries, and review concerns
+   without prematurely resolving strict-versus-lightweight policy.
+3. Commit the reviewed batch only after an explicit `good to go, commit` or
+   equivalent instruction.
+4. Continue heading-level extraction in broadly applicable order: workflow,
+   process, safety, engineering, documentation, tools, languages,
+   communication, domains, repository-local material, then generated
+   candidates.
+5. For each source heading, record `represented`, `partial`, `duplicate`,
+   `repository-local`, `generated-assessment`, or `rejected-with-reason`.
+6. Schedule focused TE/DR decisions only after real extracted examples exist.
+
+## Current Decision Queue
+
+- edit-scope plus user-work preservation: one compatible bundle or two atomic
+  modules;
+- risk-based escalation versus the complete strict decision-first workflow;
+- compatible documents versus separately selectable directory children;
+- inline YAML imports versus manifest-only or named-point composition;
+- warning versus error levels for relationships, imports, and migrations;
+- sparse source-path move maps versus permanent identity machinery;
+- output targets including `AGENTS.md`, `CLAUDE.md`, skills, specifications,
+  generated docs, tool-specific guidance, and repository-local references;
+- eventual ownership of canonical modules after semantic intake.
+
+## Relevant Commits
+
+- `86780a0 Preserve v1 library review state`
+- `1eebacb Start lossless v2 agent protolibrary`
+- `895fc96 Define provisional v2 library semantics`
+- `9f2f6a4 Reorganize v2 candidates by semantic intake`
+
+---
+
+# Historical Checkpoint: Initial Atomic Library Split
 
 Date: 2026-08-05
 
