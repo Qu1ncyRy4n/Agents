@@ -181,12 +181,3 @@ The following source content should not be treated as missing shared coverage:
 
 Each slice should have its own focused diff and example render. Do not combine
 the source-path reorganization with the public metadata-format change.
-
-## Progress
-
-- 2026-08-19: Completed the first clarity slice. The six `Corpus Variants`
-  headings now use concrete visible names while retaining the old source paths
-  through explicit IDs. Added compact explanations and examples for testing,
-  errors, imperative commits, coordination records, documentation purpose,
-  request/instruction conflicts, and usage evidence. No top-level module path or
-  metadata format changed.

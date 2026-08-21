@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-08-18
+Updated: 2026-08-20
 
 This is the compact resume point for another agent. Read `AGENTS.md` and
 `docs/DESIGN.md`, then inspect the current Git status before changing anything.
@@ -18,6 +18,13 @@ Keep durable project memory in these repository artifacts rather than relying on
 ChatGPT, Codex, or another product to share conversation history.
 
 ## Current State
+
+- `docs/REVIEW-HANDOFF-2026-08-20.md` is the exact resume point for the current
+  uncommitted library cleanup, decision map, and organization-policy/module-shape
+  thought experiments. Those changes await owner review; their recommendations
+  are not decisions and must not drive public-format implementation or source
+  moves yet. The review handoff also records the exact diff commands,
+  validation, and user-owned working-tree paths that must remain separate.
 
 - Architecture is core/CLI-first. The TUI remains a client of reusable workspace
   operations, not the only home of product behavior.
@@ -92,11 +99,6 @@ ChatGPT, Codex, or another product to share conversation history.
   clarity, taxonomy, relationship-metadata, ownership, and source-audit work.
   `docs/LIBRARY-COVERAGE-AUDIT.md` records the first sanitized comparison with
   the now-authorized protected original guides.
-- The first library clarity slice replaces extraction-facing `Corpus Variants`
-  labels with meaningful visible headings while explicit IDs preserve their
-  prior source paths. Testing, error, Git, coordination, documentation, request
-  conflict, and usage-evidence guidance now includes the compact context and
-  examples requested in the owner notes.
 - `TE-lusim` recommends reserved `self:` references for intrinsic same-source
   relationships, manifest-owned cross-source integration rules, source-scoped
   alternative families, and staged strict enforcement. `DR-lusim` is the open
@@ -124,7 +126,11 @@ the same workspace operations later.
 
 ## Next Steps
 
-Immediate closure: continue dogfooding the directory/unified-tree work from
+Immediate review gate: follow `docs/REVIEW-HANDOFF-2026-08-20.md`, beginning
+with the proposed module boundary. Keep its two review units independent and do
+not commit either until the owner reviews it.
+
+After that, continue dogfooding the directory/unified-tree work from
 `docs/DOGFOOD-SESSION-3.md` and record remaining friction.
 
 After that, the user-prioritized development order is:

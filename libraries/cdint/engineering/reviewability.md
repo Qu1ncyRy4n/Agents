@@ -33,8 +33,9 @@ Read the actual diff before handoff. Report the changed files, checks run, and
 known residual risk. Include before/after output for user-visible behavior when
 that makes review easier.
 
-## Local Size Policies <!-- id: corpus-variants -->
+## Local Size Policies
 
-Respect repository-specific change-size targets when they exist. Treat numeric
-limits as local policy, not universal quality measures; use coherent stages and
-visible consequences when a useful change cannot fit the target.
+Some repos set soft change-size targets, such as keeping complex diffs under a
+few hundred lines. Others rely on explicit decision records instead of numeric
+limits. Treat numbers as repo-local policy; keep the reusable rule focused on
+reviewable stages and visible consequences.

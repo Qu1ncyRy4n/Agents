@@ -35,9 +35,10 @@ Do not create a small helper that is referenced only once unless it names a
 non-obvious concept or isolates a risky boundary. Remove duplication when the
 shared pattern is real, not just visually similar.
 
-## Language Fit <!-- id: corpus-variants -->
+## Language Fit
 
-Follow the language and repository's established design idioms rather than
-forcing one paradigm across stacks. Prefer readable ownership, small surfaces,
-and typed domain concepts over stringly-typed behavior when the language offers
-a clearer shape.
+The corpus contains both object-oriented guidance for Go-like projects
+(`structs` and methods, avoid global state) and Rust-oriented guidance that
+prefers enums, typed domain structures, and small explicit APIs. The shared
+principle is not a single paradigm; it is readable ownership, small surfaces,
+and avoiding stringly-typed behavior where the language offers a clearer shape.
