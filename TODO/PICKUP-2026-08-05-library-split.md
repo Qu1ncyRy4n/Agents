@@ -2,6 +2,8 @@
 
 Date updated: 2026-08-21
 
+Current cross-project head: `~/dev/Notes/inbox/2026-08-W34.md`.
+
 ## Current Work
 
 The August 5 atomic-library split below is historical context. The active work
@@ -68,12 +70,25 @@ Read in this order:
   modules;
 - risk-based escalation versus the complete strict decision-first workflow;
 - compatible documents versus separately selectable directory children;
-- inline YAML imports versus manifest-only or named-point composition;
+- whether exact mid-document insertion is needed beyond manifest composition,
+  then minimal frontmatter-named marker versus restricted Go-template include;
 - warning versus error levels for relationships, imports, and migrations;
 - sparse source-path move maps versus permanent identity machinery;
 - output targets including `AGENTS.md`, `CLAUDE.md`, skills, specifications,
   generated docs, tool-specific guidance, and repository-local references;
 - eventual ownership of canonical modules after semantic intake.
+
+Include/composition narrowing has now been completed in
+`docs/thought-experiments/TE-nufad-module-includes.md`. Rich YAML embedded in
+HTML comments is rejected as the default. The surviving directions are:
+
+1. manifest composition plus separate modules;
+2. frontmatter plus a minimal named insertion marker if exact placement is
+   required; and
+3. a restricted literal Go-template include if one template surface is
+   preferred.
+
+Owner decisions remain open. Do not implement an include syntax yet.
 
 ## Relevant Commits
 

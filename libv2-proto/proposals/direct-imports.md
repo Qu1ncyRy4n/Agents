@@ -1,4 +1,4 @@
-# Keep Import Choices Beside Their Heading and Selection Visible in the Manifest
+# Compare Minimal Includes Without Embedding Configuration in Markdown
 
 Status: syntax proposal, not implemented.
 
@@ -23,7 +23,12 @@ It is difficult to explain whether `^`, `&`, and `|` mean exclusive choice,
 conjunction, fallback order, or text concatenation. It also hides the selected
 source from an ordinary manifest review.
 
-## Provisional Inline YAML Form
+## Previous Inline YAML Form
+
+The first v2 sketch placed a rich YAML block directly beneath the affected
+heading. `TE-nufad` now rejects this as the default because it creates a broad
+second YAML surface inside Markdown and makes parsing, scope, formatting, and
+diagnostics harder.
 
 Keep the import definition immediately beneath the heading it affects:
 
@@ -58,7 +63,7 @@ imports:
     - personal:roles/code-assistant
 ```
 
-This is intentionally provisional. It establishes several required semantics:
+This historical sketch established several required semantics:
 
 - an unanswered `exactly_one` choice is an error;
 - `none` is valid only when explicitly listed;
@@ -70,10 +75,20 @@ This is intentionally provisional. It establishes several required semantics:
 - rendered provenance identifies both the containing module and inserted node
   in tool output, even when metadata is omitted from `AGENTS.md`.
 
-The parser must also reject malformed YAML and duplicate keys, enforce source
-root and symlink safety, remain offline during ordinary rendering, and detect
-direct or indirect import cycles. These are requirements for a later design
-slice, not implemented syntax.
+Do not implement this syntax without a later owner decision reversing the
+`TE-nufad` narrowing result.
+
+## Current Surviving Directions
+
+1. Use manifest composition and separate modules as the default.
+2. If exact mid-document insertion is required, keep YAML in frontmatter and
+   place only a minimal named marker in the body.
+3. Alternatively, prototype a restricted literal Go-template include so Mogent
+   reuses its existing template surface.
+
+Choice rules remain outside the body marker. See
+`docs/thought-experiments/TE-nufad-module-includes.md` for scenario analysis and
+the decisions still needed.
 
 ## Simpler Existing Alternative
 
@@ -83,9 +98,6 @@ in-document insertion point is a demonstrated authoring need.
 
 ## Decision Gate
 
-Run a source-grounded thought experiment after extraction supplies several real
-choice groups. Compare inline YAML, manifest-only composition, named import
-points, and a compact Boolean expression using the same persona, role, strict
-governance, and commit-policy examples. Do not implement this proposal before
-that decision.
-
+`TE-nufad` completed the first broad narrowing pass. Do not implement includes
+until the owner resolves whether exact insertion is required for the first
+libv2 cutover and chooses which surviving directions deserve a prototype.

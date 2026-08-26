@@ -130,11 +130,10 @@ Module composition
 ├─ compatible multi-heading bundle
 └─ separately selectable child modules
 
-Inline imports
-├─ YAML inside a Markdown HTML comment
-├─ manifest-only composition
-├─ named import point with manifest choices
-└─ compact Boolean expression
+Module includes after TE-nufad
+├─ manifest composition + separate modules           default survivor
+├─ frontmatter + minimal named insertion marker      survivor if needed
+└─ restricted literal Go-template include            survivor if needed
 
 Path evolution
 ├─ sparse old-path -> new-path move map               current provisional lean
@@ -154,19 +153,21 @@ Output destination
 These should be decided from real extracted examples rather than from invented
 schemas alone.
 
-## Provisional Inline Import Direction
+## Module Include Direction After TE-nufad
 
-The current readable candidate keeps strict YAML beside the heading it affects,
-inside a Markdown comment. It supports explicit rules such as `exactly_one` and
-`any` without requiring readers to decode Boolean operators.
+The first sketch placed strict YAML inside an HTML comment beside the affected
+heading. The Steve meeting raised rendering, parsing, and maintainability
+problems with that approach. `TE-nufad` now rejects rich embedded YAML as the
+default rather than treating it as the leading syntax.
 
-It is not implementation-ready. A later design decision must cover strict YAML
-parsing, duplicate keys, import cycles, maximum depth, declared source roots,
-symlink safety, offline rendering, ambiguity rejection, and diagnostics.
+The constrained happy path is manifest composition with intrinsic metadata in
+file frontmatter. If exact mid-document insertion is required, the remaining
+prototype choices are a frontmatter-named minimal marker or a restricted literal
+Go-template include. Choice logic does not belong in the body marker.
 
-### Example Inline YAML Block
+### Historical Inline YAML Block
 
-The marker spelling is only a readable candidate:
+This is retained as rejected design evidence, not the current recommendation:
 
 ```markdown
 ### Adopt a Communication Style
@@ -189,16 +190,15 @@ imports:
 yaml:mogent:end -->
 ```
 
-Questions for the later design slice:
+The later design slice should instead answer:
 
-- Are `yaml:mogent:start` and `yaml:mogent:end` clear, or should one HTML
-  comment contain a shorter `mogent:` mapping?
-- Should metadata sit immediately after the heading, before visible content?
-- May one block define several imports, or should each heading own one import?
-- Does `none` remain an explicit `exactly_one` option, or should absence have a
-  separate meaning?
-- Can imported content itself contain imports?
-- Does selection insert only body text, or also source headings and descendants?
+- Is exact mid-document insertion needed for the first libv2 cutover?
+- If so, should a prototype compare a minimal marker with a restricted literal
+  Go-template include?
+- Does inclusion insert a full source node and descendants, or only body text?
+- Can included content include another module, and what depth is allowed?
+- Which choice rules belong in frontmatter, a source descriptor, or the
+  consuming manifest?
 
 ### Example Review Note
 
@@ -229,7 +229,7 @@ The final warning/error boundary needs its own decision. Current candidates:
 
 | Condition | Provisional level | Reason |
 |---|---|---|
-| malformed inline YAML or duplicate keys | error | Meaning cannot be determined safely. |
+| malformed frontmatter or duplicate YAML keys | error | Meaning cannot be determined safely. |
 | path escapes a source root or traverses a rejected symlink | error | Violates the source trust boundary. |
 | direct or indirect import cycle | error | Rendering cannot produce a finite deterministic result. |
 | unresolved `exactly_one` import | error | Required authored content is missing. |
@@ -249,12 +249,13 @@ a migration period before new relationship errors become blocking.
 
 These are needed decision slices, not approved TE/DR artifacts or assigned IDs.
 
-### Inline Composition and Choice Rules
+### Module Includes and Choice Rules
 
-Compare inline YAML, manifest-only composition, named import points, and compact
-logical expressions using the same real persona, role, governance, and commit
-policy examples. Test nested imports, no selection, multiple selection, cycles,
-source updates, and readable interactive prompts.
+`TE-nufad` completed the broad narrowing pass. Owner decisions now determine
+whether exact insertion belongs in the first cutover and whether the two
+syntax-bearing survivors deserve prototypes. Test any prototype with nested
+includes, no selection, multiple selection, cycles, source updates, and
+readable interactive prompts.
 
 Decision output: syntax ownership, permitted choice rules, insertion behavior,
 and warning/error boundaries.

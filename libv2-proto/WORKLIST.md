@@ -3,6 +3,8 @@
 This connects the provenance ledger to the order of extraction and owner
 review. It is not an `agents.yaml` manifest and does not define rendered output.
 
+Current cross-project head: `~/dev/Notes/inbox/2026-08-W34.md`.
+
 ## Coverage Gates
 
 - [x] Preserve v1 while v2 is developed separately.
@@ -55,8 +57,15 @@ facts.
 - [ ] Decide which decision-record requirements belong in agent guidance versus
   a specification or generated reference.
 - [ ] Decide the ordinary versus governed handoff boundary.
-- [ ] Later: compare inline YAML imports, manifest-only composition, named
-  import points, and compact expressions using real extracted choices.
+- [x] Run the broad include/composition narrowing pass in `TE-nufad`.
+- [ ] Decide whether exact mid-document insertion is required for the first
+  libv2 cutover.
+- [ ] If exact insertion is required, prototype frontmatter plus a minimal
+  marker and a restricted literal Go-template include.
+- [ ] Decide whether choice rules live in module frontmatter, a source-level
+  descriptor, or the consuming manifest according to who owns the relationship.
+- [ ] Separately decide YAML-map merge precedence; do not conflate inheritance
+  overrides with module requirements or conflicts.
 - [ ] Later: decide source-path move compatibility and migration behavior.
 
 ## Per-Candidate Review
@@ -72,4 +81,3 @@ For every candidate, answer:
    specification, library-authoring guide, or repository-local instruction?
 7. Who should own the reviewed canonical version?
 8. Keep, adapt, combine, split, retain as a choice, or reject?
-

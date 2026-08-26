@@ -88,41 +88,24 @@ Use `candidate_outputs` metadata during intake when more than one destination
 is plausible. Do not discard useful content merely because it may later become
 a skill or specification.
 
-## Direct Import Blocks
+## Module Includes
 
-The current provisional form keeps the choice definition next to its heading
-inside a Markdown HTML comment:
+`TE-nufad` rejects rich YAML embedded in Markdown comments as the default
+authoring model. It retains three decision-ready directions:
 
-```markdown
-### Adopt a Communication Style
+1. manifest composition plus separate modules as the default;
+2. frontmatter declarations plus a minimal named body marker when exact
+   insertion is necessary; or
+3. a restricted literal Go-template include function.
 
-<!-- yaml:mogent:start
-imports:
-  communication/persona:
-    choose: exactly_one
-    from:
-      - none
-      - self:personas/alien
-      - self:personas/surfer
-
-  communication/roles:
-    choose: any
-    from:
-      - self:roles/librarian
-      - self:roles/code-assistant
-      - self:roles/senior-developer
-yaml:mogent:end -->
-```
-
-This is valid Markdown because ordinary renderers treat the block as a comment.
-Mogent would parse the interior as strict YAML. The exact markers and schema
-need a source-grounded thought experiment and owner decision before
-implementation.
+Keep choice logic, relationships, and rich mappings out of body markers. The
+owner must decide whether exact mid-document insertion is required for the first
+libv2 cutover before either marker or template syntax is prototyped.
 
 Required safety properties:
 
-- reject malformed YAML, duplicate keys, duplicate import names, and unknown
-  fields;
+- reject malformed frontmatter, duplicate keys, duplicate import names, and
+  unknown fields;
 - resolve only declared sources and paths beneath their validated roots;
 - retain existing symlink rejection for local and pinned source content;
 - perform no network access during ordinary render;
@@ -148,7 +131,8 @@ becomes product behavior.
 
 Schedule focused thought experiments and decisions for:
 
-1. inline YAML import blocks versus manifest-only composition;
+1. whether exact mid-document insertion is needed beyond manifest composition,
+   then minimal marker versus restricted Go-template include if it is;
 2. the smallest sufficient choice vocabulary and whether richer Boolean
    expressions are ever necessary;
 3. directory inheritance and compatible-bundle boundaries;
@@ -157,4 +141,3 @@ Schedule focused thought experiments and decisions for:
    more than manifest aliases; and
 6. whether metadata belongs in frontmatter, heading-local blocks, a library
    descriptor, or a narrowly defined combination.
-
