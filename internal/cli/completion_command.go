@@ -103,7 +103,7 @@ func commandCandidates() []string {
 }
 
 func flagCandidates() []string {
-	return []string{"--manifest", "--template", "--output", "--list-templates", "--build", "--force", "--source", "--from", "--import", "--reject", "--ref", "--accept", "--tag", "--tag-search", "--search", "--sort", "--metadata", "--tldr", "--file", "--line", "--content", "--lines", "--align-source", "--align", "--chars", "--fit", "--width", "--coverage", "--under", "--append", "--first", "--last", "--before", "--after", "--heading", "--dry-run", "--preview", "--rebuild", "--unused-only", "--tree", "--content-only", "--leaves-only", "--depth"}
+	return []string{"--manifest", "--template", "--output", "--list-templates", "--build", "--force", "--source", "--subdir", "--from", "--import", "--reject", "--ref", "--accept", "--tag", "--tag-search", "--search", "--sort", "--metadata", "--tldr", "--file", "--line", "--content", "--lines", "--align-source", "--align", "--chars", "--fit", "--width", "--coverage", "--under", "--append", "--first", "--last", "--before", "--after", "--heading", "--dry-run", "--preview", "--rebuild", "--unused-only", "--tree", "--content-only", "--leaves-only", "--depth"}
 }
 
 func bashCompletionScript() string {

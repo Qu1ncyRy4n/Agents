@@ -1,7 +1,7 @@
 # Mogent Authoring Workflow Plan
 
-Status: implementation-ready plan; command details remain reviewable until the
-first implementation slice.
+Status: in progress; source declaration is implemented through the public
+workspace API and the remaining command details stay reviewable.
 
 ## Goal
 
@@ -56,7 +56,8 @@ core insertion primitive rather than implementing separate ordering rules.
 ## Implementation Sequence
 
 1. Extract reusable manifest location/removal/insertion operations from `add`.
-2. Implement and test local `source add` with dry-run.
+2. [x] Implement and test `source add` with dry-run for local and HTTP(S)
+   sources. URL declarations still require a separate explicit pin step.
 3. Implement `move` using the shared placement operations.
 4. Implement noninteractive `module new` flags and deterministic previews.
 5. Add an optional guided prompt client over the same operation.

@@ -22,7 +22,7 @@ func commands() []commandDefinition {
 		{name: "status", usage: "status [--manifest agents.yaml]", run: runStatus},
 		{name: "drift", usage: "drift [--manifest agents.yaml]", run: runDrift},
 		{name: "coverage", usage: "coverage [source] [--manifest agents.yaml]", run: runCoverage},
-		{name: "source", usage: "source <list|show|pin|update> ...", run: runSource},
+		{name: "source", usage: "source <add|list|show|pin|update> ...", run: runSource},
 		{name: "add", usage: "add <ref> [--under path [--first|--last] | --before path | --after path | --append]", run: runAdd},
 		{name: "localize", usage: "localize <manifest-heading-path> [--from source-ref]", run: runLocalize},
 		{name: "complete", usage: "complete <kind> [--manifest agents.yaml]", run: runComplete},

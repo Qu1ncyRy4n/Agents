@@ -831,6 +831,40 @@ func TestRunSuggestsUnknownFlag(t *testing.T) {
 	}
 }
 
+func TestRunSourceAddPreviewsAndWrites(t *testing.T) {
+	temporary, manifestPath := writeAddCLIFixture(t)
+	personal := filepath.Join(temporary, "personal")
+	if err := os.Mkdir(personal, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(personal, "python.md"), []byte("# Python\n\nUse Python.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "add", "personal", "personal", "--manifest", manifestPath, "--dry-run"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "Next: mogent source list personal --tree") {
+		t.Fatalf("source add preview =\n%s", stdout.String())
+	}
+	contents, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(contents), "personal") {
+		t.Fatalf("dry run changed manifest:\n%s", contents)
+	}
+
+	stdout.Reset()
+	if err := cli.Run([]string{"source", "add", "personal", "personal", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Added source personal") {
+		t.Fatalf("source add output =\n%s", stdout.String())
+	}
+}
+
 func TestRunAddWritesManifestByDefault(t *testing.T) {
 	_, manifestPath := writeAddCLIFixture(t)
 

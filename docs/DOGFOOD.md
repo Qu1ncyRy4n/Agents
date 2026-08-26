@@ -183,14 +183,14 @@ Purpose: find useful material without reading every source file.
 metadata. It does not currently have a `--tree` view. `coverage` in Stage 2
 looks at the same sources but overlays how the current manifest uses them.
 
-There is not yet a `mogent source add` command for extending an existing
-manifest. To add the personal library after initializing with `minimal`, edit
-the manifest's existing `sources` mapping:
+Add the personal library after initializing with `minimal`, without selecting
+any of its modules:
 
-```yaml
-sources:
-  shared: /home/qix/dev/cdint/Agents/libraries/cdint
-  personal: /home/qix/dev/cdint/Agents/libraries/personal
+```sh
+mogent source add personal /home/qix/dev/cdint/Agents/libraries/personal \
+  --manifest "$mogent_manifest" --dry-run
+mogent source add personal /home/qix/dev/cdint/Agents/libraries/personal \
+  --manifest "$mogent_manifest"
 ```
 
 Then verify it before selecting a node:
@@ -202,8 +202,8 @@ mogent add personal:lang/python --manifest "$mogent_manifest" \
   --under Instructions --dry-run --preview=patch
 ```
 
-Do not run `source add ...`: `source` is a shell builtin for loading a shell
-script, not the Mogent CLI.
+The command is `mogent source add ...`; bare `source` is a shell builtin and is
+not Mogent.
 
 For the current real target initialized with `minimal`:
 

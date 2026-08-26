@@ -20,9 +20,11 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 
 func runSource(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("source requires a subcommand; use source list, show, pin, or update")
+		return fmt.Errorf("source requires a subcommand; use source add, list, show, pin, or update")
 	}
 	switch args[0] {
+	case "add":
+		return runSourceAdd(args[1:], stdout, stderr)
 	case "list":
 		return runSourceList(args[1:], stdout, stderr)
 	case "show":
@@ -32,11 +34,56 @@ func runSource(args []string, stdout, stderr io.Writer) error {
 	case "update":
 		return runSourceUpdate(args[1:], stdout, stderr)
 	default:
-		if suggestion := closestString(args[0], []string{"list", "show", "pin", "update"}, 2); suggestion != "" {
+		if suggestion := closestString(args[0], []string{"add", "list", "show", "pin", "update"}, 2); suggestion != "" {
 			return fmt.Errorf("unknown source subcommand %q; did you mean %q?", args[0], suggestion)
 		}
-		return fmt.Errorf("unknown source subcommand %q; use source list, show, pin, or update", args[0])
+		return fmt.Errorf("unknown source subcommand %q; use source add, list, show, pin, or update", args[0])
 	}
+}
+
+func runSourceAdd(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("source add", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	subdir := flags.String("subdir", "", "library root within an HTTP(S) Git repository")
+	dryRun := flags.Bool("dry-run", false, "preview without writing")
+	args = reorderArgs(args, map[string]bool{
+		"-manifest": true, "--manifest": true,
+		"-subdir": true, "--subdir": true,
+		"-dry-run": false, "--dry-run": false,
+	})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 2 {
+		return fmt.Errorf("source add requires an alias and path or URL")
+	}
+	result, err := workspace.AddSourceDeclaration(workspace.SourceAddOptions{
+		ManifestPath: *manifestFile,
+		Alias:        flags.Arg(0),
+		Location:     flags.Arg(1),
+		Subdir:       *subdir,
+		DryRun:       *dryRun,
+	})
+	if err != nil {
+		return err
+	}
+	if result.Wrote {
+		if _, err := fmt.Fprintf(stdout, "Added source %s to %s\n", result.Alias, result.ManifestPath); err != nil {
+			return fmt.Errorf("write source add result: %w", err)
+		}
+	} else if _, err := fmt.Fprintf(stdout, "Dry run: no files written\n\nProposed manifest:\n%s", result.ManifestYAML); err != nil {
+		return fmt.Errorf("write source add preview: %w", err)
+	}
+	if result.Remote {
+		_, err = fmt.Fprintf(stdout, "\nNext: mogent source pin %s\n", result.Alias)
+	} else {
+		_, err = fmt.Fprintf(stdout, "\nNext: mogent source list %s --tree\n", result.Alias)
+	}
+	if err != nil {
+		return fmt.Errorf("write source add hint: %w", err)
+	}
+	return nil
 }
 
 func runSourcePin(args []string, stdout, stderr io.Writer) error {

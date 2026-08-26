@@ -245,22 +245,27 @@ mogent source show shared:lang/go/testing --metadata --content=snippet --lines=8
 mogent source show shared:lang/go/testing --align-source --under Instructions
 ```
 
-Pin and later review a manifest-declared URL source:
-
-```yaml
-sources:
-  shared:
-    location: https://github.com/Qu1ncyRy4n/Agents.git
-    subdir: libraries/cdint
-```
+Add a local source without selecting any modules:
 
 ```sh
+mogent source add personal ../agent-libraries/personal --dry-run
+mogent source add personal ../agent-libraries/personal
+```
+
+Declare, pin, and later review a URL source:
+
+```sh
+mogent source add shared https://github.com/Qu1ncyRy4n/Agents.git \
+  --subdir libraries/cdint --dry-run
+mogent source add shared https://github.com/Qu1ncyRy4n/Agents.git \
+  --subdir libraries/cdint
 mogent source pin shared
 mogent source update shared
 mogent source update shared --ref <full-previewed-commit> --accept
 ```
 
-Normal commands never fetch URL sources. They require the committed
+Adding a source changes only `sources:`; it never selects content. Normal
+commands never fetch URL sources. They require the committed
 `mogent.lock.yaml` entry and verify the ignored `.mogent/sources/` checkout.
 Compact scalar source values remain valid. An explicit `subdir` is locked and
 makes source references relative to that selected repository directory.
