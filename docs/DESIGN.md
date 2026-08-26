@@ -490,15 +490,18 @@ Treat this file as the entry point.
 Project memory that must survive a change of agent or product belongs in these
 repository documents, not only in ChatGPT, Codex, or another product's history.
 The documents have separate jobs: `AGENTS.md` defines workflow and constraints;
-this design and the decision records preserve design rationale; the TODO tracks
-planned work; and `docs/HANDOFF.md` is the short-lived current-state and next-step
-summary. Git state and these maintained documents win when a chat recap is stale.
+this design and the decision records preserve design rationale; `TODO/TODO.md`
+tracks canonical work state; dated `TODO/PICKUP-*` files record a workstream's
+detailed resume checkpoint; and `docs/HANDOFF.md` is a short, stable navigation
+entry point. Git state and these maintained documents win when a chat recap is
+stale.
 
 | Doc | Role | Status |
 |---|---|---|
 | `docs/DESIGN.md` | **This file** — design of record | active |
-| `TODO/TODO-jusuk-mogent-agent-modules.md` | Task tracking + DI log | active |
-| `docs/HANDOFF.md` | Compact current state and next steps for agent transfer | active |
+| `TODO/TODO.md` | Canonical task states, dependencies, and blockers | active |
+| `TODO/PICKUP-<date>-<workstream>.md` | Detailed, replaceable resume checkpoint for one active workstream | active or historical |
+| `docs/HANDOFF.md` | Stable navigation entry point for agent transfer | active |
 | `docs/IMPLEMENTATION-M3.md` | Core-first localization and drift contract | active |
 | `docs/IMPLEMENTATION-M4.md` | Immutable URL source pinning contract | active |
 | `docs/MULTIPLE-OUTPUTS-PLAN.md` | Planned schema, transaction, drift, and decision work for multiple outputs | planning |

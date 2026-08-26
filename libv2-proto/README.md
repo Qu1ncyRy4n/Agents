@@ -3,6 +3,10 @@
 Status: lossless intake and review workspace. This tree does not replace
 `libraries/` and is not yet a stable Mogent source.
 
+Canonical project tasks and blockers live in `../TODO/TODO.md`. The current
+resume point is `../TODO/PICKUP-2026-08-25-libv2-intake.md`. This README defines
+the intake contract; it is not a competing task list.
+
 ## Preserve Before Pruning
 
 The protolibrary exists to retain every useful, generalizable instruction from

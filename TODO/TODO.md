@@ -3,7 +3,8 @@
 | Handle | Title | Status |
 |--------|-------|--------|
 | jusuk | Mogent: Modular Agent Prompt Manager | [open](TODO-jusuk-mogent-agent-modules.md) |
-| pickup-2026-08-05-library-split | Library split checkpoint | [open](PICKUP-2026-08-05-library-split.md) |
+| pickup-2026-08-25-libv2-intake | Current libv2 intake checkpoint | [active](PICKUP-2026-08-25-libv2-intake.md) |
+| pickup-2026-08-05-library-split | Historical library split checkpoint | [historical](PICKUP-2026-08-05-library-split.md) |
 
 ## Canonical Mogent Task List
 
@@ -15,7 +16,7 @@ note; this file owns the detailed M-* work items and dependency graph.
 Canonical repository tracking:
 
 - `~/dev/cdint/Agents/libv2-proto/WORKLIST.md`
-- `~/dev/cdint/Agents/TODO/PICKUP-2026-08-05-library-split.md`
+- `~/dev/cdint/Agents/TODO/PICKUP-2026-08-25-libv2-intake.md`
 - `~/dev/cdint/Agents/docs/LIBV2-PROTO-PROGRESS-REPORT.md`
 - Include/composition narrowing: `~/dev/cdint/Agents/docs/thought-experiments/TE-nufad-module-includes.md`
 

@@ -369,5 +369,14 @@ promoted independently into a lighter canonical workflow.
 - `1eebacb Start lossless v2 agent protolibrary`
 - `895fc96 Define provisional v2 library semantics`
 - `9f2f6a4 Reorganize v2 candidates by semantic intake`
+- `f19efb2 Add pending-review v2 workflow candidates`
+- `7112e90 Add pending-review v2 decision candidates`
+- `4c6feaf Track pending v2 intake review`
+- `6c8575f Document pending v2 review checkpoint`
+- `5a55b8a Narrow v2 module include design`
+- `c701667 Migrate canonical Mogent tasks into repository`
 
-The current review batch remains uncommitted pending owner feedback.
+The review batch is committed for durable inspection but remains pending owner
+feedback. Committed does not mean approved or promoted into an organization
+library. Canonical detailed task state now lives in `TODO/TODO.md`; use
+`TODO/PICKUP-2026-08-25-libv2-intake.md` as the current resume point.

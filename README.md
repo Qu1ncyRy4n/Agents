@@ -461,7 +461,8 @@ for stricter Claude behavior, while `GEMINI.md` might simply symlink to
 - [docs/DESIGN.md](docs/DESIGN.md) is the design of record.
 - [docs/DOGFOOD.md](docs/DOGFOOD.md) stages current features for dogfooding and issue reporting.
 - [docs/DOGFOOD-SESSION-3.md](docs/DOGFOOD-SESSION-3.md) exercises only the new directory-tree and display work.
-- [docs/HANDOFF.md](docs/HANDOFF.md) is the compact current resume point.
+- [docs/HANDOFF.md](docs/HANDOFF.md) is the stable handoff navigation entry;
+  its linked dated pickup is the detailed current resume point.
 - [docs/AUTHORING-PLAN.md](docs/AUTHORING-PLAN.md) stages source declaration, move/reorder, and guided module creation.
 - [docs/ORIGIN-RECONCILIATION-PLAN.md](docs/ORIGIN-RECONCILIATION-PLAN.md) stages preservation, inheritance, and proposal workflows.
 - [TODO/TODO-jusuk-mogent-agent-modules.md](TODO/TODO-jusuk-mogent-agent-modules.md)
