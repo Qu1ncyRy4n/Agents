@@ -5,12 +5,13 @@ Status: active; content candidates are tracked but pending owner review
 
 ## Canonical Task Authority
 
-`TODO/TODO.md` is the canonical detailed Mogent task list and dependency graph.
-It was migrated provisionally from W34 section 1.1 in commit `c701667`.
+`TODO/TODO.md` is the canonical detailed Mogent task list, owner-decision queue,
+and dependency graph. Detailed tasks were migrated from W34 section 1.1 in
+commit `c701667`; the Mogent-specific decisions followed on 2026-08-31.
 
-The weekly note remains the cross-project head and retains owner decisions
-C1-C7 and C9. Do not copy detailed M-* tasks back into the weekly note. Update
-their state in `TODO/TODO.md` and leave the weekly note as a short status link.
+The weekly note remains the cross-project head. Do not copy detailed M-* tasks
+or Mogent decisions back into it. Update their state in `TODO/TODO.md` and leave
+the weekly note as a short status link.
 
 ## Current State
 
@@ -117,4 +118,3 @@ target, and eventual owner.
 - `4c6feaf Track pending v2 intake review`
 - `7112e90 Add pending-review v2 decision candidates`
 - `f19efb2 Add pending-review v2 workflow candidates`
-

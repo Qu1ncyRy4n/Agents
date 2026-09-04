@@ -8,9 +8,9 @@
 
 ## Canonical Mogent Task List
 
-Migrated provisionally from `~/dev/Notes/inbox/2026-08-W34.md` on
-2026-08-25. Cross-project owner decisions C1-C7 and C9 remain in that weekly
-note; this file owns the detailed M-* work items and dependency graph.
+Detailed M-* tasks and Mogent-specific owner decisions were migrated from
+`~/Documents/Obsidian Vault/inbox/2026-08-W34.md`. This file owns their status,
+blockers, and dependency graph; the weekly note is only a cross-project pointer.
 
 
 Canonical repository tracking:
@@ -19,6 +19,46 @@ Canonical repository tracking:
 - `~/dev/cdint/Agents/TODO/PICKUP-2026-08-25-libv2-intake.md`
 - `~/dev/cdint/Agents/docs/LIBV2-PROTO-PROGRESS-REPORT.md`
 - Include/composition narrowing: `~/dev/cdint/Agents/docs/thought-experiments/TE-nufad-module-includes.md`
+
+## Owner Decision Queue
+
+These are choices, not work items. Their dependent tasks remain blocked until
+the owner records an answer here.
+
+- [ ] [ready] [decision] **C1 — Choose TLDR encoding:** HTML comments beneath
+  headings or a YAML field. Steve's Aug 21 preference was YAML. Blocks M-L30
+  and M-R1.
+- [ ] [active] [decision] **C2 — Choose how much YAML the library carries:**
+  current lean is intrinsic facts in module frontmatter, no rich embedded YAML,
+  and source-level YAML only for demonstrated spanning groups or presets.
+  Blocks M-R1..M-R8 and M-L20.
+- [ ] [active] [decision] **C3 — Choose include behavior from the TE-nufad
+  survivors:** manifest composition and split modules by default; if exact
+  insertion is required, compare a frontmatter-named minimal marker with a
+  restricted literal Go-template include. Blocks M-T0a..M-T8.
+- [ ] [ready] [decision] **C4 — Confirm GitHub-Flavored Markdown with YAML
+  frontmatter as the portable canonical format:** Obsidian links and
+  transclusion may remain optional views. Decide with C3.
+- [ ] [ready] [decision] **C5a — Choose relationship validity semantics:**
+  decide whether selected hard requirements must render and exact conflicts
+  must block composition. TE-lusim analyzes this question, but DR-lusim remains
+  unapproved. Blocks M-R4..M-R6.
+- [ ] [ready] [decision] **C5b — Choose YAML/include inheritance and merge
+  precedence:** parent map, child override, explicit-only merge, or another
+  fail-loud rule. Keep value precedence separate from prerequisite rendering.
+  Blocks M-T8 and M-I1.
+- [ ] [active] [decision] **C6 — Refine the libv2 tree-plus-graph shape:**
+  semantic directories are the physical intake tree; tags, provenance, and
+  relationships form graph edges. Intake reorganization need not wait for the
+  final metadata design. Blocks M-L23 and M-R1..M-R5.
+- [ ] [active] [decision] **C9 — Confirm reconciliation of the stale
+  library-review list against the Aug 21 libv2 reset:** semantic intake and the
+  provenance ledger are the evidence-backed direction, pending owner approval.
+- [x] [done] [decision] **C10 — Dogfood sequence:** complete libv2 before
+  dogfooding. Decided 2026-08-25; M-D4 remains gated on M-L16.
+- [x] [done] [decision] **C12 — Todo app's role:** use it first as a dogfood
+  target, then for planned multi-agent features, and possibly as a product.
+  Decided 2026-08-25.
 
 - **Done**
 	- [x] Split the large CLI package [done] 2026-08-20
@@ -125,7 +165,8 @@ Canonical repository tracking:
 	- [x] **M-A1** Add a source-declaration workflow (`mogent source add`); it changes only the source map and does not select a module [done] 2026-08-25
 	- [ ] [ready] **M-A2** Add guided module creation
 	- [ ] [ready] **M-A3** Add module move and manifest reorder workflows
-	- [ ] [ready] **M-A4** Add user-level `display.hints` plus `--hints` / `--no-hints`
+	- [ ] [ready] **M-A4** Add user-level `display.hints` plus `--hints` / `--no-hints`; support progressive disclosure so repeated users can reduce usage, tutorial, and suggestion output per command
+	- [ ] [ready] **M-A4a** Study gcloud as a reference for an extensible, modular, instructive CLI suite
 	- [ ] [blocked] **M-A5** Define explicit `CLAUDE.md` output — after the template engine
 	- [ ] [blocked] **M-A6** Define `GEMINI.md` and other agent-specific outputs — after M-A5
 	- [ ] [blocked] **M-A7** Define `SPEC.md` output — universal/portable principles closer to code and implementation than to process and design — after M-A5

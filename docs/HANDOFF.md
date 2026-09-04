@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-08-25
+Updated: 2026-08-31
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
@@ -8,7 +8,8 @@ instructions.
 
 ## Sources of Authority
 
-- [`TODO/TODO.md`](../TODO/TODO.md) owns current tasks, statuses, and blockers.
+- [`TODO/TODO.md`](../TODO/TODO.md) owns current tasks, owner decisions,
+  statuses, and blockers.
 - [`TODO/PICKUP-2026-08-25-libv2-intake.md`](../TODO/PICKUP-2026-08-25-libv2-intake.md)
   is the detailed resume checkpoint for the active libv2 workstream.
 - [`DESIGN.md`](DESIGN.md) is the product design of record.
