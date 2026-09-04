@@ -67,3 +67,18 @@ its containing directory name or initial quality label.
 | [`Decision Lock and Stop Rule`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#decision-lock-and-stop-rule) | `intake/process/decision-governance/lock-durable-decisions-before-implementation.md` | verbatim evidence; strictness needs review | represented |
 | [`Comment Preservation Protocol`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#comment-preservation-protocol-required) | `intake/process/decision-governance/preserve-decision-history-through-supersession.md` | extract DI history and supersession separately from comment policy | partial |
 | [`Required final handoff artifacts`](../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#required-final-handoff-artifacts) | `intake/process/decision-governance/handoff-decisions-with-implementation-evidence.md` | verbatim strict option; compare with ordinary handoff | represented |
+
+## Exemplar Anchor
+
+The owner redirected review order on 2026-09-02: `promisegrid_wire-lab` is the
+exemplar anchor. Its full text is preserved verbatim in
+`intake/exemplar/wire-lab-exemplar.md` with per-section contrasts against the
+other 36 guides and numbered unresolved diffs (D1–D12 in that document). The
+exemplar's disposition sketch, once reviewed, drives promotion into
+`orgs/<owner>/`; all other intake candidates are triaged and deferred until the
+anchor is placed. Per-section dispositions for wire-lab headings are recorded
+in the exemplar document and must be mirrored here as they are resolved.
+
+| Source heading | Candidate module | Treatment | Coverage |
+|---|---|---|---|
+| [`promisegrid_wire-lab` (complete guide)](../docs/other_repo_agents/promisegrid_wire-lab_refs_heads_main_AGENTS.md) | `intake/exemplar/wire-lab-exemplar.md` | verbatim anchor with cross-guide contrasts and diff index | partial |
