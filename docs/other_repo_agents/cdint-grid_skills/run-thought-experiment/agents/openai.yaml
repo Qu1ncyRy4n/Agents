@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run thought experiment"
+  short_description: "Load exact evidence for a thought experiment"
+  default_prompt: "Use $run-thought-experiment to load exact bounded evidence before the thought experiment."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Load project context"
+  short_description: "Load exact bounded repository context"
+  default_prompt: "Use $load-project-context to load exact bounded repository context."

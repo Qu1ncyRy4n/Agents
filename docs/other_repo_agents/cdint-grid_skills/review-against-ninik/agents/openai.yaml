@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Against Ninik"
+  short_description: "Review a design or plan before code"
+  default_prompt: "Use $review-against-ninik to review this design or implementation plan against the Ninik touchstone before code generation."

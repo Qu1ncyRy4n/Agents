@@ -3,7 +3,8 @@
 | Handle | Title | Status |
 |--------|-------|--------|
 | jusuk | Mogent: Modular Agent Prompt Manager | [open](TODO-jusuk-mogent-agent-modules.md) |
-| pickup-2026-08-25-libv2-intake | Current libv2 intake checkpoint | [active](PICKUP-2026-08-25-libv2-intake.md) |
+| pickup-2026-09-04-agents-library-dogfood | Current agents-library dogfood checkpoint | [active](PICKUP-2026-09-04-agents-library-dogfood.md) |
+| pickup-2026-08-25-libv2-intake | Historical libv2 intake checkpoint | [historical](PICKUP-2026-08-25-libv2-intake.md) |
 | pickup-2026-08-05-library-split | Historical library split checkpoint | [historical](PICKUP-2026-08-05-library-split.md) |
 
 ## Canonical Mogent Task List
@@ -19,6 +20,17 @@ Canonical repository tracking:
 - `~/dev/cdint/Agents/TODO/PICKUP-2026-08-25-libv2-intake.md`
 - `~/dev/cdint/Agents/docs/LIBV2-PROTO-PROGRESS-REPORT.md`
 - Include/composition narrowing: `~/dev/cdint/Agents/docs/thought-experiments/TE-nufad-module-includes.md`
+
+## Decision Intent Log
+
+ID: DI-hozaz
+Date: 2026-09-04 12:57:01
+Status: active
+Author: 95124070+Qu1ncyRy4n@users.noreply.github.com (Quincy Ryan)
+Decision: Retain the current cdint-grid `AGENTS.md` as `docs/other_repo_agents/newest_promisegrid.md`, preserve all 18 current `.agents/skills/` directories and their OpenAI interface metadata under `docs/other_repo_agents/cdint-grid_skills/`, and annotate the wire-lab exemplar with contrasts and unresolved skill-library questions without rewriting its verbatim anchor.
+Intent: Give Mogent's skills research a complete, locally inspectable example of a large canonical guide paired with progressively loaded operational procedures and discovery metadata.
+Constraints: Source captures remain verbatim at cdint-grid commit `79961cb3147054bda8e94b9703fdece2fbe30a8d`. Exemplar additions are editorial notes, not approved library policy. The capture does not establish that cdint-grid's host-specific tools or workflows are portable or canonical.
+Affects: docs/other_repo_agents/newest_promisegrid.md, docs/other_repo_agents/cdint-grid_skills/, libv2-proto/intake/exemplar/wire-lab-exemplar.md, TODO/TODO.md task M-S11
 
 ## Owner Decision Queue
 
@@ -185,7 +197,7 @@ the owner records an answer here.
 	- [ ] [ready] **M-S8** Browse community skills at [skills.sh](https://skills.sh) and [mattpocock/skills](https://github.com/mattpocock/skills)
 	- [ ] [ready] **M-S9** Watch [How To Use AI Skills Like A Senior Developer](https://www.youtube.com/watch?v=cxQLKsktiBA)
 	- [ ] [ready] **M-S10** Review findings from Steve's agent researching skills optimization and token-cost reduction
-	- [ ] [ready] **M-S11** Reference [cdint-grid](https://gitea.t7a.org/cdint/cdint-grid) for LLMs calling custom tools via skills — `AGENTS.md` and `.agents/*` entry points
+	- [x] **M-S11** Reference [cdint-grid](https://gitea.t7a.org/cdint/cdint-grid) for LLMs calling custom tools via skills — captured `AGENTS.md` and all 18 `.agents/skills/` entry points, with exemplar contrasts [done] 2026-09-04
 	- [ ] [blocked] **M-S12** Decide whether Mogent should compose, install, inventory, or project skills into ecosystem-specific formats — after M-S7
 	- [ ] [blocked] **M-S13** Decide the always-present vs. loaded-on-demand boundary — commit a skill instead of putting it in `AGENTS.md` — after M-S7
 	- [ ] [blocked] **M-S14** Evaluate the "Mogent skill" idea — an LLM-facing skill that pulls docs and relevant issues by tag — after M-S12

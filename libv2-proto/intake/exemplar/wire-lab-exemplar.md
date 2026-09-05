@@ -5,6 +5,8 @@ tags: [exemplar, anchor, process/decision, workflow/te, engineering/comments, en
 tldr: The Promisegrid wire-lab guide is the v2 exemplar anchor; each section carries contrasts from the other source guides and numbered diffs to resolve before org promotion.
 sources:
   - docs/other_repo_agents/promisegrid_wire-lab_refs_heads_main_AGENTS.md
+  - docs/other_repo_agents/newest_promisegrid.md
+  - docs/other_repo_agents/cdint-grid_skills/
 requires_all: []
 mutually_exclusive: []
 see_also: []
@@ -16,7 +18,14 @@ This document is the v2 exemplar. The anchor text is a verbatim copy of
 [`promisegrid_wire-lab`](../../../docs/other_repo_agents/promisegrid_wire-lab_refs_heads_main_AGENTS.md),
 the most complete captured repository guide. Every other section below it adds
 contrast material from the other source guides, so overlap, variants, and
-conflicts are visible in one place.
+conflicts are visible in one place. The current cdint-grid guide is captured as
+[`newest_promisegrid.md`](../../../docs/other_repo_agents/newest_promisegrid.md),
+and its 18 progressively loaded operational skills are preserved under
+[`cdint-grid_skills/`](../../../docs/other_repo_agents/cdint-grid_skills/). Both
+captures are verbatim from cdint-grid commit
+`79961cb3147054bda8e94b9703fdece2fbe30a8d` (`AGENTS.md` blob
+`63de43205c1439fc4560160b2ccbf05bdd9813b3`; skills tree
+`56425b68232c5ed2492b6139383323c68b4d7626`).
 
 ## How to Read This Document
 
@@ -47,6 +56,7 @@ conflicts are visible in one place.
 #### Contrasts and unresolved diffs
 - **Same** ([`ciwg/grid-examples`](../../../docs/other_repo_agents/ciwg_grid-examples_refs_heads_main_AGENTS.md#project-structure--module-organization)): identical package-placement rule.
 - **Variant** ([`promisegrid/promisegrid`](../../../docs/other_repo_agents/promisegrid_promisegrid_refs_heads_main_AGENTS.md#project-structure--module-organization)): planning artifacts live in a root `TODO/` directory, with optional root `DR/` and `docs/thought-experiments/` — not per-protocol directories.
+- **Current cdint-grid variant** ([`newest_promisegrid`](../../../docs/other_repo_agents/newest_promisegrid.md#project-structure--module-organization)): root `TODO/` is now explicitly authoritative for this repository, durable worker-attempt records live beside their owning TODO, and design notes have a separate `DN-<handle>` identity. This is newer evidence that the anchor's per-protocol layout is repository-local rather than a family-wide default.
 - **Variant** ([`promisegrid/grid-poc`](../../../docs/other_repo_agents/promisegrid_grid-poc_refs_heads_main_AGENTS.md#project-structure--module-organization)): root Go module plus `x/` standalone experiment modules; ([`stevegt/grokker`](../../../docs/other_repo_agents/stevegt_grokker_refs_heads_main_AGENTS.md#project-structure--module-organization)) uses a versioned `v3/` tree; ([`stevegt/godecide`](../../../docs/other_repo_agents/stevegt_godecide_refs_heads_main_AGENTS.md#project-structure--module-organization)) keeps core code at the root with `cmd/` entry.
 - **Conflict** ([`computerscienceiscool/llm-runtime`](../../../docs/other_repo_agents/computerscienceiscool_llm-runtime_refs_heads_audit-sweep_AGENTS.md#project-structure--module-organization)): this guide deliberately uses `pkg/` for public packages and `internal/core/` for private code — the opposite of the anchor's "avoid `internal/` and `pkg/`". **D1 — resolve which layout rule is canonical and whether language- or tool-specific overlays may relax it.**
 - **Same** (all captured guides): local state (`.grok`, `.grok.lock`) and generated binaries stay uncommitted.
@@ -70,6 +80,8 @@ conflicts are visible in one place.
 - **Missing from anchor** ([`ciwg/decomk-conf-cswg`](../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#currency-of-information) family): a *user-level* layer above repo guides — "Frequently check `~/.codex/AGENTS.md` for updates" plus a maintained cross-repo `~/.codex/meta-context.md`. The anchor models canonical-vs-role overlays but not user-level overlays. **Diff to resolve:** does the v2 model include user-level and role-level overlay layers above the canonical manifest? (Directly informs Mogent's manifest/overlay design; see `docs/MULTIPLE-OUTPUTS-PLAN.md`.)
 - **Missing from anchor** ([`promisegrid/promisegrid`](../../../docs/other_repo_agents/promisegrid_promisegrid_refs_heads_main_AGENTS.md#public-artifact-provenance-required), [`ciwg/FAB26-Presentation`](../../../docs/other_repo_agents/ciwg_FAB26-Presentation_refs_heads_main_AGENTS.md#public-artifact-provenance-required)): public-artifact provenance rules (no DI/DR/TE references in slides; footnote tags in white papers with a `## References` section). These are output-target-specific rules. **Diff to resolve:** where artifact-type rules live when one library serves several output targets.
 - This section is the closest source analogue to Mogent's own model (canonical manifest plus stricter overlays, promotion of shared rules upward). Proposed destination: `library-authoring`.
+- **New execution layer** ([`cdint-grid skills`](../../../docs/other_repo_agents/cdint-grid_skills/)): the current guide remains canonical, but 18 tracked skills provide progressively loaded procedures, command routing, exact-once constraints, stop conditions, and output schemas. Skills repeatedly disclaim independent task, path, side-effect, decision, and acceptance authority. **D13 — decide whether Mogent models policy authority, operational procedure, discovery metadata, and executable tooling as separate typed layers, and how it checks drift between them.**
+- **Composed workflow variant:** skills call or require other skills (`newtree` → `resume` → `upgrade` → `drain-inbox`; decision work may add `run-thought-experiment`, `review-against-ninik`, and `commit`; peer integration uses `consensus` and `commit`). The anchor describes rules but has no machine-readable dependency graph. **D14 — decide whether skill dependencies, compatibility state, preconditions, side effects, and output contracts are explicit metadata or remain prose.**
 
 ## Promise Action Minimalism (Required)
 - Future PromiseGrid protocol, simulation, POC, scoring, generation, and guide work must not invent workflow-specific top-level action kinds by default. The default future-facing top-level semantic action is `promise`. (DI-mosoj)
@@ -128,6 +140,7 @@ conflicts are visible in one place.
 - **Lighter** ([`computerscienceiscool/pg`](../../../docs/other_repo_agents/computerscienceiscool_pg_refs_heads_main_AGENTS.md#decision-first-specification-and-compliance-protocol)): "Collect and lock user decisions before behavior-changing code edits" plus the append-only DI log — no DF intake round, no multiple-choice requirement, no TE trigger.
 - **Absent** (no decision protocol at all): [`ciwg/cswg`](../../../docs/other_repo_agents/ciwg_cswg_refs_heads_main_AGENTS.md), [`promisegrid/grid-poc`](../../../docs/other_repo_agents/promisegrid_grid-poc_refs_heads_main_AGENTS.md), [`stevegt/grokker`](../../../docs/other_repo_agents/stevegt_grokker_refs_heads_main_AGENTS.md), [`stevegt/godecide`](../../../docs/other_repo_agents/stevegt_godecide_refs_heads_main_AGENTS.md), [`stevegt/mob-consensus`](../../../docs/other_repo_agents/stevegt_mob-consensus_refs_heads_main_AGENTS.md), [`computerscienceiscool/llm-runtime`](../../../docs/other_repo_agents/computerscienceiscool_llm-runtime_refs_heads_audit-sweep_AGENTS.md). These guides substitute ordinary review/PR gates; none of them is "wrong" — they are lower-ceremony repos.
 - **Diff to resolve — D3 (the strongest policy question):** is the canonical v2 workflow (a) strict decision-first for every repo, (b) risk-based escalation with strict decision-first as a selectable overlay, or (c) lightweight lock-before-behavior-change? Existing intake candidates `intake/workflow/use-risk-to-choose-routine-work-or-decision-review.md` and `intake/process/decision-governance/lock-durable-decisions-before-implementation.md` already frame (b) vs (a); the corpus evidence above shows real repos operating happily at all three levels, which supports making strictness a choice rather than a baseline.
+- **Current cdint-grid conflict** ([`newest_promisegrid`](../../../docs/other_repo_agents/newest_promisegrid.md#decision-first-specification-and-compliance-protocol-required)): final decision questions are now required one at a time, while the anchor says to ask them up front in one intake round whenever possible. This is a direct workflow conflict rather than a repository-path variant. **D15 — choose whether question batching is canonical, selectable, or left to repository policy.**
 
 ## Thought Experiment Protocol (Required)
 - Before locking any non-trivial decision that will require DF questions and answers, the agent must run a thought experiment (TE) if multiple plausible designs remain.
@@ -260,7 +273,7 @@ Applicability: this policy applies uniformly to every TE corpus in this reposito
 
 #### Contrasts and unresolved diffs
 - **Same** (verbatim family): the intake/execution/output/decision/handoff subsections repeat in [`promisegrid/promisegrid`](../../../docs/other_repo_agents/promisegrid_promisegrid_refs_heads_main_AGENTS.md#thought-experiment-protocol-required), [`ciwg/FAB26-Presentation`](../../../docs/other_repo_agents/ciwg_FAB26-Presentation_refs_heads_main_AGENTS.md#thought-experiment-protocol-required), [`ciwg/grid-examples`](../../../docs/other_repo_agents/ciwg_grid-examples_refs_heads_main_AGENTS.md#thought-experiment-protocol-required), [`ciwg/decomk-conf-cswg`](../../../docs/other_repo_agents/ciwg_decomk-conf-cswg_refs_heads_main_AGENTS.md#thought-experiment-protocol-required), [`ciwg/mob-sandbox`](../../../docs/other_repo_agents/ciwg_mob-sandbox_refs_heads_main_AGENTS.md#thought-experiment-protocol-required), [`stevegt/navlog`](../../../docs/other_repo_agents/stevegt_navlog_refs_heads_main_AGENTS.md#thought-experiment-protocol-required), and [`stevegt/decomk`](../../../docs/other_repo_agents/stevegt_decomk_refs_heads_main_AGENTS.md#thought-experiment-protocol-required). Two historical ID variants appear: timestamp IDs `TE-YYYYMMDD-HHMMSS` (mob-sandbox, navlog) and proquint IDs (the rest) — this is the corpus's own evidence for a handle-migration policy.
-- **TE Authoring Conventions** — the "name Steve only when his repo-owner role is load-bearing" clause exists only in wire-lab and grid-examples (DI-034). Related **Missing from anchor**: [`ciwg/FAB26-Presentation`](../../../docs/other_repo_agents/ciwg_FAB26-Presentation_refs_heads_main_AGENTS.md#public-prose-style) extends Alice/Bob conventions into public prose style.
+- **TE Authoring Conventions** — the anchor's cryptography-alphabet convention has been replaced in current cdint-grid by stable names whose initials suggest explicitly stated roles, with Mallory retained for malicious actors. Related **Missing from anchor**: [`ciwg/FAB26-Presentation`](../../../docs/other_repo_agents/ciwg_FAB26-Presentation_refs_heads_main_AGENTS.md#public-prose-style) extends Alice/Bob conventions into public prose style. **D16 — choose a reusable actor-naming rule or classify both conventions as selectable style modules.**
 - **TE Editing Policy** — three granularities exist in the corpus: the full seven-category regime (anchor, grid-examples), a three-line durable-records rule ("do not rewrite filed TE history for style cleanup; use `## Refinements` for navigational updates; use a superseding TE for material changes" — promisegrid, FAB26), and none (everywhere else). **Diff to resolve — D4:** the three-line version is a strong candidate for the canonical v2 module, with the seven-category system as a strict overlay; the anchor itself demonstrates the cost of the full regime.
 - **Hard gates** (TE handoff gate, Compliance PASS gate, Runtime Path Touch Matrix): present verbatim across the whole governance family, absent elsewhere. **Generated evidence** ([`RoSE`](<../../../docs/other_repo_agents/low qual/RoSE_agents.md>#danger-zones--human-review-required-not-just-looks-correct)) reaches the same idea from the safety side: some diffs need named human review, "not just 'looks correct'". Existing intake candidate `intake/workflow/require-human-review-for-high-consequence-changes.md` covers the generalized form. **Diff to resolve — D5:** keep all hard gates canonical, or reserve hard gates for defined high-consequence classes and make the ceremony (matrix artifacts, inline annotations) optional per organization?
 - **File/Path Decisions** — no other guide has per-path approval intake; [`RoSE`](<../../../docs/other_repo_agents/low qual/RoSE_agents.md>#participant-data) instead names standing no-go zones (participant data paths) that require stopping. The pattern generalizes as "declare protected path classes; runtime surprises stop work," which is closer to Mogent's own source-root safety rules than per-path Q&A. Proposed: extract the generalized boundary, keep per-path approval as a strict overlay.
@@ -436,6 +449,33 @@ Reference pattern:
 - **Same** (process vocabulary): TE/DR/DI/DF/TODO definitions repeat across the governance family; twig exists only in wire-lab and grid-examples.
 - **Diff to resolve:** split destinations. Process vocabulary (TE, DR, DI, DF) is canonical `agent-guide` material for any org adopting decision governance. Domain vocabulary (pCID, twig, Burgess references) is PromiseGrid-owned `specification`/`repository-local` material and must not leak into the general library.
 
+## Current cdint-grid Skill Corpus
+
+The current source pairs a 1,555-line canonical guide with 18 focused skills.
+Each skill has YAML frontmatter (`name`, `description`) and an adjacent
+`agents/openai.yaml` interface record (`display_name`, `short_description`,
+`default_prompt`). The snapshot is intake evidence, not a claim that these
+repository-specific procedures should be promoted unchanged.
+
+- **Context, decisions, and design:** `load-project-context`, `decision-first-change`, `explain-architecture`, `run-thought-experiment`, and `review-against-ninik` load bounded evidence and preserve the distinction between analysis, recommendation, and locked authority.
+- **Worker lifecycle and instruction distribution:** `newtree`, `resume`, `upgrade`, and `retire` compose stable-worker startup, finite work cycles, deterministic instruction synchronization, and evidence-preserving shutdown.
+- **Worker communication:** `putq`, `getq`, and `drain-inbox` separate one voluntary send, one-message receipt, and one frozen-snapshot classification pass. Receipt and queue position never imply acceptance.
+- **Git promises and peer convergence:** `commit` records one exact local promise per commit; `consensus` evaluates immutable peer commits without creating a global verdict or trust score.
+- **Legacy compatibility:** `handoff` and `handback` isolate old packet-based attempts from the current Git-native workflow instead of burdening every current operation with both models.
+- **Planning and operational state:** `update-dobab` loads a validated bounded deadline view, while `next10` reconciles evidence into ten priorities without mutating the queue.
+
+#### Contrasts and unresolved diffs
+
+- **Progressive disclosure:** the skill set moves detailed procedures out of the always-loaded path while retaining canonical authority in `AGENTS.md`. This is concrete evidence for Mogent's static-library versus runtime-loaded-skill distinction (M-G5), but it also shows that context reduction depends on deterministic selectors and disciplined cross-references.
+- **Authority and capability remain distinct:** possessing a skill or executable does not authorize its represented action. User decisions and durable TODO/DR/DI records govern; skills route procedure; installed tools implement mechanics; Git objects and hashes carry evidence. A reusable library needs to preserve these distinctions rather than treating skill installation as permission.
+- **Durable versus disposable state is explicit:** Git promises and coordination records are durable evidence; local consensus views, carrier timestamps, pane observations, and working trees are mutable or rebuildable. This distinction is useful candidate metadata, not merely cdint-grid workflow detail.
+- **Finite-operation safety recurs across skills:** exact-once reads, frozen snapshots, no polling, no blind retries, immutable commit selection, and successor corrections bound races and accidental duplicate effects. These are potential reusable procedure primitives.
+- **Portability is unresolved:** skills embed repository names, absolute `/home/stevegt/bin` commands, `/tmp/cdint-grid` layouts, named documents, and cdint-grid-specific DIs. Mogent must distinguish portable procedure templates from repository-bound instances before composing or installing them.
+- **Metadata can drift from procedure text:** `upgrade` interface metadata says “review and adopt” although the skill requires deterministic synchronization without model review; `handoff` metadata does not foreground its legacy-only status; and `retire` metadata describes one worker while its procedure inventories all workers and seeks per-worker approval. Display capitalization and `$skill-name` use are also inconsistent. Discovery metadata therefore needs linting against normative content.
+- **Missing structured fields:** the current interface metadata has no explicit version, authority class, dependencies, side effects, compatibility/deprecation state, required binaries, output schema, exact-message trigger, mutability, retention, or portability fields. Adding all of them blindly would overfit this source; D13 and D14 should decide the minimum model after cross-ecosystem research M-S6/M-S7.
+- **Source-versus-runtime identity:** tracked skill text does not prove that a corresponding installed binary was built, qualified, installed, or cut over. Mogent's source model may need pins and provenance for authored skills while leaving executable attestation to an integration layer.
+- **Diff to resolve:** decide how conflicting claims among canonical guide text, skill procedure, interface metadata, and installed executable behavior are detected and which layer wins. The source itself treats the guide and durable decisions as authority, but that repository-specific answer should not be silently universalized.
+
 ---
 
 ## Unresolved Diff Index
@@ -455,6 +495,10 @@ Looser with a clear majority).
 - **D9 — Artifact identity:** proquint handles + legacy retention vs paths-as-identity (Mogent's model); informs the library-identity and source-path-move decisions.
 - **D11 — Superset/no-silent-regression:** extract as a general rewrite-preservation rule, or keep protocol-local?
 - **D12 — Consensus-derived generated summary:** extract the DEV-GUIDE-RESOURCES pattern as a reusable `generated-doc` module, or classify wholly repository-local?
+- **D13 — Skill architecture layers:** model policy authority, operational procedure, discovery metadata, and executable tooling separately, or keep a simpler source-node model with conventions?
+- **D14 — Skill composition contracts:** make dependencies, compatibility state, preconditions, side effects, exact-once rules, and output schemas machine-readable, or retain some/all in prose?
+- **D15 — Decision-question cadence:** batch questions up front, require one question at a time, offer both as selectable policy, or leave cadence repository-local?
+- **D16 — Scenario actor naming:** role-initial stable names vs cryptography-alphabet names; choose a reusable convention or expose style variants.
 
 *(Numbering skips D8→D11 to leave room for splits during owner review.)*
 
@@ -469,6 +513,7 @@ and deferred.
 | Project Structure & Module Organization | family + repo-local mix | rules → `orgs/<owner>/engineering/`; command/protocol specifics → repository-local |
 | Build, Test, and Development Commands | repo-local | repository-local; extract "report environment blockers" as general |
 | Agent Instruction Architecture | general | `library-authoring` (it describes Mogent's own model) |
+| Current cdint-grid Skill Corpus | cross-ecosystem evidence + repo-local procedures | skills research M-S6/M-S7; architecture pending D13 + D14 |
 | Promise Action Minimalism | domain | `orgs/promisegrid/` or specification target |
 | POC Superset Discipline | generalizable kernel | pending D11 |
 | DEV-GUIDE-RESOURCES.md | repo-local + pattern | repository-local; pattern candidate pending D12 |

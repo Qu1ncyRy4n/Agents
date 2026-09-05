@@ -1,0 +1,4 @@
+interface:
+  display_name: "Drain Inbox"
+  short_description: "Turn one inbox snapshot into durable TODO work"
+  default_prompt: "Drain the current worker inbox snapshot and create or update governing TODO items for actionable requests."

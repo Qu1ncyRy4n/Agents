@@ -1,0 +1,4 @@
+interface:
+  display_name: "New Worker Tree"
+  short_description: "Start or reuse a stable peer worker"
+  default_prompt: "Use $newtree to create or reuse a stable branch-based worker for a TODO or DR."

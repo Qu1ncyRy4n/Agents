@@ -1,0 +1,4 @@
+interface:
+  display_name: "Handoff"
+  short_description: "Create and verify worker handoffs"
+  default_prompt: "Use $handoff to prepare or verify a bounded worker assignment and review the final plan against Ninik before code generation."

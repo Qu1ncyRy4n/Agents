@@ -1,0 +1,4 @@
+interface:
+  display_name: "Decision first change"
+  short_description: "Load task and decision context before changes"
+  default_prompt: "Use $decision-first-change to load exact task and decision context before editing."

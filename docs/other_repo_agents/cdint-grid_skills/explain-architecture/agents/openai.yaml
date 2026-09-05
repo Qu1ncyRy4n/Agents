@@ -1,0 +1,4 @@
+interface:
+  display_name: "Explain architecture"
+  short_description: "Load agreed vocabulary before architecture work"
+  default_prompt: "Use $explain-architecture to load agreed vocabulary before explaining architecture."

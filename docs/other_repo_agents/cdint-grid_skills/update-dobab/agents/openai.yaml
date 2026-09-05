@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update dobab"
+  short_description: "Load validated bounded dobab context"
+  default_prompt: "Use $update-dobab to load validated bounded dobab context before reconciling the ledger."

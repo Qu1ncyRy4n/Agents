@@ -1,0 +1,4 @@
+interface:
+  display_name: "Retire Worker"
+  short_description: "Verify and retire one ordinary worker"
+  default_prompt: "Use $retire to verify and retire completed ordinary Codex workers without losing branch or result evidence."

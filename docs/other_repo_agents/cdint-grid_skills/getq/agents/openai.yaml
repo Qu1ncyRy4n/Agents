@@ -1,0 +1,4 @@
+interface:
+  display_name: "Getq"
+  short_description: "Handle one worker inbox request"
+  default_prompt: "Use $getq to receive and handle at most one request from this worker's inbox."

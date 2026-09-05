@@ -1,0 +1,4 @@
+interface:
+  display_name: "Handback"
+  short_description: "Reconcile complete worker results"
+  default_prompt: "Use $handback to reconcile a worker result with its complete assignment and evidence."

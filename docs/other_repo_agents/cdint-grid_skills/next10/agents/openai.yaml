@@ -1,0 +1,4 @@
+interface:
+  display_name: "Next 10"
+  short_description: "Prioritize the next ten cdint-grid tasks"
+  default_prompt: "Analyze cdint-grid and list the next ten priorities."

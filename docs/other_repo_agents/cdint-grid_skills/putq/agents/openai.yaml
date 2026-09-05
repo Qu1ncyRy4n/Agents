@@ -1,0 +1,4 @@
+interface:
+  display_name: "Putq"
+  short_description: "Send one voluntary worker request"
+  default_prompt: "Use $putq to send one bounded request to a named cdint-grid worker."

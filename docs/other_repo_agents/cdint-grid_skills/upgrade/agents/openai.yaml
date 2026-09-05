@@ -1,0 +1,4 @@
+interface:
+  display_name: "Upgrade Worker Instructions"
+  short_description: "Review and adopt current worker guidance"
+  default_prompt: "Use $upgrade to evaluate and locally adopt the worker instruction bundle from the current main tip."

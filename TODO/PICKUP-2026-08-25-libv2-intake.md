@@ -1,7 +1,8 @@
 # PICKUP: Libv2 Semantic Intake and Include Decisions
 
 Date: 2026-08-25
-Status: active; content candidates are tracked but pending owner review
+Status: historical; superseded as the active checkpoint by
+`PICKUP-2026-09-04-agents-library-dogfood.md`
 
 ## Canonical Task Authority
 

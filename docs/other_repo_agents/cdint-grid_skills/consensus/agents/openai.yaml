@@ -1,0 +1,4 @@
+interface:
+  display_name: "Peer Consensus"
+  short_description: "Evaluate and integrate peer promises"
+  default_prompt: "Use $consensus to inspect peer work and make a local integration decision."

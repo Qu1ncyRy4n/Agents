@@ -1,0 +1,4 @@
+interface:
+  display_name: "Resume Worker"
+  short_description: "Return an idle worker to prioritized work"
+  default_prompt: "Run the resume procedure for this worker."

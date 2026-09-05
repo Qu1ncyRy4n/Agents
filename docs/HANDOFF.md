@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-08-31
+Updated: 2026-09-04
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
@@ -10,8 +10,9 @@ instructions.
 
 - [`TODO/TODO.md`](../TODO/TODO.md) owns current tasks, owner decisions,
   statuses, and blockers.
-- [`TODO/PICKUP-2026-08-25-libv2-intake.md`](../TODO/PICKUP-2026-08-25-libv2-intake.md)
-  is the detailed resume checkpoint for the active libv2 workstream.
+- [`TODO/PICKUP-2026-09-04-agents-library-dogfood.md`](../TODO/PICKUP-2026-09-04-agents-library-dogfood.md)
+  points to the detailed resume checkpoint for the active dogfood-library
+  workstream.
 - [`DESIGN.md`](DESIGN.md) is the product design of record.
 - [`LIBV2-PROTO-PROGRESS-REPORT.md`](LIBV2-PROTO-PROGRESS-REPORT.md) explains
   the libv2 problem, approach, organization, and open decisions.
@@ -23,9 +24,10 @@ above, inspect the authority and current working tree.
 
 ## Current Resume Point
 
-Libv2 semantic intake is active. The first workflow and decision-governance
-candidate modules are committed but pending owner review. Start with the dated
-pickup, then review the candidate batch in its listed order.
+The agents-library dogfood review is active and paused after coding style and
+error handling. Start with the dated pickup and its linked sibling-repository
+checkpoint. Resume the first source document at DR/DI records and comment
+preservation.
 
 The root `agents.yaml` and generated `AGENTS.md` are intentionally absent until
 reviewed libv2 modules exist. Do not restore the deleted v1 guide or create the
@@ -38,6 +40,7 @@ precedence also remain separate open questions.
 ## Document Convention
 
 - `TODO/TODO.md`: durable, canonical work state.
-- `TODO/PICKUP-<date>-<workstream>.md`: volatile, detailed checkpoint for one
-  active workstream; replace or archive it when its resume point changes.
+- `TODO/PICKUP-<date>-<workstream>.md`: volatile checkpoint for one active
+  workstream; it may point to a detailed checkpoint in the repository that owns
+  the active work.
 - `docs/HANDOFF.md`: short, stable map to the current authorities and pickup.
