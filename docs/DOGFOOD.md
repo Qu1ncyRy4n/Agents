@@ -7,7 +7,7 @@ specifically tests drift handling.
 
 For only the newly implemented directory-tree, unified-coverage, alignment,
 and display-character work, start with
-[`DOGFOOD-SESSION-3.md`](DOGFOOD-SESSION-3.md). The longer staged guide below
+[`dogfood/history/DOGFOOD-SESSION-3.md`](dogfood/history/DOGFOOD-SESSION-3.md). The longer staged guide below
 also includes older regression exercises.
 
 ## Choose An Active Dogfood Target

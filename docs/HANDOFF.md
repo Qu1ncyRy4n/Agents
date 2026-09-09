@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-09-04
+Updated: 2026-09-08
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
@@ -11,11 +11,11 @@ instructions.
 - [`TODO/TODO.md`](../TODO/TODO.md) owns current tasks, owner decisions,
   statuses, and blockers.
 - [`TODO/PICKUP-2026-09-04-agents-library-dogfood.md`](../TODO/PICKUP-2026-09-04-agents-library-dogfood.md)
-  points to the detailed resume checkpoint for the active dogfood-library
-  workstream.
+  is historical checkpoint context. It is not the current curation entry point.
 - [`DESIGN.md`](DESIGN.md) is the product design of record.
-- [`LIBV2-PROTO-PROGRESS-REPORT.md`](LIBV2-PROTO-PROGRESS-REPORT.md) explains
-  the libv2 problem, approach, organization, and open decisions.
+- [`library-curation/archive/LIBV2-PROTO-PROGRESS-REPORT.md`](library-curation/archive/LIBV2-PROTO-PROGRESS-REPORT.md)
+  preserves the historic libv2 problem, approach, organization, and open
+  decisions.
 - [`../libv2-proto/PROVENANCE.md`](../libv2-proto/PROVENANCE.md) and
   [`../libv2-proto/WORKLIST.md`](../libv2-proto/WORKLIST.md) track source intake.
 
@@ -24,10 +24,12 @@ above, inspect the authority and current working tree.
 
 ## Current Resume Point
 
-The agents-library dogfood review is active and paused after coding style and
-error handling. Start with the dated pickup and its linked sibling-repository
-checkpoint. Resume the first source document at DR/DI records and comment
-preservation.
+The agents-library source review is paused pending Steve curation. For a request
+such as "I'm Steve, I'm here to do the content curation that Quincy requested.
+Please guide me through it.", read the [Steve library curation
+handoff](STEVE-LIBRARY-CURATION-HANDOFF.md) first, then the [local curation
+landing page](library-curation/README.md), [open questions](library-curation/open-questions.md),
+and [wb review material](wb.md). Pause before rendering or promoting drafts.
 
 The root `agents.yaml` and generated `AGENTS.md` are intentionally absent until
 reviewed libv2 modules exist. Do not restore the deleted v1 guide or create the
