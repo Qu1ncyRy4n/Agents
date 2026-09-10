@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-09-08
+Updated: 2026-09-10
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
@@ -18,6 +18,8 @@ instructions.
   decisions.
 - [`../libv2-proto/PROVENANCE.md`](../libv2-proto/PROVENANCE.md) and
   [`../libv2-proto/WORKLIST.md`](../libv2-proto/WORKLIST.md) track source intake.
+- Git history records authorship from human developers only; commit messages
+  cite no co-authors except human developers.
 
 If a chat recap or this navigation file conflicts with Git or an authority
 above, inspect the authority and current working tree.
