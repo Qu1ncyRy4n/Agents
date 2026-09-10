@@ -35,6 +35,31 @@ func TestBuildUsesManifestHeadingsTemplatesAndExclusions(t *testing.T) {
 	}
 }
 
+func TestBuildPreservesSiblingHeadingSourceOrder(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "rules.md"), "# Rules\n## Testing\nTest behavior.\n## Commit\nCommit carefully.\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: library\ndoc:\n  - Rules: shared:rules\n")
+
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.Build(value, loadedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testing := strings.Index(result.Content, "## Testing")
+	commit := strings.Index(result.Content, "## Commit")
+	if testing < 0 || commit < 0 || testing > commit {
+		t.Fatalf("sibling heading order = %q, want Testing before Commit", result.Content)
+	}
+}
+
 func TestBuildSelectsDirectorySubtreeAndNarrowsItWithExclude(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library", "engineering")

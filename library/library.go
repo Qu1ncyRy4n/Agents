@@ -113,7 +113,7 @@ func Load(root string) (*Index, error) {
 			}
 		}
 	}
-	index.buildTree(directories)
+	index.buildTree(root, directories)
 	return index, nil
 }
 
@@ -146,7 +146,7 @@ func (i *Index) addHeadings(node *Node) error {
 	return nil
 }
 
-func (i *Index) buildTree(directories map[string]bool) {
+func (i *Index) buildTree(root string, directories map[string]bool) {
 	for path := range directories {
 		if existing, found := i.ByPath[path]; found {
 			if existing.Kind == NodeHeading {
@@ -177,6 +177,41 @@ func (i *Index) buildTree(directories map[string]bool) {
 		}
 		i.Roots = append(i.Roots, node)
 	}
+	orderTree(root, i.Roots)
+}
+
+func orderTree(root string, nodes []*Node) {
+	orderNodes(root, nodes)
+	for _, node := range nodes {
+		orderTree(root, node.Children)
+	}
+}
+
+// orderNodes retains document order for headings while providing a stable order
+// for headings and directories that share a parent.
+func orderNodes(root string, nodes []*Node) {
+	sort.Slice(nodes, func(left, right int) bool {
+		leftPath := sourceOrderPath(root, nodes[left])
+		rightPath := sourceOrderPath(root, nodes[right])
+		if leftPath != rightPath {
+			return leftPath < rightPath
+		}
+		if nodes[left].Line != nodes[right].Line {
+			return nodes[left].Line < nodes[right].Line
+		}
+		return nodes[left].Path < nodes[right].Path
+	})
+}
+
+func sourceOrderPath(root string, node *Node) string {
+	if node.File == "" {
+		return node.Path
+	}
+	relative, err := filepath.Rel(root, node.File)
+	if err != nil {
+		return node.File
+	}
+	return filepath.ToSlash(relative)
 }
 
 func lastPathPart(path string) string {
