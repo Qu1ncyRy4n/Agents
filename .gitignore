@@ -1,3 +1,4 @@
 # docs/other_repo_agents/
-/.mogent/
+.mogent/sources/
+.mogent/state.json
 testing-ground/**/.mogent/
