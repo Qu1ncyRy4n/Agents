@@ -5,8 +5,16 @@ export CGO_ENABLED="${CGO_ENABLED:-0}"
 export GOCACHE="${GOCACHE:-/tmp/mogent-gocache}"
 export GOMODCACHE="${GOMODCACHE:-/tmp/mogent-gopath/pkg/mod}"
 
+unformatted="$(gofmt -l .)"
+if [ -n "$unformatted" ]; then
+  echo "tools/check: files need gofmt:" >&2
+  printf '%s\n' "$unformatted" >&2
+  exit 1
+fi
+
 go test ./...
 go vet ./...
+go mod tidy -diff
 
 if ! command -v errcheck >/dev/null 2>&1; then
   echo "tools/check: errcheck is required; run through 'nix develop -c tools/check' or install errcheck" >&2
