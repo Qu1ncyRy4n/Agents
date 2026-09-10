@@ -28,6 +28,7 @@ func commands() []commandDefinition {
 		{name: "complete", usage: "complete <kind> [--manifest agents.yaml]", run: runComplete},
 		{name: "completion", usage: "completion <bash|zsh>", run: runCompletion},
 		{name: "tui", usage: "tui [--manifest agents.yaml]", run: runTUI},
+		{name: "mint", usage: "mint [-w 1|2] [-r REPO_ROOT] [-n] [-s SEED]", run: runMint},
 	}
 }
 

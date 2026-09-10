@@ -27,7 +27,7 @@ func unknownCommandError(command string) error {
 	if suggestion := closestString(command, commands, 3); suggestion != "" {
 		return fmt.Errorf("unknown command %q; did you mean %q? Use help for usage", command, suggestion)
 	}
-	return fmt.Errorf("unknown command %q; use init, build, status, drift, coverage, source, add, localize, complete, completion, or tui", command)
+	return fmt.Errorf("unknown command %q; use init, build, status, drift, coverage, source, add, localize, complete, completion, tui, or mint", command)
 }
 
 func decorateSourceReferenceError(reference string, err error) error {
