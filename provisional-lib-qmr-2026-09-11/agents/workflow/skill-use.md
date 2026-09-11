@@ -1,0 +1,23 @@
+# Use Applicable Skills
+
+## Status
+
+- Version: 0.1.0
+- State: draft; manual approval required
+- Kind: agent guidance
+- Source: `docs/library-curation/drafts/agents/skill-use.md`
+
+## Verbatim Candidate
+
+> # Use Applicable Skills
+>
+> When a task matches an available skill's description, load and follow that
+> skill before acting.
+>
+> Skills provide task procedures. They do not expand existing task, path,
+> side-effect, or decision authority.
+>
+> Sources:
+>
+> - [Agent Skills specification](https://agentskills.io/specification)
+> - [`cdint-grid` captured skills](../reference/source-guides/cdint-grid_skills/)
