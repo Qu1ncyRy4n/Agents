@@ -32,7 +32,7 @@
 
 ### Existing Evidence
 
-- `/home/qix/dev/cdint/agents_library/intake/exemplar/wire-lab-exemplar.md:57-72,95-106,278-293`
+- `/home/qix/dev/cdint/qmr-agents-library/intake/exemplar/wire-lab-exemplar.md:57-72,95-106,278-293`
 - `/home/qix/dev/cdint/Agents/docs/LIBRARY-REVIEW-PLAN.md:44-87`
 - `/home/qix/dev/cdint/Agents/docs/LIBRARY-COVERAGE-AUDIT.md:25-57,122-137`
 - `/home/qix/dev/cdint/Agents/docs/thought-experiments/TE-kavam-metadata-tags-and-library-shape.md:57-59`

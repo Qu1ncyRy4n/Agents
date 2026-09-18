@@ -1,9 +1,9 @@
 # Library Curation
 
-This is the current operational home for library curation. The sibling
-`/home/qix/dev/cdint/agents_library` is frozen archival duplication, not current
-operational authority; it remains untouched until the later separate-repository
-move.
+This is the current operational home for CDINT library curation. The sibling
+`/home/qix/dev/cdint/qmr-agents-library` is the separately maintained personal
+library and dogfood source. CDINT curation remains here until it has an
+independently approved shared-library home.
 
 ## Current Reading And Work Areas
 
@@ -20,9 +20,9 @@ move.
   source-capture evidence.
 - [`archive/`](archive/) contains historic scratch and review material.
 
-No draft is selected, rendered, or promoted. Draft-internal links are archival
-and point to the frozen sibling location; preserve their bytes rather than
-rewriting those links during this paused review.
+No CDINT curation draft is selected, rendered, or promoted. Draft-internal links
+are archival; preserve their bytes rather than rewriting them during this paused
+review.
 
 ## Documentation Cleanup Status
 
@@ -31,5 +31,5 @@ local tree; moved the specified scratch, review, source-list, and dogfood
 history documents into clear archival locations.
 
 Current product plans and raw source captures were deliberately not reorganized
-before Steve's review. After that review, move the curated library and its
+before Steve's review. After that review, move the curated CDINT library and its
 evidence to a separate repository.
