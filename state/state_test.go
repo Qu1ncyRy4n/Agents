@@ -19,7 +19,7 @@ func TestCheckOverwriteProtectsUntrackedAndEditedOutput(t *testing.T) {
 	if err := state.CheckOverwrite(outputPath, statePath, false); err == nil || !strings.Contains(err.Error(), "untracked") {
 		t.Fatalf("untracked error = %v", err)
 	}
-	if err := state.Write(statePath, "generated\n"); err != nil {
+	if err := state.Write(statePath, outputPath, "generated\n"); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(outputPath, []byte("direct edit\n"), 0o644); err != nil {
@@ -57,7 +57,7 @@ func TestInspectReportsOutputState(t *testing.T) {
 		t.Fatalf("untracked state = %s", got)
 	}
 
-	if err := state.Write(statePath, "handwritten\n"); err != nil {
+	if err := state.Write(statePath, outputPath, "handwritten\n"); err != nil {
 		t.Fatal(err)
 	}
 	got, err = state.Inspect(outputPath, statePath)
@@ -77,5 +77,31 @@ func TestInspectReportsOutputState(t *testing.T) {
 	}
 	if got != state.OutputModified {
 		t.Fatalf("modified state = %s", got)
+	}
+}
+
+func TestCheckOverwriteRejectsAChangedOutputPath(t *testing.T) {
+	temporary := t.TempDir()
+	firstOutput := filepath.Join(temporary, "AGENTS.md")
+	secondOutput := filepath.Join(temporary, "CLAUDE.md")
+	statePath := filepath.Join(temporary, ".mogent", "state.json")
+	if err := os.WriteFile(firstOutput, []byte("generated\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Write(statePath, firstOutput, "generated\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(secondOutput, []byte("generated\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.CheckOverwrite(secondOutput, statePath, false); err == nil || !strings.Contains(err.Error(), "output path does not match") {
+		t.Fatalf("changed output path error = %v", err)
+	}
+	got, err := state.Inspect(secondOutput, statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != state.OutputUntracked {
+		t.Fatalf("changed output path state = %s", got)
 	}
 }

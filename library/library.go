@@ -238,6 +238,7 @@ func parseFile(root string, path string) ([]*Node, error) {
 	var roots []*Node
 	var stack []*parsedNode
 	var current *Node
+	var fence fenceState
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 1024), 1024*1024)
 	lineNumber := 0
@@ -261,6 +262,22 @@ func parseFile(root string, path string) ([]*Node, error) {
 			}
 			frontmatter.WriteString(line)
 			frontmatter.WriteByte('\n')
+			continue
+		}
+		if fence.active {
+			if fence.closes(line) {
+				fence = fenceState{}
+			}
+			if current != nil {
+				current.Body += line + "\n"
+			}
+			continue
+		}
+		if opened := parseFence(line); opened.active {
+			fence = opened
+			if current != nil {
+				current.Body += line + "\n"
+			}
 			continue
 		}
 		level, heading, identifier, ok := headingLine(line)
@@ -323,6 +340,49 @@ func parseFile(root string, path string) ([]*Node, error) {
 		}
 	}
 	return roots, nil
+}
+
+type fenceState struct {
+	character byte
+	length    int
+	active    bool
+}
+
+func parseFence(line string) fenceState {
+	indent := 0
+	for indent < len(line) && line[indent] == ' ' {
+		indent++
+	}
+	if indent > 3 || indent == len(line) {
+		return fenceState{}
+	}
+	character := line[indent]
+	if character != '`' && character != '~' {
+		return fenceState{}
+	}
+	length := 0
+	for indent+length < len(line) && line[indent+length] == character {
+		length++
+	}
+	if length < 3 {
+		return fenceState{}
+	}
+	return fenceState{character: character, length: length, active: true}
+}
+
+func (fence fenceState) closes(line string) bool {
+	indent := 0
+	for indent < len(line) && line[indent] == ' ' {
+		indent++
+	}
+	if indent > 3 || indent == len(line) || line[indent] != fence.character {
+		return false
+	}
+	length := 0
+	for indent+length < len(line) && line[indent+length] == fence.character {
+		length++
+	}
+	return length >= fence.length && strings.TrimSpace(line[indent+length:]) == ""
 }
 
 func directoryPrefix(root string, path string) (string, error) {

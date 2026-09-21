@@ -77,7 +77,7 @@ func Initialize(options InitOptions) (*InitResult, error) {
 		if err := render.WriteAtomically(outputPath, preview.Content); err != nil {
 			return nil, rollbackPaths(err, snapshots)
 		}
-		if err := state.Write(filepath.Join(filepath.Dir(manifestPath), ".mogent", "state.json"), preview.Content); err != nil {
+		if err := state.Write(filepath.Join(filepath.Dir(manifestPath), ".mogent", "state.json"), outputPath, preview.Content); err != nil {
 			return nil, rollbackPaths(err, snapshots)
 		}
 		result.Built = true

@@ -85,6 +85,31 @@ Use table tests.
 	}
 }
 
+func TestLoadKeepsHeadingsInsideFencedBlocksInTheBody(t *testing.T) {
+	temporary := t.TempDir()
+	source := "# Rules\n\n```md\n# Example\n## Not A Module\n```\n\n## Testing\nUse tests.\n"
+	if err := os.WriteFile(filepath.Join(temporary, "rules.md"), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	index, err := library.Load(temporary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rules := index.ByPath["rules"]
+	if rules == nil {
+		t.Fatalf("missing rules node: %#v", index.ByPath)
+	}
+	if index.ByPath["rules/example"] != nil || index.ByPath["rules/example/not-a-module"] != nil {
+		t.Fatalf("fenced heading became a source path: %#v", index.ByPath)
+	}
+	if !strings.Contains(rules.Body, "# Example\n## Not A Module\n") {
+		t.Fatalf("fenced headings missing from body: %q", rules.Body)
+	}
+	if index.ByPath["rules/testing"] == nil {
+		t.Fatalf("missing heading after fenced block: %#v", index.ByPath)
+	}
+}
+
 func TestLoadUsesDirectoryPathAsHeadingPrefix(t *testing.T) {
 	temporary := t.TempDir()
 	sourceDir := filepath.Join(temporary, "lang", "go")

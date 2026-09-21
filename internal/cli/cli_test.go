@@ -55,6 +55,39 @@ func TestRunBuildWritesConfiguredOutput(t *testing.T) {
 	}
 }
 
+func TestRunBuildRemovesNewOutputWhenStateWriteFails(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "identity.md"), []byte("# Identity\nHello.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  local: library\noutput: generated.md\ndoc:\n  - Agent: local:identity\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stateDirectory := filepath.Join(temporary, ".mogent")
+	if err := os.Mkdir(stateDirectory, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(stateDirectory, 0o700); err != nil {
+			t.Error(err)
+		}
+	})
+	var stdout, stderr bytes.Buffer
+	err := cli.Run([]string{"build", "-manifest", manifestPath}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "create temporary output") {
+		t.Fatalf("build error = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(temporary, "generated.md")); !os.IsNotExist(err) {
+		t.Fatalf("generated output remains after state failure: %v", err)
+	}
+}
+
 func TestRunInitGuidesAndWritesStarter(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if err := cli.Run([]string{"init", "--list-templates"}, &stdout, &stderr); err != nil {

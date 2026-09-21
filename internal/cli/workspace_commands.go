@@ -156,10 +156,7 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	if err := state.CheckOverwrite(outputPath, statePath, *force); err != nil {
 		return err
 	}
-	if err := render.WriteAtomically(outputPath, result.Content); err != nil {
-		return err
-	}
-	if err := state.Write(statePath, result.Content); err != nil {
+	if err := workspace.WriteGeneratedOutput(outputPath, statePath, result.Content); err != nil {
 		return err
 	}
 	for _, warning := range result.Warnings {

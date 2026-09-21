@@ -177,7 +177,7 @@ func (s *Session) Localize(options LocalizeOptions) (*LocalizeResult, error) {
 	if writeErr == nil && options.Rebuild {
 		writeErr = render.WriteAtomically(s.OutputPath(), preview.Content)
 		if writeErr == nil {
-			writeErr = state.Write(s.StatePath(), preview.Content)
+			writeErr = state.Write(s.StatePath(), s.OutputPath(), preview.Content)
 		}
 	}
 	if writeErr != nil {
@@ -432,4 +432,20 @@ func rollbackPaths(original error, snapshots []pathSnapshot) error {
 	}
 	sort.Slice(rollbackErrors, func(i, j int) bool { return rollbackErrors[i].Error() < rollbackErrors[j].Error() })
 	return errors.Join(append([]error{original}, rollbackErrors...)...)
+}
+
+// WriteGeneratedOutput replaces generated output and its state record together.
+// If recording state fails, the output is restored to its prior contents.
+func WriteGeneratedOutput(outputPath, statePath, content string) error {
+	snapshots, err := snapshotPaths([]string{outputPath, statePath})
+	if err != nil {
+		return err
+	}
+	if err := render.WriteAtomically(outputPath, content); err != nil {
+		return rollbackPaths(err, snapshots)
+	}
+	if err := state.Write(statePath, outputPath, content); err != nil {
+		return rollbackPaths(err, snapshots)
+	}
+	return nil
 }
