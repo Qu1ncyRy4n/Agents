@@ -52,7 +52,7 @@ func (s *Session) RejectDrift(force bool) error {
 	if err := render.WriteAtomically(s.OutputPath(), s.Output); err != nil {
 		return err
 	}
-	return state.Write(s.StatePath(), s.Output)
+	return state.Write(s.StatePath(), s.OutputPath(), s.Output)
 }
 
 // ImportDrift localizes one manifest section only when all direct edits are

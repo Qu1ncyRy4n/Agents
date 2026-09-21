@@ -106,7 +106,7 @@ func (s *Session) SaveAndBuild() error {
 	if err := render.WriteAtomically(outputPath, result.Content); err != nil {
 		return rollbackSave(err, s.ManifestPath, originalManifest, outputPath, originalOutput, outputExisted)
 	}
-	if err := state.Write(statePath, result.Content); err != nil {
+	if err := state.Write(statePath, outputPath, result.Content); err != nil {
 		return rollbackSave(err, s.ManifestPath, originalManifest, outputPath, originalOutput, outputExisted)
 	}
 	s.Saved = s.Draft.Clone()

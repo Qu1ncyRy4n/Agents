@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
 )
 
 type generated struct {
-	SHA256 string `json:"sha256"`
+	OutputPath string `json:"output_path"`
+	SHA256     string `json:"sha256"`
 }
 
 // OutputState describes the relationship between an output file and mogent's
@@ -48,6 +50,9 @@ func Inspect(outputPath, statePath string) (OutputState, error) {
 	if err != nil {
 		return "", err
 	}
+	if previous.OutputPath == "" || previous.OutputPath != normalizedOutputPath(outputPath) {
+		return OutputUntracked, nil
+	}
 	if Hash(output) != previous.SHA256 {
 		return OutputModified, nil
 	}
@@ -75,6 +80,9 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 	if err != nil {
 		return err
 	}
+	if previous.OutputPath == "" || previous.OutputPath != normalizedOutputPath(outputPath) {
+		return fmt.Errorf("refusing to overwrite untracked output %q; output path does not match generated-output state, rerun with --force", outputPath)
+	}
 	if Hash(output) != previous.SHA256 {
 		return fmt.Errorf("refusing to overwrite direct edits in %q; inspect the generated and direct changes or rerun with --force", outputPath)
 	}
@@ -82,8 +90,8 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 }
 
 // Write records exactly the content just written to the generated output.
-func Write(statePath, output string) error {
-	contents, err := json.MarshalIndent(generated{SHA256: Hash([]byte(output))}, "", "  ")
+func Write(statePath, outputPath, output string) error {
+	contents, err := json.MarshalIndent(generated{OutputPath: normalizedOutputPath(outputPath), SHA256: Hash([]byte(output))}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode generated-output state: %w", err)
 	}
@@ -92,6 +100,14 @@ func Write(statePath, output string) error {
 		return fmt.Errorf("write generated-output state: %w", err)
 	}
 	return nil
+}
+
+func normalizedOutputPath(path string) string {
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		return filepath.Clean(path)
+	}
+	return filepath.Clean(absolute)
 }
 
 func Hash(content []byte) string {
