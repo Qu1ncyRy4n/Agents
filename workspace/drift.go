@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Qu1ncyRy4n/Agents/render"
 	"github.com/Qu1ncyRy4n/Agents/state"
 )
 
@@ -49,10 +48,7 @@ func (s *Session) RejectDrift(force bool) error {
 	if err := state.CheckOverwrite(s.OutputPath(), s.StatePath(), true); err != nil {
 		return err
 	}
-	if err := render.WriteAtomically(s.OutputPath(), s.Output); err != nil {
-		return err
-	}
-	return state.Write(s.StatePath(), s.OutputPath(), s.Output)
+	return WriteGeneratedOutput(s.OutputPath(), s.StatePath(), s.Output)
 }
 
 // ImportDrift localizes one manifest section only when all direct edits are

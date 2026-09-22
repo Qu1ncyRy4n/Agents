@@ -69,15 +69,28 @@ func TestAddSourceDeclarationAcceptsUnpinnedURLAndSubdir(t *testing.T) {
 
 func TestAddSourceDeclarationRejectsDuplicatesAndInvalidSources(t *testing.T) {
 	manifestPath := writeSourceAddFixture(t, t.TempDir())
+	original, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []workspace.SourceAddOptions{
 		{ManifestPath: manifestPath, Alias: "shared", Location: "missing"},
 		{ManifestPath: manifestPath, Alias: "new", Location: "missing"},
 		{ManifestPath: manifestPath, Alias: "new", Location: "ssh://example.com/repo.git"},
 		{ManifestPath: manifestPath, Alias: "new", Location: "https://example.com/repo.git", Subdir: "../escape"},
+		{ManifestPath: manifestPath, Alias: "../new", Location: "https://example.com/repo.git"},
+		{ManifestPath: manifestPath, Alias: "remote", Location: "https://user:secret@example.com/repo.git"},
 	}
 	for _, options := range tests {
 		if _, err := workspace.AddSourceDeclaration(options); err == nil {
 			t.Fatalf("expected error for %#v", options)
+		}
+		after, err := os.ReadFile(manifestPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(after) != string(original) {
+			t.Fatalf("invalid source changed manifest for %#v", options)
 		}
 	}
 }

@@ -9,9 +9,22 @@ import (
 )
 
 func WriteAtomically(path string, content []byte) error {
+	return WriteAtomicallyMode(path, content, 0o644)
+}
+
+// WriteAtomicallyMode replaces a file atomically while preserving its existing
+// mode or using defaultMode when it is created.
+func WriteAtomicallyMode(path string, content []byte, defaultMode os.FileMode) error {
 	directory := filepath.Dir(path)
 	if err := os.MkdirAll(directory, 0o755); err != nil {
 		return fmt.Errorf("create output directory: %w", err)
+	}
+	mode := defaultMode
+	info, err := os.Stat(path)
+	if err == nil && !info.IsDir() {
+		mode = info.Mode().Perm()
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect existing output permissions: %w", err)
 	}
 	temporary, err := os.CreateTemp(directory, ".mogent-write-")
 	if err != nil {
@@ -34,7 +47,7 @@ func WriteAtomically(path string, content []byte) error {
 	if _, err := temporary.Write(content); err != nil {
 		return cleanup(fmt.Errorf("write temporary output: %w", err))
 	}
-	if err := temporary.Chmod(0o644); err != nil {
+	if err := temporary.Chmod(mode); err != nil {
 		return cleanup(fmt.Errorf("set output permissions: %w", err))
 	}
 	if err := temporary.Close(); err != nil {

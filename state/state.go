@@ -96,7 +96,7 @@ func Write(statePath, outputPath, output string) error {
 		return fmt.Errorf("encode generated-output state: %w", err)
 	}
 	contents = append(contents, '\n')
-	if err := renderfs.WriteAtomically(statePath, contents); err != nil {
+	if err := renderfs.WriteAtomicallyMode(statePath, contents, 0o600); err != nil {
 		return fmt.Errorf("write generated-output state: %w", err)
 	}
 	return nil

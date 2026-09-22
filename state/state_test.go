@@ -105,3 +105,18 @@ func TestCheckOverwriteRejectsAChangedOutputPath(t *testing.T) {
 		t.Fatalf("changed output path state = %s", got)
 	}
 }
+
+func TestWriteCreatesPrivateStateFile(t *testing.T) {
+	temporary := t.TempDir()
+	statePath := filepath.Join(temporary, ".mogent", "state.json")
+	if err := state.Write(statePath, filepath.Join(temporary, "AGENTS.md"), "generated\n"); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("mode = %o, want 600", got)
+	}
+}

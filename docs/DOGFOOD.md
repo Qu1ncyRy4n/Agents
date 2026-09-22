@@ -101,18 +101,17 @@ target or disposable fixture before each writing command.
 Do not use this fixture until its source paths are rebuilt against a dedicated
 test fixture. It currently assumes the removed bundled v1 library.
 
-This optional block creates a temporary copy of Mogent's bundled example and
-libraries under `/tmp`. It is useful later when you want to test destructive or
-failure behavior without touching the real project. It can be run from any
-directory because the copy sources are anchored at `$mogent_repo`.
+This optional block creates a temporary copy of Mogent's bundled smoke fixtures
+under `/tmp`. It is useful later when you want to test destructive or failure
+behavior without touching the real project. It can be run from any directory
+because the copy sources are anchored at `$mogent_repo`.
 
-Create a disposable copy of the fixture and its source libraries:
+Create a disposable copy of the fixture collection and its neutral source
+library:
 
 ```sh
 mogent_dogfood_dir=$(mktemp -d)
-mkdir -p "$mogent_dogfood_dir/testing-ground"
-cp -R "$mogent_repo/testing-ground/personal-go-nix" "$mogent_dogfood_dir/testing-ground/"
-cp -R "$mogent_repo/libraries" "$mogent_dogfood_dir/"
+cp -R "$mogent_repo/testing-ground" "$mogent_dogfood_dir/"
 mogent_manifest="$mogent_dogfood_dir/testing-ground/personal-go-nix/agents.yaml"
 ```
 
@@ -136,7 +135,7 @@ CDINT library. Preview first:
 
 ```sh
 mogent init --template minimal \
-  --source shared="$mogent_repo/libraries/cdint" \
+  --source shared="$mogent_repo/testing-ground/fixture-library/cdint" \
   --manifest "$mogent_manifest" \
   --dry-run
 ```
@@ -145,7 +144,7 @@ If the preview fits the project, create only the manifest (not `AGENTS.md`):
 
 ```sh
 mogent init --template minimal \
-  --source shared="$mogent_repo/libraries/cdint" \
+  --source shared="$mogent_repo/testing-ground/fixture-library/cdint" \
   --manifest "$mogent_manifest"
 ```
 
@@ -161,9 +160,9 @@ disposable fixture:
 ```sh
 mogent init --list-templates
 mogent init --template personal-go-nix \
-  --source shared="$mogent_repo/libraries/cdint" \
-  --source go="$mogent_repo/libraries/cdint" \
-  --source personal="$mogent_repo/libraries/personal" \
+  --source shared="$mogent_repo/testing-ground/fixture-library/cdint" \
+  --source go="$mogent_repo/testing-ground/fixture-library/cdint" \
+  --source personal="$mogent_repo/testing-ground/fixture-library/personal" \
   --manifest "$mogent_manifest" \
   --dry-run
 ```
@@ -215,9 +214,9 @@ Add the personal library after initializing with `minimal`, without selecting
 any of its modules:
 
 ```sh
-mogent source add personal /home/qix/dev/cdint/Agents/libraries/personal \
+mogent source add personal "$mogent_repo/testing-ground/fixture-library/personal" \
   --manifest "$mogent_manifest" --dry-run
-mogent source add personal /home/qix/dev/cdint/Agents/libraries/personal \
+mogent source add personal "$mogent_repo/testing-ground/fixture-library/personal" \
   --manifest "$mogent_manifest"
 ```
 
@@ -426,8 +425,8 @@ library within a larger repository, use the explicit source form:
 ```yaml
 sources:
   shared:
-    location: https://github.com/Qu1ncyRy4n/Agents.git
-    subdir: libraries/cdint
+    location: https://github.com/Qu1ncyRy4n/qmr-agents-library.git
+    subdir: agents
 ```
 
 Then run:

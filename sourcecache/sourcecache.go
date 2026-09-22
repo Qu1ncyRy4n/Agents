@@ -423,19 +423,32 @@ func markdownMap(root string) (map[string]string, error) {
 }
 
 func validateRemote(alias, sourceURL string) error {
-	if alias == "" {
-		return fmt.Errorf("URL source alias is empty")
-	}
-	for _, character := range alias {
-		if !unicode.IsLetter(character) && !unicode.IsDigit(character) && !strings.ContainsRune("._-", character) {
-			return fmt.Errorf("URL source alias %q is unsafe for cache paths", alias)
-		}
+	if err := ValidateAlias(alias); err != nil {
+		return err
 	}
 	parsed, err := url.Parse(sourceURL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil {
 		return fmt.Errorf("URL source %q must be an HTTP(S) Git URL without embedded credentials", alias)
 	}
 	return nil
+}
+
+// ValidateAlias rejects source aliases that are unsafe as cache-path segments.
+func ValidateAlias(alias string) error {
+	if alias == "" {
+		return fmt.Errorf("source alias is empty")
+	}
+	for _, character := range alias {
+		if !unicode.IsLetter(character) && !unicode.IsDigit(character) && !strings.ContainsRune("._-", character) {
+			return fmt.Errorf("source alias %q is unsafe for cache paths", alias)
+		}
+	}
+	return nil
+}
+
+// ValidateRemote checks the cache-safe alias and URL rules for a remote source.
+func ValidateRemote(alias, sourceURL string) error {
+	return validateRemote(alias, sourceURL)
 }
 
 func validateLockEntry(alias string, entry LockEntry) error {

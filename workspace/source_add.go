@@ -8,6 +8,7 @@ import (
 
 	"github.com/Qu1ncyRy4n/Agents/library"
 	"github.com/Qu1ncyRy4n/Agents/manifest"
+	"github.com/Qu1ncyRy4n/Agents/sourcecache"
 )
 
 // SourceAddOptions describes one explicit manifest source declaration.
@@ -40,12 +41,20 @@ func AddSourceDeclaration(options SourceAddOptions) (*SourceAddResult, error) {
 	if alias == "" {
 		return nil, fmt.Errorf("source alias must not be empty")
 	}
+	if err := sourcecache.ValidateAlias(alias); err != nil {
+		return nil, err
+	}
 	if _, exists := value.Sources[alias]; exists {
 		return nil, fmt.Errorf("source %q is already declared in manifest", alias)
 	}
 	remote, err := validateSourceLocation(location)
 	if err != nil {
 		return nil, err
+	}
+	if remote {
+		if err := sourcecache.ValidateRemote(alias, location); err != nil {
+			return nil, err
+		}
 	}
 	if !remote {
 		resolved := location
