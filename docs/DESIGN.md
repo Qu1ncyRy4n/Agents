@@ -446,8 +446,9 @@ the visible `local:` reference. Source: DI-ravam.
   the user review names, metadata, and hierarchy before using it as a source.
   Shared libraries should prefer one reusable module per file, but the renderer
   should continue to accept normal multi-heading Markdown files.
-- **Drift detection** — regenerate from manifest, diff against `AGENTS.md` on disk,
-  offer explicit handling.
+- **Full drift reconciliation** — conservative drift import and explicit reject
+  are implemented; three-way reconciliation and conflict resolution remain
+  future work.
 - **Multiple agent outputs** — optionally render additional agent entrypoint
   files such as `CLAUDE.md`, `GEMINI.md`, or `.codex/AGENTS.md`. A secondary
   output may be a symlink/mirror of `AGENTS.md`, or it may be a tool-specific

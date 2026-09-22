@@ -1,7 +1,8 @@
 sources:
-  shared: ../../libraries/cdint
-  go: ../../libraries/cdint
-  personal: ../../libraries/personal
+  # Historical v1 smoke fixture. The archive is not an active policy source.
+  shared: ../../../qmr-agents-library/archive/agents-libraries-v1/cdint
+  go: ../../../qmr-agents-library/archive/agents-libraries-v1/cdint
+  personal: ../../../qmr-agents-library/archive/agents-libraries-v1/personal
 vars:
   repo_name: personal-go-nix
   repo_url: ""

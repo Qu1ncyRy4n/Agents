@@ -1,6 +1,7 @@
 sources:
-  shared: ../../libraries/cdint
-  go: ../../libraries/cdint
+  # Historical v1 smoke fixture. The archive is not an active policy source.
+  shared: ../../../qmr-agents-library/archive/agents-libraries-v1/cdint
+  go: ../../../qmr-agents-library/archive/agents-libraries-v1/cdint
 vars:
   repo_name: foss-fork
   repo_url: ""

@@ -17,7 +17,14 @@ Add one row per active experiment:
 
 | Repository / nickname | Stack and stage | Mogent features in use | Questions or friction | Last exercised |
 |---|---|---|---|---|
+| QMR Agents Library | Personal library, initial live core | Local source, manifest render | Does the core-and-constraints template produce a useful baseline without archive content? | 2026-09-21 |
 | _Add repository_ | _Language, maturity, migration state_ | _Sources, init, build, localization, etc._ | _What are you trying to learn?_ | _YYYY-MM-DD_ |
+
+<!--
+The QMR row is a bounded library-source smoke target, not evidence that a
+consumer repository workflow is pleasant. Add a separate row for the first
+consumer-repository experiment.
+-->
 
 ## Per-Repository Notes
 

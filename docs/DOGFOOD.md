@@ -5,10 +5,39 @@ unexpectedly and record the command, output, manifest, and expected behavior.
 Do not work around a failure by editing generated `AGENTS.md` unless the stage
 specifically tests drift handling.
 
+> [!IMPORTANT]
+> Stages -1 through 8 below are the historical v1 runbook. They assume the
+> removed `Agents/libraries/` tree and must not be run unchanged. The current
+> personal-library smoke target is the sibling QMR library and its
+> `templates/core-and-constraints/agents.yaml` manifest. Update this runbook
+> with a reviewed QMR consumer workflow before treating it as the current
+> end-to-end dogfood procedure.
+
 For only the newly implemented directory-tree, unified-coverage, alignment,
 and display-character work, start with
 [`dogfood/history/DOGFOOD-SESSION-3.md`](dogfood/history/DOGFOOD-SESSION-3.md). The longer staged guide below
 also includes older regression exercises.
+
+## Current QMR Template Smoke
+
+This is the current bounded dogfood workflow for the sibling QMR personal
+library. It creates a disposable manifest that selects QMR's current live
+core-and-constraints modules; it does not select archive or reference content.
+
+```sh
+qmr_library=/path/to/qmr-agents-library
+mogent_dogfood_dir=$(mktemp -d)
+sed "s|../../agents|$qmr_library/agents|" \
+  "$qmr_library/templates/core-and-constraints/agents.yaml" \
+  > "$mogent_dogfood_dir/agents.yaml"
+mogent build --manifest "$mogent_dogfood_dir/agents.yaml"
+mogent status --manifest "$mogent_dogfood_dir/agents.yaml"
+```
+
+Expected: build writes a generated `AGENTS.md` beside the disposable manifest,
+and status reports the output as clean. Record whether the selected core is
+useful, too strict, missing critical routing guidance, or includes material that
+should instead be a skill, guide, specification, or overlay.
 
 ## Choose An Active Dogfood Target
 
@@ -21,11 +50,11 @@ original dogfood session, not the canonical active-repository list:
 /home/qix/dev/omnicortex/todo_app_project
 ```
 
-Use these variables throughout the guide:
+The following variables are retained for the historical v1 runbook:
 
 ```sh
-mogent_repo=/home/qix/dev/cdint/Agents
-mogent_target=/home/qix/dev/omnicortex/todo_app_project
+mogent_repo=/path/to/Agents
+mogent_target=/path/to/dogfood-target
 mogent_manifest="$mogent_target/agents.yaml"
 ```
 
@@ -67,11 +96,10 @@ drift, and rejection behavior without risking the real project. Commands in the
 numbered stages use `$mogent_manifest`, so confirm whether it points to the real
 target or disposable fixture before each writing command.
 
-## Optional Disposable Fixture — Skip For The Current Real-Project Run
+## Historical Optional Disposable Fixture
 
-You do **not** need this section to dogfood Mogent on
-`/home/qix/dev/omnicortex/todo_app_project`. Continue directly to Stage -1 with
-`mogent_manifest` still pointing at that project's `agents.yaml`.
+Do not use this fixture until its source paths are rebuilt against a dedicated
+test fixture. It currently assumes the removed bundled v1 library.
 
 This optional block creates a temporary copy of Mogent's bundled example and
 libraries under `/tmp`. It is useful later when you want to test destructive or
@@ -98,7 +126,7 @@ mogent_manifest="$mogent_target/agents.yaml"
 The fixture's relative source paths resolve in the copied layout. Remove the
 temporary directory when the exercise is complete.
 
-## Stage -1: Guided Init
+## Historical Stages: Guided Init Through Pinned Sources
 
 Purpose: create a reviewable starter manifest instead of beginning from blank
 YAML.

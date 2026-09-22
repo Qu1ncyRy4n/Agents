@@ -13,13 +13,35 @@ Detailed M-* tasks and Mogent-specific owner decisions were migrated from
 `~/Documents/Obsidian Vault/inbox/2026-08-W34.md`. This file owns their status,
 blockers, and dependency graph; the weekly note is only a cross-project pointer.
 
+## Current Library Direction
+
+Mogent owns renderer behavior, CLI workflows, and test fixtures. The personal
+live library is the sibling QMR Agents Library; its archive and reference trees
+are non-selectable evidence. A future CDINT shared library requires separately
+approved ownership and policy boundaries.
+
+The `libv2-proto` tasks below remain historical research and CDINT-curation
+evidence. They do not gate bounded QMR personal-library dogfooding or Mogent
+product validation.
+
+<!--
+Replace this direction with an explicit shared-library decision when CDINT
+curation has an approved owner, source window, selection policy, and promotion
+gate.
+-->
 
 Canonical repository tracking:
 
-- `~/dev/cdint/Agents/libv2-proto/WORKLIST.md`
-- `~/dev/cdint/Agents/TODO/PICKUP-2026-08-25-libv2-intake.md`
-- `~/dev/cdint/Agents/docs/LIBV2-PROTO-PROGRESS-REPORT.md`
-- Include/composition narrowing: `~/dev/cdint/Agents/docs/thought-experiments/TE-nufad-module-includes.md`
+- [`libv2-proto/WORKLIST.md`](../libv2-proto/WORKLIST.md) is historical intake
+  evidence.
+- [`TODO/PICKUP-2026-08-25-libv2-intake.md`](PICKUP-2026-08-25-libv2-intake.md)
+  is a historical checkpoint.
+- [`docs/library-curation/archive/LIBV2-PROTO-PROGRESS-REPORT.md`](../docs/library-curation/archive/LIBV2-PROTO-PROGRESS-REPORT.md)
+  preserves the historical progress report.
+- Include/composition narrowing:
+  [`TE-nufad-module-includes.md`](../docs/thought-experiments/TE-nufad-module-includes.md).
+- Personal live-library work is in the sibling QMR repository; its current
+  template and dogfood status are not governed by the libv2 backlog.
 
 ## Decision Intent Log
 
@@ -66,8 +88,9 @@ the owner records an answer here.
 - [ ] [active] [decision] **C9 — Confirm reconciliation of the stale
   library-review list against the Aug 21 libv2 reset:** semantic intake and the
   provenance ledger are the evidence-backed direction, pending owner approval.
-- [x] [done] [decision] **C10 — Dogfood sequence:** complete libv2 before
-  dogfooding. Decided 2026-08-25; M-D4 remains gated on M-L16.
+	- [x] [historical] [decision] **C10 — Dogfood sequence:** complete libv2 before
+	  dogfooding. Decided 2026-08-25; superseded for bounded QMR personal-library
+	  dogfooding by the Current Library Direction above.
 - [x] [done] [decision] **C12 — Todo app's role:** use it first as a dogfood
   target, then for planned multi-agent features, and possibly as a product.
   Decided 2026-08-25.
@@ -90,13 +113,18 @@ the owner records an answer here.
 	- [ ] [blocked] **M-C5** Write external-style examples — after M-C3
 	- [ ] [ready] **M-C6** Merge outstanding branches
 	- [ ] [ready] **M-C7** Restructure remaining directories (carryover from the CLI split)
+	- [ ] [active] **M-Q1** Run one bounded QMR core-and-constraints template
+	  dogfood experiment in a real personal consumer repository; record the result
+	  in `docs/ACTIVE-DOGFOOD.md`
 - **b. Portable install**
 	- [x] **M-P1** Remove the runtime `rg` dependency [done] 2026-08-25 — `rg` remains only a development-shell convenience
 	- [x] **M-P2** Remove the supported-install `gcc` requirement [done] 2026-08-25 — `tools/install` uses `CGO_ENABLED=0`
 	- [x] **M-P3** Determine the CGO dependency path [done] 2026-08-25 — terminal dependencies reach `os/user`; documented in README
 	- [ ] [ready] **M-P4** Decide whether to add a Makefile as an ergonomic wrapper around the existing pure-Go install/check scripts — no longer a portability blocker
 - **c. Library v2 — audit** (all gated on [decision] C9)
-	- [x] **M-L1** Complete the initial read of every checked-in module under `libraries/` [done] 2026-08-25 — owner review continues through semantic intake
+	- [x] **M-L1** Complete the initial read of every former checked-in v1 module
+	  [done] 2026-08-25 — the preserved archive now lives in the QMR repository;
+	  owner review continues through semantic intake
 	- [ ] [active] **M-L2** Record per module: missing, thin, duplicated, conflicting, or overly repo-specific content
 	- [ ] [ready] **M-L3** Survey existing `AGENTS.md` files across all relevant repos [overdue]
 	- [ ] [ready] **M-L4** Pull examples from [Steve's brainstorm doc and dumps](https://github.com/stevegt/quincy-agents/tree/main/docs) [overdue]
@@ -112,7 +140,8 @@ the owner records an answer here.
 	- [ ] [active] **M-L13** Run the libv2-proto reset to completion
 	- [ ] [active] **M-L14** Keep every module until explicitly discussed (migration rule — enforce, don't drop silently)
 	- [ ] [active] **M-L15** Maintain the semantically-organized intake folder for finding and negotiating overlap
-	- [ ] [blocked] **M-L16** Cut libv2-proto over to libv2 — after M-L13, gates all dogfooding per C10
+	- [ ] [historical] **M-L16** Cut libv2-proto over to libv2 — after M-L13; no
+	  longer gates bounded QMR personal-library dogfooding
 	- [ ] [blocked] **M-L17** Delete the old library repo — after M-L16
 	- [x] **M-L18** Remove the rejected explanatory additions from the v1 cleanup [done] 2026-08-20 — preserved in commit `86780a0`
 	- [x] **M-L19** Remove `corpus-variants` IDs and verify no checked-in manifest references them [done] 2026-08-20
@@ -219,7 +248,8 @@ the owner records an answer here.
 	- [ ] [ready] **M-G6** Articulate the "LLM is a Markdown compiler" framing — precision in Markdown → code generation, compiler imports libraries, libraries organized and included at runtime
 	- [ ] [later] **M-G7** Revisit embeddings for docs (aidda-style) — Steve: grid and storm will provide better-managed vector DB pieces
 	- [ ] [ready] **M-G8** Look at Swamp's hub-and-spoke JSON instructions and tight constraints; decide whether the pattern is useful here
-- **n. Dogfooding** — libv2 first per [decision] C10, so everything here waits on M-L16
+- **n. Product-root dogfooding** — historical libv2 workflow. QMR personal-library
+  dogfooding is tracked separately by the Current Library Direction above.
 	- [ ] [blocked] **M-D1** Author the root `agents.yaml` against reviewed libv2 modules — intentionally clean-slate/TBD until M-L16
 	- [ ] [blocked] **M-D2** Build the root `AGENTS.md` from the new manifest — after M-D1
 	- [ ] [blocked] **M-D3** Refresh stale Git/branch facts in `docs/HANDOFF.md` — after M-D2

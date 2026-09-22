@@ -1,6 +1,8 @@
 # Mogent Milestone-Two Navigator Contract
 
-Status: active implementation contract.
+Status: historical navigator contract. The core navigator remains implemented;
+localization and drift clauses are superseded by `IMPLEMENTATION-M3.md`, and
+immutable URL-source clauses are superseded by `IMPLEMENTATION-M4.md`.
 
 This document defines the first interactive navigator after the milestone-one
 renderer. Source: DI-tuvim.
@@ -13,9 +15,10 @@ operation. It uses Bubble Tea for terminal interaction and Lip Gloss for
 layout and color. Bubbles components are used only where they remove ordinary
 terminal work such as scrolling or text input.
 
-The navigator does not modify a source library as part of ordinary selection,
-ordering, exclusion, save, or build operations. Copy-on-write editing and
-direct-edit import remain separate future features.
+The navigator does not modify a shared source library as part of ordinary
+selection, ordering, exclusion, save, or build operations. Copy-on-write
+editing and conservative direct-edit import are defined by
+`IMPLEMENTATION-M3.md`.
 
 ## Layout
 
@@ -106,7 +109,5 @@ manifest and shared library in `demo_script.md`:
 
 ## Deferred
 
-- Copy-on-write editing and import of direct `AGENTS.md` edits.
 - Full source-file view toggle.
 - Wide-screen user layout preferences.
-- URL sources, pinning, cache, and upstream-change review.

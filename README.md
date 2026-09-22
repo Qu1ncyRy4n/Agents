@@ -58,9 +58,13 @@ Create an editable starter manifest:
 
 ```sh
 mogent init --list-templates
-mogent init --template minimal --source shared=./libraries/cdint --dry-run
-mogent init --template minimal --source shared=./libraries/cdint
+mogent init --template minimal --source shared=/path/to/your/library --dry-run
+mogent init --template minimal --source shared=/path/to/your/library
 ```
+
+Mogent does not ship a selectable policy library. Use an explicit local library
+path, such as the sibling QMR personal library, or a source owned by the target
+organization.
 
 Templates are ordinary manifest starting points, not hidden presets. `init`
 validates their source references and rendered output before writing.
@@ -114,10 +118,10 @@ conflicts_with: [shared:security/loose-security]
 
 Metadata is tool-only. It does not render into `AGENTS.md`.
 
-The checked-in example libraries use this atomic style. Each reusable module
+The checked-in metadata fixture uses this atomic style. Each reusable module
 usually lives in one file with one top-level heading and frontmatter metadata.
-For example, `libraries/cdint/shared-baseline/instructions/focused-change-loop.md`
-resolves as `shared:shared-baseline/instructions/focused-change-loop`.
+For example, `testing-ground/metadata-library/library/lang/go/testing.md`
+resolves as `shared:lang/go/testing`.
 
 When a document wants several atomic modules under one local heading, name them
 explicitly in the manifest:
@@ -248,17 +252,17 @@ mogent source show shared:lang/go/testing --align-source --under Instructions
 Add a local source without selecting any modules:
 
 ```sh
-mogent source add personal ../agent-libraries/personal --dry-run
-mogent source add personal ../agent-libraries/personal
+mogent source add personal /path/to/personal-library --dry-run
+mogent source add personal /path/to/personal-library
 ```
 
 Declare, pin, and later review a URL source:
 
 ```sh
-mogent source add shared https://github.com/Qu1ncyRy4n/Agents.git \
-  --subdir libraries/cdint --dry-run
-mogent source add shared https://github.com/Qu1ncyRy4n/Agents.git \
-  --subdir libraries/cdint
+mogent source add qmr https://github.com/Qu1ncyRy4n/qmr-agents-library.git \
+  --subdir agents --dry-run
+mogent source add qmr https://github.com/Qu1ncyRy4n/qmr-agents-library.git \
+  --subdir agents
 mogent source pin shared
 mogent source update shared
 mogent source update shared --ref <full-previewed-commit> --accept

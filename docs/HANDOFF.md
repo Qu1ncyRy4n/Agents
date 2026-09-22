@@ -26,16 +26,20 @@ above, inspect the authority and current working tree.
 
 ## Current Resume Point
 
-The agents-library source review is paused pending Steve curation. For a request
-such as "I'm Steve, I'm here to do the content curation that Quincy requested.
+CDINT source review remains paused pending Steve curation. For a request such
+as "I'm Steve, I'm here to do the content curation that Quincy requested.
 Please guide me through it.", read the [Steve library curation
 handoff](STEVE-LIBRARY-CURATION-HANDOFF.md) first, then the [local curation
 landing page](library-curation/README.md), [open questions](library-curation/open-questions.md),
 and [wb review material](wb.md). Pause before rendering or promoting drafts.
 
-The root `agents.yaml` and generated `AGENTS.md` are intentionally absent until
-reviewed libv2 modules exist. Do not restore the deleted v1 guide or create the
-new root manifest against an incomplete intake library.
+Personal live-library dogfooding is owned by the sibling QMR Agents Library.
+Its design workbench, templates, archive, and provenance are not CDINT policy.
+
+The root `agents.yaml` and generated `AGENTS.md` remain intentionally absent:
+this repository owns Mogent product code, not a selectable policy library. Do
+not restore the deleted v1 guide or create a product-root manifest. Use a
+reviewed consumer repository or the QMR library template for dogfood work.
 
 Module include syntax remains undecided. `TE-nufad` narrowed the design space;
 it did not authorize implementation. Relationship validity and merge
