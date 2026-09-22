@@ -120,3 +120,24 @@ func TestWriteCreatesPrivateStateFile(t *testing.T) {
 		t.Fatalf("mode = %o, want 600", got)
 	}
 }
+
+func TestInspectReadsLegacySingleOutputState(t *testing.T) {
+	temporary := t.TempDir()
+	output := filepath.Join(temporary, "AGENTS.md")
+	content := "generated\n"
+	if err := os.WriteFile(output, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	statePath := filepath.Join(temporary, ".mogent", "state.json")
+	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := "{\"output_path\":\"" + output + "\",\"sha256\":\"" + state.Hash([]byte(content)) + "\"}\n"
+	if err := os.WriteFile(statePath, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := state.Inspect(output, statePath)
+	if err != nil || got != state.OutputClean {
+		t.Fatalf("legacy inspect = %s, %v", got, err)
+	}
+}

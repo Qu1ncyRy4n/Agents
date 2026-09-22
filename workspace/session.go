@@ -10,7 +10,6 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/library"
 	"github.com/Qu1ncyRy4n/Agents/manifest"
 	"github.com/Qu1ncyRy4n/Agents/render"
-	"github.com/Qu1ncyRy4n/Agents/state"
 )
 
 // Session is one loaded mogent workspace. UI and CLI callers mutate Draft,
@@ -43,7 +42,7 @@ func New(manifestPath string) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sources, err := render.LoadSources(value, loadedPath)
+	sources, err := render.LoadWorkspaceSources(value, loadedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -87,33 +86,24 @@ func (s *Session) SaveAndBuild() error {
 	if err != nil {
 		return err
 	}
-	outputPath := s.OutputPath()
-	statePath := s.StatePath()
-	if err := state.CheckOverwrite(outputPath, statePath, false); err != nil {
-		return err
-	}
 	originalManifest, err := os.ReadFile(s.ManifestPath)
 	if err != nil {
 		return fmt.Errorf("read existing manifest before save: %w", err)
 	}
-	originalOutput, outputExisted, err := readOptional(outputPath)
-	if err != nil {
-		return err
-	}
 	if err := manifest.WriteAtomically(s.ManifestPath, s.Draft); err != nil {
 		return err
 	}
-	if err := render.WriteAtomically(outputPath, result.Content); err != nil {
-		return rollbackSave(err, s.ManifestPath, originalManifest, outputPath, originalOutput, outputExisted)
-	}
-	if err := state.Write(statePath, outputPath, result.Content); err != nil {
-		return rollbackSave(err, s.ManifestPath, originalManifest, outputPath, originalOutput, outputExisted)
+	if err := BuildOutputs(s.Draft, s.ManifestPath, result.Content, false); err != nil {
+		if restoreErr := render.WriteAtomically(s.ManifestPath, string(originalManifest)); restoreErr != nil {
+			return errors.Join(err, restoreErr)
+		}
+		return err
 	}
 	s.Saved = s.Draft.Clone()
 	s.Draft = s.Saved.Clone()
 	s.Output = result.Content
 	s.Dirty = false
-	sources, err := render.LoadSources(s.Saved, s.ManifestPath)
+	sources, err := render.LoadWorkspaceSources(s.Saved, s.ManifestPath)
 	if err != nil {
 		return err
 	}

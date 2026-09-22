@@ -8,7 +8,6 @@ import (
 
 	"github.com/Qu1ncyRy4n/Agents/manifest"
 	"github.com/Qu1ncyRy4n/Agents/render"
-	"github.com/Qu1ncyRy4n/Agents/state"
 )
 
 type InitOptions struct {
@@ -47,38 +46,19 @@ func Initialize(options InitOptions) (*InitResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("validate starter manifest: %w", err)
 	}
-	outputPath := options.Manifest.Output
-	if !filepath.IsAbs(outputPath) {
-		outputPath = filepath.Join(filepath.Dir(manifestPath), outputPath)
-	}
+	outputPath := filepath.Join(filepath.Dir(manifestPath), options.Manifest.Output)
 	result := &InitResult{ManifestPath: manifestPath, OutputPath: outputPath, ManifestYAML: string(serialized), Preview: preview.Content}
 	if options.DryRun {
 		return result, nil
-	}
-	if options.Build {
-		statePath := filepath.Join(filepath.Dir(manifestPath), ".mogent", "state.json")
-		if err := state.CheckOverwrite(outputPath, statePath, options.ForceOutput); err != nil {
-			return nil, err
-		}
-	}
-	paths := []string{manifestPath}
-	if options.Build {
-		paths = append(paths, outputPath, filepath.Join(filepath.Dir(manifestPath), ".mogent", "state.json"))
-	}
-	snapshots, err := snapshotPaths(paths)
-	if err != nil {
-		return nil, err
 	}
 	if err := manifest.WriteAtomically(manifestPath, options.Manifest); err != nil {
 		return nil, err
 	}
 	result.Wrote = true
 	if options.Build {
-		if err := render.WriteAtomically(outputPath, preview.Content); err != nil {
-			return nil, rollbackPaths(err, snapshots)
-		}
-		if err := state.Write(filepath.Join(filepath.Dir(manifestPath), ".mogent", "state.json"), outputPath, preview.Content); err != nil {
-			return nil, rollbackPaths(err, snapshots)
+		if err := BuildOutputs(options.Manifest, manifestPath, preview.Content, options.ForceOutput); err != nil {
+			_ = os.Remove(manifestPath)
+			return nil, err
 		}
 		result.Built = true
 	}

@@ -30,7 +30,13 @@ type Status struct {
 	ManifestPath string
 	OutputPath   string
 	Output       OutputStatus
+	Outputs      []NamedOutputStatus
 	Sources      []SourceStatus
+}
+
+type NamedOutputStatus struct {
+	Path   string
+	Status OutputStatus
 }
 
 // OutputPath returns the absolute generated document path for the current
@@ -61,7 +67,55 @@ func (s *Session) Status() (*Status, error) {
 		Output:       s.outputStatus(outputState, outputPath),
 		Sources:      s.sourceStatuses(),
 	}
+	outputs, err := configuredOutputs(s.Draft, s.ManifestPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, output := range outputs[1:] {
+		current := state.OutputMissing
+		if output.spec.Directory() {
+			current, err = state.InspectDirectory(output.path, s.StatePath())
+		} else {
+			current, err = state.Inspect(output.path, s.StatePath())
+		}
+		if err != nil {
+			return nil, err
+		}
+		value := s.outputStatus(current, output.path)
+		if output.spec.Directory() {
+			switch current {
+			case state.OutputMissing:
+				value = StatusMissing
+			case state.OutputUntracked:
+				value = StatusUntracked
+			case state.OutputModified:
+				value = StatusDirectEdits
+			case state.OutputClean:
+				value = StatusUpToDate
+			}
+		}
+		if output.spec.Directory() && current == state.OutputClean {
+			wanted, hashErr := state.DirectoryHashes(output.source)
+			actual, actualErr := state.DirectoryHashes(output.path)
+			if hashErr != nil || actualErr != nil || !sameHashes(wanted, actual) {
+				value = StatusStale
+			}
+		}
+		status.Outputs = append(status.Outputs, NamedOutputStatus{Path: output.path, Status: value})
+	}
 	return status, nil
+}
+
+func sameHashes(first, second map[string]string) bool {
+	if len(first) != len(second) {
+		return false
+	}
+	for path, hash := range first {
+		if second[path] != hash {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Session) outputStatus(outputState state.OutputState, outputPath string) OutputStatus {

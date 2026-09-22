@@ -723,18 +723,18 @@ func TestRunSourceShowAlignsSourceAndSuggestsDescendants(t *testing.T) {
 		t.Fatal(err)
 	}
 	manifestPath := filepath.Join(temporary, "agents.yaml")
-	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Constraints: shared:engineering/runtime-artifacts\n"
+	manifest := "sources:\n  shared: library\noutput: AGENTS.md\ndoc:\n  - Constraints / Safety: shared:engineering/runtime-artifacts\n"
 	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	var stdout, stderr bytes.Buffer
-	if err := cli.Run([]string{"source", "show", "shared:engineering/runtime-artifacts", "--manifest", manifestPath, "--align-source", "--under", "Constraints"}, &stdout, &stderr); err != nil {
+	if err := cli.Run([]string{"source", "show", "shared:engineering/runtime-artifacts", "--manifest", manifestPath, "--align-source", "--under", `Constraints \/ Safety`}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
 		"Aligned preview: shared:engineering/runtime-artifacts",
-		"Under: Constraints",
+		`Under: Constraints \/ Safety`,
 		"## Runtime Artifacts",
 	} {
 		if !strings.Contains(stdout.String(), expected) {

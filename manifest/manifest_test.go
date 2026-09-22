@@ -111,3 +111,28 @@ func TestLoadDefaultsOutputAndRejectsAliases(t *testing.T) {
 		t.Fatalf("anchor error = %v", err)
 	}
 }
+
+func TestOutputsInferKindsAndRejectUnsafePaths(t *testing.T) {
+	temporary := t.TempDir()
+	path := filepath.Join(temporary, "agents.yaml")
+	content := "sources:\n  qmr: library\noutputs:\n  - path: docs/AGENTS.md\n  - path: .agents/skills/\n    from: qmr:skills\ndoc:\n  - Rules: qmr:rules\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	value, _, err := manifest.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(value.Outputs) != 2 || value.Outputs[0].Directory() || !value.Outputs[1].Directory() {
+		t.Fatalf("outputs = %#v", value.Outputs)
+	}
+	for _, output := range []string{"docs/agents", "../escape.md", ".mogent/skills/", "x\\y.md", "skills/"} {
+		bad := "sources:\n  qmr: library\noutputs:\n  - path: " + output + "\ndoc:\n  - Rules: qmr:rules\n"
+		if err := os.WriteFile(path, []byte(bad), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := manifest.Load(path); err == nil {
+			t.Fatalf("output %q was accepted", output)
+		}
+	}
+}

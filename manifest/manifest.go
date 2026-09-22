@@ -19,7 +19,40 @@ type Manifest struct {
 	Sources map[string]Source `yaml:"sources"`
 	Vars    map[string]any    `yaml:"vars,omitempty"`
 	Output  string            `yaml:"output,omitempty"`
+	Outputs []Output          `yaml:"outputs,omitempty"`
 	Doc     []Entry           `yaml:"doc"`
+}
+
+// Output is an additional generated target. Kind is inferred from Path: .md
+// renders the document, while paths ending in / or .d/ copy a source tree.
+type Output struct {
+	Path string `yaml:"path"`
+	From string `yaml:"from,omitempty"`
+}
+
+func (o *Output) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode || len(value.Content)%2 != 0 {
+		return fmt.Errorf("output must be a mapping")
+	}
+	for i := 0; i < len(value.Content); i += 2 {
+		key, item := value.Content[i].Value, value.Content[i+1]
+		if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
+			return fmt.Errorf("output %q must be a string", key)
+		}
+		switch key {
+		case "path":
+			o.Path = item.Value
+		case "from":
+			o.From = item.Value
+		default:
+			return fmt.Errorf("unknown output key %q", key)
+		}
+	}
+	return nil
+}
+
+func (o Output) Directory() bool {
+	return strings.HasSuffix(o.Path, "/") || strings.HasSuffix(o.Path, ".d/")
 }
 
 // Source normalizes compact scalar locations and explicit source options.
@@ -263,6 +296,7 @@ func (m *Manifest) Clone() *Manifest {
 		Sources: make(map[string]Source, len(m.Sources)),
 		Vars:    make(map[string]any, len(m.Vars)),
 		Output:  m.Output,
+		Outputs: append([]Output(nil), m.Outputs...),
 		Doc:     cloneEntries(m.Doc),
 	}
 	for key, value := range m.Sources {
@@ -357,6 +391,20 @@ func (m *Manifest) Validate() error {
 	if strings.TrimSpace(m.Output) == "" {
 		m.Output = "AGENTS.md"
 	}
+	all := append([]Output{{Path: m.Output}}, m.Outputs...)
+	for i, output := range all {
+		if err := output.validate(); err != nil {
+			return fmt.Errorf("output[%d]: %w", i, err)
+		}
+	}
+	for i := range all {
+		for j := i + 1; j < len(all); j++ {
+			first, second := strings.TrimSuffix(all[i].Path, "/"), strings.TrimSuffix(all[j].Path, "/")
+			if first == second || strings.HasPrefix(first, second+"/") || strings.HasPrefix(second, first+"/") {
+				return fmt.Errorf("outputs %q and %q collide or overlap", all[i].Path, all[j].Path)
+			}
+		}
+	}
 	if len(m.Doc) == 0 {
 		return fmt.Errorf("manifest requires at least one doc entry")
 	}
@@ -366,6 +414,34 @@ func (m *Manifest) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (o Output) validate() error {
+	path := o.Path
+	if strings.TrimSpace(path) == "" || filepath.IsAbs(path) || strings.Contains(path, "\\") {
+		return fmt.Errorf("path must be a non-empty relative slash-separated path")
+	}
+	for _, part := range strings.Split(strings.TrimSuffix(path, "/"), "/") {
+		if part == "" || part == "." || part == ".." || part == ".mogent" {
+			return fmt.Errorf("unsafe output path %q", path)
+		}
+	}
+	if o.Directory() {
+		if o.From == "" {
+			return fmt.Errorf("directory output %q requires from", path)
+		}
+		if _, _, err := SplitReference(o.From); err != nil {
+			return err
+		}
+		return nil
+	}
+	if strings.HasSuffix(path, ".md") {
+		if o.From != "" {
+			return fmt.Errorf("Markdown output %q must not use from", path)
+		}
+		return nil
+	}
+	return fmt.Errorf("ambiguous output path %q; use .md or a trailing /", path)
 }
 
 func (e Entry) validate(location string) error {

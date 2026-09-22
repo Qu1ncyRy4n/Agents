@@ -170,7 +170,11 @@ func (s *Session) addTarget(options AddOptions) (string, *[]manifest.Entry, int,
 		if target == "" {
 			target = after
 		}
-		locations := findEntryLocations(&s.Draft.Doc, splitManifestPath(target), nil)
+		path, err := ParseManifestHeadingPath(target)
+		if err != nil {
+			return "", nil, 0, err
+		}
+		locations := findEntryLocations(&s.Draft.Doc, path, nil)
 		if len(locations) == 0 {
 			if suggestion := closestManifestHeadingPath(target, s.ManifestHeadingPaths()); suggestion != "" {
 				return "", nil, 0, fmt.Errorf("manifest heading path %q was not found; did you mean %q?", target, suggestion)
@@ -185,12 +189,16 @@ func (s *Session) addTarget(options AddOptions) (string, *[]manifest.Entry, int,
 		if after != "" {
 			index++
 		}
-		return strings.Join(location.Parents, "/"), location.Entries, index, nil
+		return FormatManifestHeadingPath(location.Parents), location.Entries, index, nil
 	}
 	if options.Append {
 		return "", &s.Draft.Doc, len(s.Draft.Doc), nil
 	}
-	matches := findEntryPaths(s.Draft.Doc, splitManifestPath(under), nil)
+	path, err := ParseManifestHeadingPath(under)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	matches := findEntryPaths(s.Draft.Doc, path, nil)
 	if len(matches) == 0 {
 		if suggestion := closestManifestHeadingPath(under, s.ManifestHeadingPaths()); suggestion != "" {
 			return "", nil, 0, fmt.Errorf("manifest heading path %q was not found; did you mean %q?", under, suggestion)
@@ -200,7 +208,7 @@ func (s *Session) addTarget(options AddOptions) (string, *[]manifest.Entry, int,
 	if len(matches) > 1 {
 		var paths []string
 		for _, match := range matches {
-			paths = append(paths, strings.Join(match.Headings, "/"))
+			paths = append(paths, FormatManifestHeadingPath(match.Headings))
 		}
 		return "", nil, 0, fmt.Errorf("manifest heading path %q is ambiguous; matches: %s", under, strings.Join(paths, ", "))
 	}
@@ -213,7 +221,7 @@ func (s *Session) addTarget(options AddOptions) (string, *[]manifest.Entry, int,
 	if options.First {
 		insertion = 0
 	}
-	return strings.Join(match.Headings, "/"), children, insertion, nil
+	return FormatManifestHeadingPath(match.Headings), children, insertion, nil
 }
 
 func insertManifestEntry(entries []manifest.Entry, index int, entry manifest.Entry) []manifest.Entry {
@@ -370,15 +378,50 @@ func findEntryPaths(entries []manifest.Entry, target []string, parents []string)
 	return matches
 }
 
-func splitManifestPath(path string) []string {
-	parts := strings.Split(path, "/")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			result = append(result, trimmed)
+// ParseManifestHeadingPath splits slash-separated manifest paths. Escape a
+// literal slash as \/ and a literal backslash as \\.
+func ParseManifestHeadingPath(path string) ([]string, error) {
+	var parts []string
+	var current strings.Builder
+	escaped := false
+	for _, character := range path {
+		if escaped {
+			if character != '/' && character != '\\' {
+				return nil, fmt.Errorf("invalid escape \\%c in manifest heading path %q; use \\/ for a literal slash or \\\\ for a literal backslash", character, path)
+			}
+			current.WriteRune(character)
+			escaped = false
+			continue
+		}
+		switch character {
+		case '\\':
+			escaped = true
+		case '/':
+			if segment := strings.TrimSpace(current.String()); segment != "" {
+				parts = append(parts, segment)
+			}
+			current.Reset()
+		default:
+			current.WriteRune(character)
 		}
 	}
-	return result
+	if escaped {
+		return nil, fmt.Errorf("manifest heading path %q ends with an incomplete escape", path)
+	}
+	if segment := strings.TrimSpace(current.String()); segment != "" {
+		parts = append(parts, segment)
+	}
+	return parts, nil
+}
+
+// FormatManifestHeadingPath returns the canonical CLI form of a heading path.
+func FormatManifestHeadingPath(path []string) string {
+	parts := make([]string, len(path))
+	for index, segment := range path {
+		segment = strings.ReplaceAll(segment, "\\", "\\\\")
+		parts[index] = strings.ReplaceAll(segment, "/", "\\/")
+	}
+	return strings.Join(parts, "/")
 }
 
 func samePath(headings []string, target []string) bool {
@@ -404,7 +447,10 @@ func addedSection(heading string, content string, parentPath string) string {
 	var output strings.Builder
 	level := 1
 	if parentPath != "" {
-		level = len(splitManifestPath(parentPath)) + 1
+		path, err := ParseManifestHeadingPath(parentPath)
+		if err == nil {
+			level = len(path) + 1
+		}
 	}
 	output.WriteString(strings.Repeat("#", level))
 	output.WriteByte(' ')

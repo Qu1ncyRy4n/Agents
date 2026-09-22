@@ -61,7 +61,10 @@ func (s *Session) ImportDrift(manifestHeading, from string) (*LocalizeResult, er
 	if !report.DirectEdits {
 		return nil, fmt.Errorf("output has no recorded direct edits to import; current status is %s", report.Status)
 	}
-	path := splitManifestPath(manifestHeading)
+	path, err := ParseManifestHeadingPath(manifestHeading)
+	if err != nil {
+		return nil, err
+	}
 	if len(path) == 0 {
 		return nil, fmt.Errorf("drift import requires a manifest heading path")
 	}
@@ -115,10 +118,10 @@ func markdownSection(document string, target []string) (sectionSpan, error) {
 		}
 	}
 	if len(matches) == 0 {
-		return sectionSpan{}, fmt.Errorf("heading path %q was not found", strings.Join(target, "/"))
+		return sectionSpan{}, fmt.Errorf("heading path %q was not found", FormatManifestHeadingPath(target))
 	}
 	if len(matches) > 1 {
-		return sectionSpan{}, fmt.Errorf("heading path %q is ambiguous", strings.Join(target, "/"))
+		return sectionSpan{}, fmt.Errorf("heading path %q is ambiguous", FormatManifestHeadingPath(target))
 	}
 	index := matches[0]
 	heading := headings[index]

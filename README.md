@@ -163,6 +163,28 @@ doc:
 The manifest owns the rendered headings. Source headings help find content, but
 the manifest decides where content appears in the final document.
 
+### Additional Outputs
+
+`output: AGENTS.md` remains the primary rendered Markdown file. Add `outputs:`
+for extra rendered Markdown mirrors or source-directory copies. A `.md` path is
+Markdown; a path ending in `/` (including `.d/`) is a directory. Bare paths are
+rejected so output kind is never guessed.
+
+```yaml
+output: AGENTS.md
+outputs:
+  - path: docs/skills-index.md
+  - path: .agents/skills/
+    from: qmr:skills
+```
+
+The directory example copies the *contents* of the selected `qmr:skills`
+source directory recursively, including `SKILL.md` and non-Markdown assets. It
+does not copy the `skills` directory itself. Directory outputs require `from`;
+Markdown outputs intentionally render the primary `doc` and reject `from`.
+Mogent records every copied file, rejects symlinked sources or targets, and
+refuses untracked or edited output content unless `--force` is supplied.
+
 ## Organization Adoption
 
 For a team repository, treat the manifest, lock, and rendered agent file as
@@ -324,6 +346,9 @@ mogent add shared:lang/go/testing --before Instructions/Workflow --dry-run --pre
 
 `--under` inserts last by default and accepts `--first` or `--last`.
 `--before` and `--after` use full manifest heading paths and infer the parent.
+Use `/` between heading levels. Escape a literal slash in a heading as `\/` and
+a literal backslash as `\\`; for example,
+`--under 'Constraints \/ Safety'` addresses one heading containing a slash.
 Directory tree previews list inherited source headings separately and flag
 exact overlap or related existing selections for review.
 
@@ -457,7 +482,7 @@ Not ready yet:
 - global source cache,
 - automatic or multi-section import from hand-edited `AGENTS.md`,
 - conflict warnings from `conflicts_with`,
-- multiple agent outputs such as `CLAUDE.md`, `GEMINI.md`, or `.codex/AGENTS.md`,
+- tool-specific Markdown renders or template inheritance,
 - split/import from a full `AGENTS.md` into an atomic library.
 
 Future multi-output support should allow both exact mirrors and tool-specific

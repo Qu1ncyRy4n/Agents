@@ -4,11 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"path/filepath"
 
 	"github.com/Qu1ncyRy4n/Agents/manifest"
 	"github.com/Qu1ncyRy4n/Agents/render"
-	"github.com/Qu1ncyRy4n/Agents/state"
 	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
 
@@ -148,15 +146,7 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	outputPath := value.Output
-	if !filepath.IsAbs(outputPath) {
-		outputPath = filepath.Join(filepath.Dir(manifestPath), outputPath)
-	}
-	statePath := filepath.Join(filepath.Dir(manifestPath), ".mogent", "state.json")
-	if err := state.CheckOverwrite(outputPath, statePath, *force); err != nil {
-		return err
-	}
-	if err := workspace.WriteGeneratedOutput(outputPath, statePath, result.Content); err != nil {
+	if err := workspace.BuildOutputs(value, manifestPath, result.Content, *force); err != nil {
 		return err
 	}
 	for _, warning := range result.Warnings {
@@ -164,7 +154,7 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 			return fmt.Errorf("write warning: %w", err)
 		}
 	}
-	if _, err := fmt.Fprintf(stdout, "Wrote %s\n", outputPath); err != nil {
+	if _, err := fmt.Fprintf(stdout, "Wrote generated outputs\n"); err != nil {
 		return fmt.Errorf("write success message: %w", err)
 	}
 	return nil
@@ -200,6 +190,11 @@ func runStatus(args []string, stdout, stderr io.Writer) error {
 	if hint := statusHint(status.Output); hint != "" {
 		if _, err := fmt.Fprintf(stdout, "Hint: %s\n", hint); err != nil {
 			return fmt.Errorf("write status: %w", err)
+		}
+	}
+	for _, output := range status.Outputs {
+		if _, err := fmt.Fprintf(stdout, "Output: %s\nOutput status: %s\n", output.Path, output.Status); err != nil {
+			return fmt.Errorf("write output status: %w", err)
 		}
 	}
 	if _, err := fmt.Fprintf(stdout, "Sources: %d\n", len(status.Sources)); err != nil {

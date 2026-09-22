@@ -14,8 +14,15 @@ import (
 )
 
 type generated struct {
-	OutputPath string `json:"output_path"`
-	SHA256     string `json:"sha256"`
+	OutputPath string            `json:"output_path"`
+	SHA256     string            `json:"sha256"`
+	Outputs    map[string]record `json:"outputs,omitempty"`
+}
+
+type record struct {
+	Kind   string            `json:"kind"`
+	SHA256 string            `json:"sha256,omitempty"`
+	Files  map[string]string `json:"files,omitempty"`
 }
 
 // OutputState describes the relationship between an output file and mogent's
@@ -50,10 +57,11 @@ func Inspect(outputPath, statePath string) (OutputState, error) {
 	if err != nil {
 		return "", err
 	}
-	if previous.OutputPath == "" || previous.OutputPath != normalizedOutputPath(outputPath) {
+	record, found := previous.output(outputPath)
+	if !found || record.Kind != "file" {
 		return OutputUntracked, nil
 	}
-	if Hash(output) != previous.SHA256 {
+	if Hash(output) != record.SHA256 {
 		return OutputModified, nil
 	}
 	return OutputClean, nil
@@ -80,10 +88,11 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 	if err != nil {
 		return err
 	}
-	if previous.OutputPath == "" || previous.OutputPath != normalizedOutputPath(outputPath) {
+	record, found := previous.output(outputPath)
+	if !found || record.Kind != "file" {
 		return fmt.Errorf("refusing to overwrite untracked output %q; output path does not match generated-output state, rerun with --force", outputPath)
 	}
-	if Hash(output) != previous.SHA256 {
+	if Hash(output) != record.SHA256 {
 		return fmt.Errorf("refusing to overwrite direct edits in %q; inspect the generated and direct changes or rerun with --force", outputPath)
 	}
 	return nil
@@ -91,7 +100,24 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 
 // Write records exactly the content just written to the generated output.
 func Write(statePath, outputPath, output string) error {
-	contents, err := json.MarshalIndent(generated{OutputPath: normalizedOutputPath(outputPath), SHA256: Hash([]byte(output))}, "", "  ")
+	return WriteAll(statePath, map[string]string{outputPath: output}, nil)
+}
+
+// WriteAll records all generated files and directory trees together. It writes
+// the version-two shape but decode also accepts the original single-file shape.
+func WriteAll(statePath string, files map[string]string, directories map[string]map[string]string) error {
+	outputs := make(map[string]record, len(files)+len(directories))
+	for path, content := range files {
+		outputs[normalizedOutputPath(path)] = record{Kind: "file", SHA256: Hash([]byte(content))}
+	}
+	for path, entries := range directories {
+		copy := make(map[string]string, len(entries))
+		for name, digest := range entries {
+			copy[name] = digest
+		}
+		outputs[normalizedOutputPath(path)] = record{Kind: "directory", Files: copy}
+	}
+	contents, err := json.MarshalIndent(generated{Outputs: outputs}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode generated-output state: %w", err)
 	}
@@ -100,6 +126,78 @@ func Write(statePath, outputPath, output string) error {
 		return fmt.Errorf("write generated-output state: %w", err)
 	}
 	return nil
+}
+
+// InspectDirectory reports tree drift, including untracked files.
+func InspectDirectory(outputPath, statePath string) (OutputState, error) {
+	info, err := os.Lstat(outputPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return OutputMissing, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("inspect existing output: %w", err)
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return OutputUntracked, nil
+	}
+	previous, err := readState(statePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return OutputUntracked, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	record, found := previous.output(outputPath)
+	if !found || record.Kind != "directory" {
+		return OutputUntracked, nil
+	}
+	files, err := directoryHashes(outputPath)
+	if err != nil {
+		return "", err
+	}
+	if len(files) != len(record.Files) {
+		return OutputModified, nil
+	}
+	for path, digest := range files {
+		if record.Files[path] != digest {
+			return OutputModified, nil
+		}
+	}
+	return OutputClean, nil
+}
+
+func DirectoryHashes(path string) (map[string]string, error) { return directoryHashes(path) }
+
+func directoryHashes(root string) (map[string]string, error) {
+	files := map[string]string{}
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("symlink in generated directory %q", path)
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if !entry.Type().IsRegular() {
+			return fmt.Errorf("non-regular file in generated directory %q", path)
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		files[filepath.ToSlash(rel)] = Hash(content)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read generated directory: %w", err)
+	}
+	return files, nil
 }
 
 func normalizedOutputPath(path string) string {
@@ -117,8 +215,31 @@ func Hash(content []byte) string {
 
 func decode(contents []byte) (generated, error) {
 	var previous generated
-	if err := json.Unmarshal(contents, &previous); err != nil || previous.SHA256 == "" {
+	if err := json.Unmarshal(contents, &previous); err != nil || (previous.SHA256 == "" && len(previous.Outputs) == 0) {
 		return generated{}, fmt.Errorf("read generated-output state: invalid state file")
 	}
 	return previous, nil
+}
+
+func readState(path string) (generated, error) {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return generated{}, err
+	}
+	value, err := decode(contents)
+	if err != nil {
+		return generated{}, err
+	}
+	return value, nil
+}
+
+func (g generated) output(path string) (record, bool) {
+	path = normalizedOutputPath(path)
+	if value, ok := g.Outputs[path]; ok {
+		return value, true
+	}
+	if g.OutputPath == path && g.SHA256 != "" {
+		return record{Kind: "file", SHA256: g.SHA256}, true
+	}
+	return record{}, false
 }

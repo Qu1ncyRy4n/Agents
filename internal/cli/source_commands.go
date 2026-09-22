@@ -500,7 +500,11 @@ func runSourceShow(args []string, stdout, stderr io.Writer) error {
 func writeAlignedSource(stdout io.Writer, node *workspace.SourceNode, under string, contentMode string, snippetLines int) error {
 	level := 1
 	if strings.TrimSpace(under) != "" {
-		level = len(strings.Split(strings.Trim(strings.TrimSpace(under), "/"), "/")) + 1
+		path, err := workspace.ParseManifestHeadingPath(under)
+		if err != nil {
+			return err
+		}
+		level = len(path) + 1
 	}
 	if level > 6 {
 		return fmt.Errorf("--under %q would render beyond Markdown heading level 6", under)

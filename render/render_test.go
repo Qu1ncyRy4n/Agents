@@ -35,6 +35,36 @@ func TestBuildUsesManifestHeadingsTemplatesAndExclusions(t *testing.T) {
 	}
 }
 
+func TestBuildIgnoresRawDirectoryOnlySourceMarkdown(t *testing.T) {
+	temporary := t.TempDir()
+	markdownLibrary := filepath.Join(temporary, "markdown")
+	rawLibrary := filepath.Join(temporary, "raw")
+	if err := os.MkdirAll(markdownLibrary, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(rawLibrary, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(markdownLibrary, "rules.md"), "# Rules\nWork carefully.\n")
+	// This frontmatter is intentionally invalid Mogent metadata but is valid raw
+	// source content for a directory output.
+	writeFile(t, filepath.Join(rawLibrary, "SKILL.md"), "---\nname: raw-skill\ndescription: Raw skill.\n---\n# Raw Skill\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: markdown\n  raw: raw\noutputs:\n  - path: .agents/skills/\n    from: raw:skills\ndoc:\n  - Rules: shared:rules\n")
+
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.Build(value, loadedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Content != "# Rules\n\nWork carefully.\n" {
+		t.Fatalf("content = %q", result.Content)
+	}
+}
+
 func TestBuildPreservesSiblingHeadingSourceOrder(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

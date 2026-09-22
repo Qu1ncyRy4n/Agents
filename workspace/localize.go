@@ -63,7 +63,11 @@ func (s *Session) Localize(options LocalizeOptions) (*LocalizeResult, error) {
 	if heading == "" {
 		return nil, fmt.Errorf("localize requires a manifest heading path")
 	}
-	matches := findEntryPaths(s.Draft.Doc, splitManifestPath(heading), nil)
+	path, err := ParseManifestHeadingPath(heading)
+	if err != nil {
+		return nil, err
+	}
+	matches := findEntryPaths(s.Draft.Doc, path, nil)
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("manifest heading path %q was not found", heading)
 	}
@@ -140,11 +144,6 @@ func (s *Session) Localize(options LocalizeOptions) (*LocalizeResult, error) {
 	if options.DryRun {
 		return result, nil
 	}
-	if options.Rebuild {
-		if err := state.CheckOverwrite(s.OutputPath(), s.StatePath(), options.ForceOutput); err != nil {
-			return nil, err
-		}
-	}
 	record, err := s.provenanceRecord(reference, node, originalMarkdown)
 	if err != nil {
 		return nil, err
@@ -166,19 +165,13 @@ func (s *Session) Localize(options LocalizeOptions) (*LocalizeResult, error) {
 		return nil, err
 	}
 	paths := []string{localPath, provenancePath, s.ManifestPath}
-	if options.Rebuild {
-		paths = append(paths, s.OutputPath(), s.StatePath())
-	}
 	snapshots, err := snapshotPaths(paths)
 	if err != nil {
 		return nil, err
 	}
 	writeErr := writeLocalization(localPath, markdown, provenancePath, provenanceBytes, s.ManifestPath, manifestBytes)
 	if writeErr == nil && options.Rebuild {
-		writeErr = render.WriteAtomically(s.OutputPath(), preview.Content)
-		if writeErr == nil {
-			writeErr = state.Write(s.StatePath(), s.OutputPath(), preview.Content)
-		}
+		writeErr = BuildOutputs(s.Draft, s.ManifestPath, preview.Content, options.ForceOutput)
 	}
 	if writeErr != nil {
 		return nil, rollbackPaths(writeErr, snapshots)
@@ -187,7 +180,7 @@ func (s *Session) Localize(options LocalizeOptions) (*LocalizeResult, error) {
 	s.Draft = s.Saved.Clone()
 	s.Output = preview.Content
 	s.Dirty = false
-	s.Sources, err = render.LoadSources(s.Saved, s.ManifestPath)
+	s.Sources, err = render.LoadWorkspaceSources(s.Saved, s.ManifestPath)
 	if err != nil {
 		return nil, err
 	}

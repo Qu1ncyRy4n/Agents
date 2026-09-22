@@ -27,7 +27,7 @@ type Result struct {
 // Intent: refuse partial or ambiguous documents before a caller can replace an
 // existing AGENTS.md. Source: DI-vukam, DI-sufok.
 func Build(value *manifest.Manifest, manifestPath string) (*Result, error) {
-	sources, err := LoadSources(value, manifestPath)
+	sources, err := LoadDocumentSources(value, manifestPath)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +54,44 @@ func LoadSources(value *manifest.Manifest, manifestPath string) (map[string]*lib
 	for alias := range value.Sources {
 		aliases = append(aliases, alias)
 	}
+	return loadSourceAliases(value, manifestPath, aliases)
+}
+
+// LoadDocumentSources indexes only aliases that contribute rendered Markdown.
+func LoadDocumentSources(value *manifest.Manifest, manifestPath string) (map[string]*library.Index, error) {
+	used := documentSourceAliases(value.Doc)
+	aliases := make([]string, 0, len(used))
+	for alias := range used {
+		aliases = append(aliases, alias)
+	}
+	return loadSourceAliases(value, manifestPath, aliases)
+}
+
+// LoadWorkspaceSources indexes ordinary libraries for interactive browsing while
+// skipping aliases used only by raw directory outputs. Those outputs may contain
+// non-Mogent Markdown such as Agent Skills frontmatter.
+func LoadWorkspaceSources(value *manifest.Manifest, manifestPath string) (map[string]*library.Index, error) {
+	usedByDocument := documentSourceAliases(value.Doc)
+	directoryOnly := make(map[string]bool)
+	for _, output := range value.Outputs {
+		if !output.Directory() {
+			continue
+		}
+		alias, _, err := manifest.SplitReference(output.From)
+		if err == nil && !usedByDocument[alias] {
+			directoryOnly[alias] = true
+		}
+	}
+	aliases := make([]string, 0, len(value.Sources))
+	for alias := range value.Sources {
+		if !directoryOnly[alias] {
+			aliases = append(aliases, alias)
+		}
+	}
+	return loadSourceAliases(value, manifestPath, aliases)
+}
+
+func loadSourceAliases(value *manifest.Manifest, manifestPath string, aliases []string) (map[string]*library.Index, error) {
 	sort.Strings(aliases)
 	indexes := make(map[string]*library.Index, len(aliases))
 	for _, alias := range aliases {
@@ -88,6 +126,56 @@ func LoadSources(value *manifest.Manifest, manifestPath string) (map[string]*lib
 		indexes[alias] = index
 	}
 	return indexes, nil
+}
+
+// documentSourceAliases returns only sources whose Markdown headings participate
+// in the rendered document. Directory outputs copy raw file trees and must not
+// require unrelated Markdown elsewhere in their source roots to parse as a
+// Mogent library.
+func documentSourceAliases(entries []manifest.Entry) map[string]bool {
+	aliases := make(map[string]bool)
+	var visit func([]manifest.Entry)
+	visit = func(entries []manifest.Entry) {
+		for _, entry := range entries {
+			for _, reference := range append(append([]string(nil), entry.From...), entry.Exclude...) {
+				alias, _, err := manifest.SplitReference(reference)
+				if err == nil {
+					aliases[alias] = true
+				}
+			}
+			visit(entry.Children)
+		}
+	}
+	visit(entries)
+	return aliases
+}
+
+// ResolveSourcePath returns the physical root used for a source. Directory
+// outputs use this rather than the Markdown index so assets are copied intact.
+func ResolveSourcePath(value *manifest.Manifest, manifestPath, alias string) (string, error) {
+	source, found := value.Sources[alias]
+	if !found {
+		return "", fmt.Errorf("reference uses undeclared source %q", alias)
+	}
+	path := source.Location
+	if isURL(path) {
+		resolved, err := sourcecache.Resolve(manifestPath, alias, path, source.Subdir)
+		if err != nil {
+			return "", err
+		}
+		return resolved, nil
+	}
+	if source.Subdir != "" {
+		return "", fmt.Errorf("source %q: subdir is currently supported only for URL locations", alias)
+	}
+	path, err := expandHome(path)
+	if err != nil {
+		return "", err
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(filepath.Dir(manifestPath), path)
+	}
+	return filepath.Clean(path), nil
 }
 
 func isURL(value string) bool {

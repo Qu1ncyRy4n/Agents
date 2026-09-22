@@ -164,7 +164,7 @@ func manifestHeadingPaths(entries []manifest.Entry, parents []string) []string {
 	var paths []string
 	for _, entry := range entries {
 		current := append(append([]string(nil), parents...), entry.Heading)
-		paths = append(paths, strings.Join(current, "/"))
+		paths = append(paths, FormatManifestHeadingPath(current))
 		paths = append(paths, manifestHeadingPaths(entry.Children, current)...)
 	}
 	return paths
