@@ -142,7 +142,11 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	result, err := render.Build(value, manifestPath)
+	outputs := value.EffectiveOutputs()
+	if len(outputs) == 0 || outputs[0].Directory() {
+		return fmt.Errorf("manifest requires a Markdown output")
+	}
+	result, err := render.RenderOutput(value, manifestPath, outputs[0])
 	if err != nil {
 		return err
 	}

@@ -42,11 +42,15 @@ func Initialize(options InitOptions) (*InitResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	preview, err := render.Build(options.Manifest, manifestPath)
+	outputs := options.Manifest.EffectiveOutputs()
+	if len(outputs) == 0 || outputs[0].Directory() {
+		return nil, fmt.Errorf("starter manifest requires a Markdown output")
+	}
+	preview, err := render.RenderOutput(options.Manifest, manifestPath, outputs[0])
 	if err != nil {
 		return nil, fmt.Errorf("validate starter manifest: %w", err)
 	}
-	outputPath := filepath.Join(filepath.Dir(manifestPath), options.Manifest.Output)
+	outputPath := filepath.Join(filepath.Dir(manifestPath), outputs[0].Path)
 	result := &InitResult{ManifestPath: manifestPath, OutputPath: outputPath, ManifestYAML: string(serialized), Preview: preview.Content}
 	if options.DryRun {
 		return result, nil

@@ -140,7 +140,45 @@ subtree. That keeps source selection explicit while the library model settles.
 
 ## Manifest
 
-`agents.yaml` is the authored document outline:
+New manifests use output-scoped selectors, so every target is independent:
+
+```yaml
+roots:
+  qmr: /path/to/qmr-library
+sources:
+  qmr_agents:
+    path: {root: qmr, subdir: agents}
+  qmr_skills:
+    path: {root: qmr, subdir: skills}
+outputs:
+  - path: AGENTS.md
+    include:
+      - all: qmr_agents
+    exclude:
+      - tags:
+          any: [lang/go, os/windows]
+  - path: .agents/skills/
+    include:
+      - all: qmr_skills
+```
+
+`all` selects a source root, `source` selects `alias:heading/path`, and
+`tags.any` matches indexed library metadata. Markdown outputs preserve selected
+source headings; directory outputs copy selected contents. Tag filtering fails
+for raw skill trees whose metadata cannot be indexed. Roots and subdirectories
+are literal paths only: Mogent does not expand shell or environment variables.
+Local rooted sources may safely use `subdir`.
+
+Use block YAML for readable manifests. YAML flow syntax such as
+`include: [{all: qmr_agents}]` remains valid input, but is not the documented
+authoring style.
+
+`output` plus `doc` remains fully supported legacy input. Migrate by replacing
+the document outline with one or more `outputs` entries and moving each output's
+source selection into `include`/`exclude`; retain the old form when its custom
+heading placement is needed.
+
+Legacy `agents.yaml` is an authored document outline:
 
 ```yaml
 sources:
@@ -165,23 +203,25 @@ the manifest decides where content appears in the final document.
 
 ### Additional Outputs
 
-`output: AGENTS.md` remains the primary rendered Markdown file. Add `outputs:`
-for extra rendered Markdown mirrors or source-directory copies. A `.md` path is
+In the canonical model every `outputs:` entry is a peer target. A `.md` path is
 Markdown; a path ending in `/` (including `.d/`) is a directory. Bare paths are
-rejected so output kind is never guessed.
+rejected so output kind is never guessed. The older `output` plus `doc` form
+continues to produce its primary document and may retain legacy additions.
 
 ```yaml
-output: AGENTS.md
 outputs:
   - path: docs/skills-index.md
+    include:
+      - all: qmr
   - path: .agents/skills/
-    from: qmr:skills
+    include:
+      - all: qmr_skills
 ```
 
-The directory example copies the *contents* of the selected `qmr:skills`
+The directory example copies the *contents* of the selected `qmr_skills`
 source directory recursively, including `SKILL.md` and non-Markdown assets. It
-does not copy the `skills` directory itself. Directory outputs require `from`;
-Markdown outputs intentionally render the primary `doc` and reject `from`.
+does not copy the source root directory itself. Legacy directory outputs may
+continue to use `from`; canonical Markdown outputs use `include`.
 Mogent records every copied file, rejects symlinked sources or targets, and
 refuses untracked or edited output content unless `--force` is supplied.
 

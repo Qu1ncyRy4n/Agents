@@ -16,6 +16,7 @@ import (
 
 // Manifest is the complete, repository-local build specification.
 type Manifest struct {
+	Roots   map[string]string `yaml:"roots,omitempty"`
 	Sources map[string]Source `yaml:"sources"`
 	Vars    map[string]any    `yaml:"vars,omitempty"`
 	Output  string            `yaml:"output,omitempty"`
@@ -26,8 +27,63 @@ type Manifest struct {
 // Output is an additional generated target. Kind is inferred from Path: .md
 // renders the document, while paths ending in / or .d/ copy a source tree.
 type Output struct {
-	Path string `yaml:"path"`
-	From string `yaml:"from,omitempty"`
+	Path    string     `yaml:"path"`
+	From    string     `yaml:"from,omitempty"` // Legacy directory selection.
+	Include []Selector `yaml:"include,omitempty"`
+	Exclude []Selector `yaml:"exclude,omitempty"`
+}
+
+// Selector selects source content for one canonical output.
+type Selector struct {
+	All    string
+	Source string
+	Tags   []string
+}
+
+func (s *Selector) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode || len(value.Content) != 2 {
+		return fmt.Errorf("selector must contain exactly one of all, source, or tags")
+	}
+	key, item := value.Content[0].Value, value.Content[1]
+	switch key {
+	case "all", "source":
+		if item.Kind != yaml.ScalarNode || item.Tag != "!!str" || strings.TrimSpace(item.Value) == "" {
+			return fmt.Errorf("selector %q must be a non-empty string", key)
+		}
+		if key == "all" {
+			s.All = item.Value
+		} else {
+			s.Source = item.Value
+		}
+	case "tags":
+		if item.Kind != yaml.MappingNode || len(item.Content) != 2 || item.Content[0].Value != "any" {
+			return fmt.Errorf("selector tags must contain only any")
+		}
+		values, err := stringsOnly(item.Content[1], "selector tags.any")
+		if err != nil || len(values) == 0 {
+			return fmt.Errorf("selector tags.any must be a non-empty sequence of strings")
+		}
+		s.Tags = values
+	default:
+		return fmt.Errorf("unknown selector key %q", key)
+	}
+	return nil
+}
+
+func (s Selector) MarshalYAML() (any, error) {
+	if s.All != "" {
+		return map[string]string{"all": s.All}, nil
+	}
+	if s.Source != "" {
+		return map[string]string{"source": s.Source}, nil
+	}
+	return struct {
+		Tags struct {
+			Any []string `yaml:"any"`
+		} `yaml:"tags"`
+	}{Tags: struct {
+		Any []string `yaml:"any"`
+	}{Any: s.Tags}}, nil
 }
 
 func (o *Output) UnmarshalYAML(value *yaml.Node) error {
@@ -36,14 +92,31 @@ func (o *Output) UnmarshalYAML(value *yaml.Node) error {
 	}
 	for i := 0; i < len(value.Content); i += 2 {
 		key, item := value.Content[i].Value, value.Content[i+1]
-		if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
-			return fmt.Errorf("output %q must be a string", key)
-		}
 		switch key {
 		case "path":
+			if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
+				return fmt.Errorf("output path must be a string")
+			}
 			o.Path = item.Value
 		case "from":
+			if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
+				return fmt.Errorf("output from must be a string")
+			}
 			o.From = item.Value
+		case "include":
+			if item.Kind != yaml.SequenceNode {
+				return fmt.Errorf("output include must be a sequence")
+			}
+			if err := item.Decode(&o.Include); err != nil {
+				return err
+			}
+		case "exclude":
+			if item.Kind != yaml.SequenceNode {
+				return fmt.Errorf("output exclude must be a sequence")
+			}
+			if err := item.Decode(&o.Exclude); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown output key %q", key)
 		}
@@ -58,6 +131,7 @@ func (o Output) Directory() bool {
 // Source normalizes compact scalar locations and explicit source options.
 type Source struct {
 	Location string `yaml:"location"`
+	Root     string `yaml:"-"`
 	Subdir   string `yaml:"subdir,omitempty"`
 }
 
@@ -80,14 +154,39 @@ func (s *Source) UnmarshalYAML(value *yaml.Node) error {
 				return fmt.Errorf("duplicate source option %q", key)
 			}
 			seen[key] = true
-			if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
-				return fmt.Errorf("source option %q must be a string", key)
-			}
 			switch key {
 			case "location":
+				if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
+					return fmt.Errorf("source option %q must be a string", key)
+				}
 				s.Location = item.Value
 			case "subdir":
+				if item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
+					return fmt.Errorf("source option %q must be a string", key)
+				}
 				s.Subdir = item.Value
+			case "path":
+				if item.Kind == yaml.ScalarNode && item.Tag == "!!str" {
+					s.Location = item.Value
+					continue
+				}
+				if item.Kind != yaml.MappingNode || len(item.Content)%2 != 0 {
+					return fmt.Errorf("source path must be a string or root/subdir mapping")
+				}
+				for j := 0; j < len(item.Content); j += 2 {
+					pathKey, pathValue := item.Content[j].Value, item.Content[j+1]
+					if pathValue.Kind != yaml.ScalarNode || pathValue.Tag != "!!str" {
+						return fmt.Errorf("source path %q must be a string", pathKey)
+					}
+					switch pathKey {
+					case "root":
+						s.Root = pathValue.Value
+					case "subdir":
+						s.Subdir = pathValue.Value
+					default:
+						return fmt.Errorf("unknown source path option %q", pathKey)
+					}
+				}
 			default:
 				return fmt.Errorf("unknown source option %q", key)
 			}
@@ -99,6 +198,17 @@ func (s *Source) UnmarshalYAML(value *yaml.Node) error {
 }
 
 func (s Source) MarshalYAML() (any, error) {
+	if s.Root != "" {
+		return struct {
+			Path struct {
+				Root   string `yaml:"root"`
+				Subdir string `yaml:"subdir,omitempty"`
+			} `yaml:"path"`
+		}{Path: struct {
+			Root   string `yaml:"root"`
+			Subdir string `yaml:"subdir,omitempty"`
+		}{Root: s.Root, Subdir: s.Subdir}}, nil
+	}
 	if s.Subdir == "" {
 		return s.Location, nil
 	}
@@ -113,7 +223,11 @@ func (s Source) Display() string {
 	if s.Subdir == "" {
 		return s.Location
 	}
-	return s.Location + " (subdir: " + s.Subdir + ")"
+	base := s.Location
+	if s.Root != "" {
+		base = "root: " + s.Root
+	}
+	return base + " (subdir: " + s.Subdir + ")"
 }
 
 // Entry owns one rendered heading and either composes source subtrees or owns
@@ -293,17 +407,37 @@ func Load(path string) (*Manifest, string, error) {
 // Clone returns an independent manifest draft.
 func (m *Manifest) Clone() *Manifest {
 	clone := &Manifest{
+		Roots:   make(map[string]string, len(m.Roots)),
 		Sources: make(map[string]Source, len(m.Sources)),
 		Vars:    make(map[string]any, len(m.Vars)),
 		Output:  m.Output,
-		Outputs: append([]Output(nil), m.Outputs...),
+		Outputs: cloneOutputs(m.Outputs),
 		Doc:     cloneEntries(m.Doc),
+	}
+	for key, value := range m.Roots {
+		clone.Roots[key] = value
 	}
 	for key, value := range m.Sources {
 		clone.Sources[key] = value
 	}
 	for key, value := range m.Vars {
 		clone.Vars[key] = value
+	}
+	return clone
+}
+
+func cloneOutputs(outputs []Output) []Output {
+	clone := make([]Output, len(outputs))
+	for i, output := range outputs {
+		clone[i] = output
+		clone[i].Include = append([]Selector(nil), output.Include...)
+		clone[i].Exclude = append([]Selector(nil), output.Exclude...)
+		for j := range clone[i].Include {
+			clone[i].Include[j].Tags = append([]string(nil), output.Include[j].Tags...)
+		}
+		for j := range clone[i].Exclude {
+			clone[i].Exclude[j].Tags = append([]string(nil), output.Exclude[j].Tags...)
+		}
 	}
 	return clone
 }
@@ -374,9 +508,22 @@ func (m *Manifest) Validate() error {
 	if len(m.Sources) == 0 {
 		return fmt.Errorf("manifest requires at least one source")
 	}
+	for name, root := range m.Roots {
+		if strings.TrimSpace(name) == "" || strings.Contains(name, ":") || strings.TrimSpace(root) == "" {
+			return fmt.Errorf("invalid root %q", name)
+		}
+	}
 	for alias, source := range m.Sources {
 		if strings.TrimSpace(alias) == "" || strings.Contains(alias, ":") {
 			return fmt.Errorf("invalid source alias %q", alias)
+		}
+		if source.Root != "" {
+			root, found := m.Roots[source.Root]
+			if !found {
+				return fmt.Errorf("source %q references undeclared root %q", alias, source.Root)
+			}
+			source.Location = root
+			m.Sources[alias] = source
 		}
 		if strings.TrimSpace(source.Location) == "" {
 			return fmt.Errorf("source %q has an empty path", alias)
@@ -384,14 +531,11 @@ func (m *Manifest) Validate() error {
 		if err := sourcepath.ValidateSubdir(source.Subdir); err != nil {
 			return fmt.Errorf("source %q: %w", alias, err)
 		}
-		if source.Subdir != "" && !strings.HasPrefix(source.Location, "http://") && !strings.HasPrefix(source.Location, "https://") {
-			return fmt.Errorf("source %q: subdir is supported only for HTTP(S) Git locations", alias)
-		}
 	}
-	if strings.TrimSpace(m.Output) == "" {
+	if strings.TrimSpace(m.Output) == "" && len(m.Doc) > 0 {
 		m.Output = "AGENTS.md"
 	}
-	all := append([]Output{{Path: m.Output}}, m.Outputs...)
+	all := m.EffectiveOutputs()
 	for i, output := range all {
 		if err := output.validate(); err != nil {
 			return fmt.Errorf("output[%d]: %w", i, err)
@@ -405,8 +549,8 @@ func (m *Manifest) Validate() error {
 			}
 		}
 	}
-	if len(m.Doc) == 0 {
-		return fmt.Errorf("manifest requires at least one doc entry")
+	if len(m.Doc) == 0 && len(m.Outputs) == 0 {
+		return fmt.Errorf("manifest requires doc entries or outputs")
 	}
 	for index, entry := range m.Doc {
 		if err := entry.validate(fmt.Sprintf("doc[%d]", index)); err != nil {
@@ -427,11 +571,21 @@ func (o Output) validate() error {
 		}
 	}
 	if o.Directory() {
-		if o.From == "" {
-			return fmt.Errorf("directory output %q requires from", path)
+		for _, selector := range append(append([]Selector(nil), o.Include...), o.Exclude...) {
+			if err := selector.validate(); err != nil {
+				return err
+			}
 		}
-		if _, _, err := SplitReference(o.From); err != nil {
-			return err
+		if o.From != "" {
+			if _, _, err := SplitReference(o.From); err != nil {
+				return err
+			}
+		}
+		if o.From == "" && len(o.Include) == 0 {
+			return fmt.Errorf("directory output %q requires include", path)
+		}
+		if o.From != "" && len(o.Include) > 0 {
+			return fmt.Errorf("directory output %q cannot combine from and include", path)
 		}
 		return nil
 	}
@@ -439,9 +593,54 @@ func (o Output) validate() error {
 		if o.From != "" {
 			return fmt.Errorf("Markdown output %q must not use from", path)
 		}
+		if len(o.Exclude) > 0 && len(o.Include) == 0 {
+			return fmt.Errorf("Markdown output %q uses exclude without include", path)
+		}
+		for _, selector := range append(append([]Selector(nil), o.Include...), o.Exclude...) {
+			if err := selector.validate(); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 	return fmt.Errorf("ambiguous output path %q; use .md or a trailing /", path)
+}
+
+func (s Selector) validate() error {
+	count := 0
+	if s.All != "" {
+		count++
+		if strings.Contains(s.All, ":") || strings.TrimSpace(s.All) == "" {
+			return fmt.Errorf("all selector requires a source alias")
+		}
+	}
+	if s.Source != "" {
+		count++
+		if _, _, err := SplitReference(s.Source); err != nil {
+			return err
+		}
+	}
+	if len(s.Tags) > 0 {
+		count++
+		for _, tag := range s.Tags {
+			if strings.TrimSpace(tag) == "" {
+				return fmt.Errorf("tag selector contains an empty tag")
+			}
+		}
+	}
+	if count != 1 {
+		return fmt.Errorf("selector must contain exactly one of all, source, or tags")
+	}
+	return nil
+}
+
+// EffectiveOutputs returns canonical outputs, or the legacy primary output plus
+// legacy additions when the manifest still has a document outline.
+func (m *Manifest) EffectiveOutputs() []Output {
+	if m.Output == "" {
+		return append([]Output(nil), m.Outputs...)
+	}
+	return append([]Output{{Path: m.Output}}, m.Outputs...)
 }
 
 func (e Entry) validate(location string) error {

@@ -65,6 +65,36 @@ func TestBuildIgnoresRawDirectoryOnlySourceMarkdown(t *testing.T) {
 	}
 }
 
+func TestRenderOutputSelectsAllSourceTagsAndExclusions(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "agents")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "go.md"), "---\ntags: [lang/go]\n---\n# Go\nUse gofmt.\n")
+	writeFile(t, filepath.Join(libraryPath, "windows.md"), "---\ntags: [os/windows]\n---\n# Windows\nUse PowerShell.\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "roots:\n  qmr: library\nsources:\n  agents:\n    path:\n      root: qmr\n      subdir: agents\noutputs:\n  - path: AGENTS.md\n    include:\n      - all: agents\n    exclude:\n      - tags:\n          any: [os/windows]\n  - path: GO.md\n    include:\n      - source: agents:go\n      - tags:\n          any: [lang/go]\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := render.RenderOutput(value, loadedPath, value.Outputs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(first.Content, "# Go") || strings.Contains(first.Content, "Windows") {
+		t.Fatalf("all/exclude content = %q", first.Content)
+	}
+	second, err := render.RenderOutput(value, loadedPath, value.Outputs[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(second.Content, "# Go") != 1 {
+		t.Fatalf("source/tag deduplication content = %q", second.Content)
+	}
+}
+
 func TestBuildPreservesSiblingHeadingSourceOrder(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

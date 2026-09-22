@@ -19,20 +19,20 @@ type configuredOutput struct {
 }
 
 func configuredOutputs(value *manifest.Manifest, manifestPath string) ([]configuredOutput, error) {
-	specs := append([]manifest.Output{{Path: value.Output}}, value.Outputs...)
+	specs := value.EffectiveOutputs()
 	outputs := make([]configuredOutput, 0, len(specs))
 	for _, spec := range specs {
 		path := filepath.Join(filepath.Dir(manifestPath), filepath.FromSlash(strings.TrimSuffix(spec.Path, "/")))
 		if err := rejectTargetSymlinks(path, filepath.Dir(manifestPath)); err != nil {
 			return nil, err
 		}
-		for _, source := range value.Sources {
+		for alias, source := range value.Sources {
 			if source.Location == "" || strings.HasPrefix(source.Location, "http") {
 				continue
 			}
-			root := source.Location
-			if !filepath.IsAbs(root) {
-				root = filepath.Join(filepath.Dir(manifestPath), root)
+			root, err := render.ResolveSourcePath(value, manifestPath, alias)
+			if err != nil {
+				return nil, err
 			}
 			if sameOrWithin(path, filepath.Clean(root)) {
 				return nil, fmt.Errorf("output %q is inside source root %q", spec.Path, source.Location)
@@ -40,12 +40,27 @@ func configuredOutputs(value *manifest.Manifest, manifestPath string) ([]configu
 		}
 		output := configuredOutput{spec: spec, path: path}
 		if spec.Directory() {
-			alias, selected, _ := manifest.SplitReference(spec.From)
+			selection := spec.From
+			if selection == "" {
+				if len(spec.Include) != 1 || len(spec.Exclude) != 0 || len(spec.Include[0].Tags) != 0 {
+					return nil, fmt.Errorf("directory output %q requires one all or source selector without exclusions; tag selection requires indexed metadata and is not a safe tree copy", spec.Path)
+				}
+				if spec.Include[0].All != "" {
+					selection = spec.Include[0].All + ":root"
+				} else {
+					selection = spec.Include[0].Source
+				}
+			}
+			alias, selected, _ := manifest.SplitReference(selection)
 			root, err := render.ResolveSourcePath(value, manifestPath, alias)
 			if err != nil {
 				return nil, err
 			}
-			output.source = filepath.Join(root, filepath.FromSlash(selected))
+			if selected == "root" && spec.Include != nil && spec.Include[0].All != "" {
+				output.source = root
+			} else {
+				output.source = filepath.Join(root, filepath.FromSlash(selected))
+			}
 			if err := verifySourceDirectory(output.source); err != nil {
 				return nil, err
 			}
@@ -129,10 +144,18 @@ func BuildOutputs(value *manifest.Manifest, manifestPath, markdown string, force
 			}
 			dirs[output.path] = hashes
 		} else {
-			if err := renderfs.WriteAtomically(output.path, []byte(markdown)); err != nil {
+			content := markdown
+			if len(output.spec.Include) > 0 {
+				result, err := render.RenderOutput(value, manifestPath, output.spec)
+				if err != nil {
+					return rollbackOutputTree(err, snapshot)
+				}
+				content = result.Content
+			}
+			if err := renderfs.WriteAtomically(output.path, []byte(content)); err != nil {
 				return rollbackOutputTree(err, snapshot)
 			}
-			files[output.path] = markdown
+			files[output.path] = content
 		}
 	}
 	if err := state.WriteAll(statePath, files, dirs); err != nil {

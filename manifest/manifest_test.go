@@ -136,3 +136,29 @@ func TestOutputsInferKindsAndRejectUnsafePaths(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadSupportsRootsAndCanonicalOutputSelectors(t *testing.T) {
+	temporary := t.TempDir()
+	path := filepath.Join(temporary, "agents.yaml")
+	content := "roots:\n  qmr: ../library\nsources:\n  agents:\n    path:\n      root: qmr\n      subdir: agents\noutputs:\n  - path: AGENTS.md\n    include:\n      - all: agents\n    exclude:\n      - tags:\n          any: [os/windows]\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	value, _, err := manifest.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value.Sources["agents"].Location != "../library" || value.Sources["agents"].Subdir != "agents" {
+		t.Fatalf("rooted source = %#v", value.Sources["agents"])
+	}
+	if len(value.Outputs) != 1 || value.Outputs[0].Include[0].All != "agents" || value.Outputs[0].Exclude[0].Tags[0] != "os/windows" {
+		t.Fatalf("outputs = %#v", value.Outputs)
+	}
+	encoded, err := manifest.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), "path:\n      root: qmr") {
+		t.Fatalf("canonical source was not marshaled:\n%s", encoded)
+	}
+}

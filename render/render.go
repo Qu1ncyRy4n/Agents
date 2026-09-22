@@ -4,7 +4,6 @@ package render
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/manifest"
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/sourcecache"
+	"github.com/Qu1ncyRy4n/Agents/sourcepath"
 )
 
 // Result is the fully validated build result. Warnings are non-fatal facts that
@@ -77,9 +77,14 @@ func LoadWorkspaceSources(value *manifest.Manifest, manifestPath string) (map[st
 		if !output.Directory() {
 			continue
 		}
-		alias, _, err := manifest.SplitReference(output.From)
-		if err == nil && !usedByDocument[alias] {
-			directoryOnly[alias] = true
+		if output.From != "" {
+			alias, _, err := manifest.SplitReference(output.From)
+			if err == nil && !usedByDocument[alias] {
+				directoryOnly[alias] = true
+			}
+		}
+		if len(output.Include) == 1 && output.Include[0].All != "" && len(output.Exclude) == 0 && !usedByDocument[output.Include[0].All] {
+			directoryOnly[output.Include[0].All] = true
 		}
 	}
 	aliases := make([]string, 0, len(value.Sources))
@@ -95,29 +100,9 @@ func loadSourceAliases(value *manifest.Manifest, manifestPath string, aliases []
 	sort.Strings(aliases)
 	indexes := make(map[string]*library.Index, len(aliases))
 	for _, alias := range aliases {
-		source := value.Sources[alias]
-		path := source.Location
-		if isURL(path) {
-			resolved, err := sourcecache.Resolve(manifestPath, alias, path, source.Subdir)
-			if err != nil {
-				return nil, err
-			}
-			index, err := library.Load(resolved)
-			if err != nil {
-				return nil, fmt.Errorf("source %q: %w", alias, err)
-			}
-			indexes[alias] = index
-			continue
-		}
-		if source.Subdir != "" {
-			return nil, fmt.Errorf("source %q: subdir is currently supported only for URL locations", alias)
-		}
-		path, err := expandHome(path)
+		path, err := ResolveSourcePath(value, manifestPath, alias)
 		if err != nil {
 			return nil, fmt.Errorf("source %q: %w", alias, err)
-		}
-		if !filepath.IsAbs(path) {
-			path = filepath.Join(filepath.Dir(manifestPath), path)
 		}
 		index, err := library.Load(filepath.Clean(path))
 		if err != nil {
@@ -165,35 +150,14 @@ func ResolveSourcePath(value *manifest.Manifest, manifestPath, alias string) (st
 		}
 		return resolved, nil
 	}
-	if source.Subdir != "" {
-		return "", fmt.Errorf("source %q: subdir is currently supported only for URL locations", alias)
-	}
-	path, err := expandHome(path)
-	if err != nil {
-		return "", err
-	}
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(filepath.Dir(manifestPath), path)
 	}
-	return filepath.Clean(path), nil
+	return sourcepath.Resolve(filepath.Clean(path), source.Subdir)
 }
 
 func isURL(value string) bool {
 	return strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://")
-}
-
-func expandHome(path string) (string, error) {
-	if path != "~" && !strings.HasPrefix(path, "~/") {
-		return path, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("resolve home directory: %w", err)
-	}
-	if path == "~" {
-		return home, nil
-	}
-	return filepath.Join(home, strings.TrimPrefix(path, "~/")), nil
 }
 
 func renderEntry(output *strings.Builder, entry manifest.Entry, level int, vars map[string]any, sources map[string]*library.Index, result *Result) error {
@@ -332,6 +296,159 @@ func executeTemplate(name, content string, vars map[string]any) (string, error) 
 		return "", fmt.Errorf("render template %q: %w", name, err)
 	}
 	return output.String(), nil
+}
+
+// RenderOutput renders one canonical Markdown output. Outputs without selectors
+// retain the legacy authored document outline.
+func RenderOutput(value *manifest.Manifest, manifestPath string, output manifest.Output) (*Result, error) {
+	if len(output.Include) == 0 {
+		return Build(value, manifestPath)
+	}
+	sources, err := loadSelectorSources(value, manifestPath, output)
+	if err != nil {
+		return nil, err
+	}
+	selected, err := selectorNodes(output.Include, sources)
+	if err != nil {
+		return nil, err
+	}
+	excluded, err := selectorPaths(output.Exclude, sources)
+	if err != nil {
+		return nil, err
+	}
+	var text strings.Builder
+	for _, item := range selected {
+		if excluded[item.alias+":"+item.node.Path] {
+			continue
+		}
+		text.WriteString("# " + item.node.Heading + "\n\n")
+		if err := renderNode(&text, item.node, 1, item.alias, value.Vars, excluded); err != nil {
+			return nil, err
+		}
+	}
+	content := strings.TrimSpace(text.String())
+	if content == "" {
+		return nil, fmt.Errorf("output %q selects no renderable content", output.Path)
+	}
+	return &Result{Content: content + "\n"}, nil
+}
+
+type selectorNode struct {
+	alias string
+	node  *library.Node
+}
+
+func loadSelectorSources(value *manifest.Manifest, manifestPath string, output manifest.Output) (map[string]*library.Index, error) {
+	used := map[string]bool{}
+	for _, selector := range append(append([]manifest.Selector(nil), output.Include...), output.Exclude...) {
+		if selector.All != "" {
+			used[selector.All] = true
+		}
+		if selector.Source != "" {
+			alias, _, _ := manifest.SplitReference(selector.Source)
+			used[alias] = true
+		}
+		if len(selector.Tags) > 0 {
+			for alias := range value.Sources {
+				used[alias] = true
+			}
+		}
+	}
+	aliases := make([]string, 0, len(used))
+	for alias := range used {
+		aliases = append(aliases, alias)
+	}
+	return loadSourceAliases(value, manifestPath, aliases)
+}
+
+func selectorNodes(selectors []manifest.Selector, sources map[string]*library.Index) ([]selectorNode, error) {
+	var result []selectorNode
+	for _, selector := range selectors {
+		if selector.All != "" {
+			index, found := sources[selector.All]
+			if !found {
+				return nil, fmt.Errorf("selector uses undeclared source %q", selector.All)
+			}
+			for _, node := range index.Roots {
+				result = appendSelectorNode(result, selectorNode{selector.All, node})
+			}
+			continue
+		}
+		if selector.Source != "" {
+			alias, path, _ := manifest.SplitReference(selector.Source)
+			node, err := lookup(sources, alias, path)
+			if err != nil {
+				return nil, err
+			}
+			result = appendSelectorNode(result, selectorNode{alias, node})
+			continue
+		}
+		aliases := make([]string, 0, len(sources))
+		for alias := range sources {
+			aliases = append(aliases, alias)
+		}
+		sort.Strings(aliases)
+		for _, alias := range aliases {
+			index := sources[alias]
+			paths := make([]string, 0, len(index.ByPath))
+			for path := range index.ByPath {
+				paths = append(paths, path)
+			}
+			sort.Strings(paths)
+			for _, path := range paths {
+				node := index.ByPath[path]
+				if tagsAny(node.Metadata.Tags, selector.Tags) {
+					result = appendSelectorNode(result, selectorNode{alias, node})
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+func appendSelectorNode(nodes []selectorNode, candidate selectorNode) []selectorNode {
+	for _, existing := range nodes {
+		if existing.alias == candidate.alias && (existing.node.Path == candidate.node.Path || strings.HasPrefix(candidate.node.Path, existing.node.Path+"/")) {
+			return nodes
+		}
+	}
+	kept := nodes[:0]
+	for _, existing := range nodes {
+		if existing.alias == candidate.alias && strings.HasPrefix(existing.node.Path, candidate.node.Path+"/") {
+			continue
+		}
+		kept = append(kept, existing)
+	}
+	return append(kept, candidate)
+}
+
+func selectorPaths(selectors []manifest.Selector, sources map[string]*library.Index) (map[string]bool, error) {
+	selected, err := selectorNodes(selectors, sources)
+	if err != nil {
+		return nil, err
+	}
+	paths := map[string]bool{}
+	for _, item := range selected {
+		markSelectorSubtree(paths, item.alias, item.node)
+	}
+	return paths, nil
+}
+
+func markSelectorSubtree(paths map[string]bool, alias string, node *library.Node) {
+	paths[alias+":"+node.Path] = true
+	for _, child := range node.Children {
+		markSelectorSubtree(paths, alias, child)
+	}
+}
+func tagsAny(have, wanted []string) bool {
+	for _, tag := range wanted {
+		for _, candidate := range have {
+			if candidate == tag {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func hasContent(node *library.Node, alias string, excluded map[string]bool) bool {

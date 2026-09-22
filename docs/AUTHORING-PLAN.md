@@ -9,12 +9,23 @@ Make source declaration, manifest placement, reordering, and module creation
 available through reusable workspace operations. Every mutation must support a
 non-writing preview and preserve the core/CLI/TUI boundary.
 
+## Canonical Output Authoring
+
+New manifests declare `roots`, source `path: {root, subdir}`, and independent
+`outputs` with output-scoped `include` and `exclude` selectors. `all`,
+`source`, and metadata-backed `tags.any` are the complete selector vocabulary.
+The legacy `output` plus `doc` form remains supported for custom authored
+heading layouts; migration is explicit rather than inferred. Do not add
+profiles, conditionals, aliases, mirrors, or template inheritance to this
+model.
+
 ## Proposed Surface
 
 ```text
 mogent source add <alias> <path-or-url> [--subdir path] [--dry-run]
 mogent move <manifest-heading-path> (--before path | --after path | --under path [--first|--last]) [--dry-run]
 mogent module new --source <alias> --path <path> --heading <text> --tldr <text> [metadata flags] [--dry-run]
+mogent include normalize <output> --style explicit|all-except [--dry-run]
 ```
 
 `add` already provides the shared placement vocabulary: `--under` with
@@ -39,6 +50,22 @@ core insertion primitive rather than implementing separate ordering rules.
   collisions.
 - Preserve the complete entry, including children, `from`, and exclusions.
 - Preview both the manifest tree and rendered-output patch.
+
+## Selection Normalization
+
+Selection has equivalent readable forms: an explicit list of source nodes, or a
+broad source subtree narrowed by exclusions. Add a non-writing normalization
+command that previews either form before rewriting the manifest.
+
+- `--style explicit` expands a selected subtree and its exclusions into the
+  exact included source nodes.
+- `--style all-except` finds a safe common selected subtree and expresses only
+  the omitted descendants as exclusions.
+- Refuse normalization when no single unambiguous form exists, when it would
+  hide an authored heading choice, or when it would change output order.
+- Preview the manifest patch, source-coverage tree, and rendered-output diff.
+- Do not treat tags, requirements, profiles, or conditional predicates as
+  selection shortcuts until their semantics are separately designed.
 
 ## Module Creation
 

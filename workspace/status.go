@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/Qu1ncyRy4n/Agents/render"
 	"github.com/Qu1ncyRy4n/Agents/state"
 )
 
@@ -42,7 +43,11 @@ type NamedOutputStatus struct {
 // OutputPath returns the absolute generated document path for the current
 // draft.
 func (s *Session) OutputPath() string {
-	outputPath := s.Draft.Output
+	outputs := s.Draft.EffectiveOutputs()
+	if len(outputs) == 0 {
+		return ""
+	}
+	outputPath := outputs[0].Path
 	if !filepath.IsAbs(outputPath) {
 		outputPath = filepath.Join(filepath.Dir(s.ManifestPath), outputPath)
 	}
@@ -98,6 +103,13 @@ func (s *Session) Status() (*Status, error) {
 			wanted, hashErr := state.DirectoryHashes(output.source)
 			actual, actualErr := state.DirectoryHashes(output.path)
 			if hashErr != nil || actualErr != nil || !sameHashes(wanted, actual) {
+				value = StatusStale
+			}
+		}
+		if !output.spec.Directory() && current == state.OutputClean && len(output.spec.Include) > 0 {
+			wanted, renderErr := render.RenderOutput(s.Draft, s.ManifestPath, output.spec)
+			actual, readErr := os.ReadFile(output.path)
+			if renderErr != nil || readErr != nil || string(actual) != wanted.Content {
 				value = StatusStale
 			}
 		}

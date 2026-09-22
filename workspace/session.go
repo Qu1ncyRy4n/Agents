@@ -38,7 +38,7 @@ func New(manifestPath string) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	result, err := render.Build(value, loadedPath)
+	result, err := previewOutput(value, loadedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func New(manifestPath string) (*Session, error) {
 // MarkDraftChanged records an in-memory change and rebuilds the preview.
 func (s *Session) MarkDraftChanged() error {
 	s.Dirty = true
-	result, err := render.Build(s.Draft, s.ManifestPath)
+	result, err := previewOutput(s.Draft, s.ManifestPath)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (s *Session) MarkDraftChanged() error {
 func (s *Session) DiscardDraft() error {
 	s.Draft = s.Saved.Clone()
 	s.Dirty = false
-	result, err := render.Build(s.Draft, s.ManifestPath)
+	result, err := previewOutput(s.Draft, s.ManifestPath)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (s *Session) DiscardDraft() error {
 // state. If the output write/state write fails, the manifest and output are
 // restored to their pre-save contents.
 func (s *Session) SaveAndBuild() error {
-	result, err := render.Build(s.Draft, s.ManifestPath)
+	result, err := previewOutput(s.Draft, s.ManifestPath)
 	if err != nil {
 		return err
 	}
@@ -109,6 +109,14 @@ func (s *Session) SaveAndBuild() error {
 	}
 	s.Sources = sources
 	return nil
+}
+
+func previewOutput(value *manifest.Manifest, manifestPath string) (*render.Result, error) {
+	outputs := value.EffectiveOutputs()
+	if len(outputs) == 0 || outputs[0].Directory() {
+		return nil, fmt.Errorf("manifest requires a Markdown output")
+	}
+	return render.RenderOutput(value, manifestPath, outputs[0])
 }
 
 func readOptional(path string) ([]byte, bool, error) {
