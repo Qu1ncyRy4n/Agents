@@ -35,6 +35,35 @@ func TestBuildUsesManifestHeadingsTemplatesAndExclusions(t *testing.T) {
 	}
 }
 
+func TestBuildStripsHTMLCommentsExceptFencedContentUnlessPreserved(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "rules.md"), "# Rules\nVisible. <!-- inline -->\n<!-- multi\nline -->\n```html\n<!-- retain -->\n```\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: library\ndoc:\n  - Rules: shared:rules\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.Build(value, loadedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Content, "inline") || strings.Contains(result.Content, "multi") || !strings.Contains(result.Content, "<!-- retain -->") {
+		t.Fatalf("default comment rendering = %q", result.Content)
+	}
+	preserved, err := render.BuildWithOptions(value, loadedPath, render.Options{PreserveHTMLComments: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(preserved.Content, "<!-- inline -->") || !strings.Contains(preserved.Content, "<!-- multi") {
+		t.Fatalf("preserved comment rendering = %q", preserved.Content)
+	}
+}
+
 func TestBuildIgnoresRawDirectoryOnlySourceMarkdown(t *testing.T) {
 	temporary := t.TempDir()
 	markdownLibrary := filepath.Join(temporary, "markdown")
@@ -92,6 +121,98 @@ func TestRenderOutputSelectsAllSourceTagsAndExclusions(t *testing.T) {
 	}
 	if strings.Count(second.Content, "# Go") != 1 {
 		t.Fatalf("source/tag deduplication content = %q", second.Content)
+	}
+}
+
+func TestRenderOutputAllFormatsDirectoryHeadings(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library", "decision-first")
+	if err := os.MkdirAll(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "rules.md"), "# Rules\nChoose clearly.\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: library\noutputs:\n  - path: AGENTS.md\n    include:\n      - all: shared\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.RenderOutput(value, loadedPath, value.Outputs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Content, "# Decision First") {
+		t.Fatalf("canonical output = %q", result.Content)
+	}
+}
+
+func TestRenderOutputAllAppliesSidecarOrderAndTitles(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.MkdirAll(filepath.Join(libraryPath, "group"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "alpha.md"), "# Alpha\nAlpha body.\n")
+	writeFile(t, filepath.Join(libraryPath, "zeta.md"), "# Zeta\nZeta body.\n")
+	writeFile(t, filepath.Join(libraryPath, "group", "rules.md"), "# Rules\n## First\nFirst body.\n## Second\nSecond body.\n")
+	writeFile(t, filepath.Join(libraryPath, "library.mogent.yaml"), `schema: {id: mogent/1}
+library: {name: Test}
+tree:
+  - source: zeta
+    title: Start Here
+  - source: group
+    title: Curated Group
+    children:
+      - source: group/rules
+        children:
+          - source: group/rules/second
+            title: Second Curated
+          - source: group/rules/first
+  - source: alpha
+`)
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: library\noutputs:\n  - path: AGENTS.md\n    include:\n      - all: shared\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.RenderOutput(value, loadedPath, value.Outputs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"# Start Here", "# Curated Group", "### Second Curated"} {
+		if !strings.Contains(result.Content, want) {
+			t.Fatalf("canonical output missing %q:\n%s", want, result.Content)
+		}
+	}
+	if strings.Index(result.Content, "# Start Here") > strings.Index(result.Content, "# Curated Group") || strings.Index(result.Content, "# Curated Group") > strings.Index(result.Content, "# Alpha") || strings.Index(result.Content, "### Second Curated") > strings.Index(result.Content, "### First") {
+		t.Fatalf("sidecar order not applied:\n%s", result.Content)
+	}
+	sources, err := render.LoadSources(value, loadedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, found := sources["shared"].ByPath["group/rules/second"]; !found {
+		t.Fatal("sidecar title changed source path lookup")
+	}
+}
+
+func TestBuildRejectsInvalidSidecar(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "rules.md"), "# Rules\nBody.\n")
+	writeFile(t, filepath.Join(libraryPath, "library.mogent.yaml"), "schema: {id: mogent/1}\nlibrary: {name: Test}\ntree: []\n")
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "sources:\n  shared: library\ndoc:\n  - Rules: shared:rules\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := render.Build(value, loadedPath); err == nil || !strings.Contains(err.Error(), "sidecar validation failed") {
+		t.Fatalf("Build error = %v, want sidecar validation failure", err)
 	}
 }
 

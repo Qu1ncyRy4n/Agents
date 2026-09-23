@@ -113,6 +113,11 @@ func verifySourceDirectory(root string) error {
 
 // BuildOutputs writes every configured output as one rollback transaction.
 func BuildOutputs(value *manifest.Manifest, manifestPath, markdown string, force bool) error {
+	return BuildOutputsWithOptions(value, manifestPath, markdown, force, render.Options{})
+}
+
+// BuildOutputsWithOptions writes outputs while applying options to Markdown only.
+func BuildOutputsWithOptions(value *manifest.Manifest, manifestPath, markdown string, force bool, options render.Options) error {
 	outputs, err := configuredOutputs(value, manifestPath)
 	if err != nil {
 		return err
@@ -146,7 +151,7 @@ func BuildOutputs(value *manifest.Manifest, manifestPath, markdown string, force
 		} else {
 			content := markdown
 			if len(output.spec.Include) > 0 {
-				result, err := render.RenderOutput(value, manifestPath, output.spec)
+				result, err := render.RenderOutputWithOptions(value, manifestPath, output.spec, options)
 				if err != nil {
 					return rollbackOutputTree(err, snapshot)
 				}

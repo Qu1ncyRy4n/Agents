@@ -1,6 +1,7 @@
 package state_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,5 +140,110 @@ func TestInspectReadsLegacySingleOutputState(t *testing.T) {
 	got, err := state.Inspect(output, statePath)
 	if err != nil || got != state.OutputClean {
 		t.Fatalf("legacy inspect = %s, %v", got, err)
+	}
+}
+
+func TestPortableStateSurvivesWorkspaceMove(t *testing.T) {
+	first := t.TempDir()
+	second := t.TempDir()
+	firstState := filepath.Join(first, ".mogent", "state.json")
+	if err := os.MkdirAll(filepath.Join(first, ".agents", "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(first, "AGENTS.md"), []byte("generated\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(first, ".agents", "skills", "SKILL.md"), []byte("skill\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hashes, err := state.DirectoryHashes(filepath.Join(first, ".agents", "skills"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.WriteAll(firstState, map[string]string{filepath.Join(first, "AGENTS.md"): "generated\n"}, map[string]map[string]string{filepath.Join(first, ".agents", "skills"): hashes}); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(firstState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var written map[string]any
+	if err := json.Unmarshal(contents, &written); err != nil {
+		t.Fatal(err)
+	}
+	if written["version"] != float64(3) || written["output_path"] != nil || written["sha256"] != nil || strings.Contains(string(contents), first) {
+		t.Fatalf("state is not clean and portable: %s", contents)
+	}
+	if err := os.MkdirAll(filepath.Join(second, ".mogent"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(second, ".agents", "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(second, "AGENTS.md"), []byte("generated\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(second, ".agents", "skills", "SKILL.md"), []byte("skill\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	secondState := filepath.Join(second, ".mogent", "state.json")
+	if err := os.WriteFile(secondState, contents, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := state.Inspect(filepath.Join(second, "AGENTS.md"), secondState); err != nil || got != state.OutputClean {
+		t.Fatalf("moved file inspect = %s, %v", got, err)
+	}
+	if got, err := state.InspectDirectory(filepath.Join(second, ".agents", "skills"), secondState); err != nil || got != state.OutputClean {
+		t.Fatalf("moved directory inspect = %s, %v", got, err)
+	}
+}
+
+func TestPortableStateAcceptsSymlinkWorkspaceInvocation(t *testing.T) {
+	workspace := t.TempDir()
+	invocation := filepath.Join(t.TempDir(), "workspace")
+	if err := os.Symlink(workspace, invocation); err != nil {
+		t.Fatal(err)
+	}
+	output := filepath.Join(workspace, "AGENTS.md")
+	if err := os.WriteFile(output, []byte("generated\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	invokedState := filepath.Join(invocation, ".mogent", "state.json")
+	if err := state.Write(invokedState, filepath.Join(invocation, "AGENTS.md"), "generated\n"); err != nil {
+		t.Fatal(err)
+	}
+	physicalState := filepath.Join(workspace, ".mogent", "state.json")
+	if got, err := state.Inspect(output, physicalState); err != nil || got != state.OutputClean {
+		t.Fatalf("physical invocation inspect = %s, %v", got, err)
+	}
+}
+
+func TestLegacyAbsoluteV2StateMigratesOnWrite(t *testing.T) {
+	temporary := t.TempDir()
+	output := filepath.Join(temporary, "AGENTS.md")
+	content := "generated\n"
+	if err := os.WriteFile(output, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	statePath := filepath.Join(temporary, ".mogent", "state.json")
+	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	legacy := "{\"outputs\":{\"" + output + "\":{\"kind\":\"file\",\"sha256\":\"" + state.Hash([]byte(content)) + "\"}}}\n"
+	if err := os.WriteFile(statePath, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := state.Inspect(output, statePath); err != nil || got != state.OutputClean {
+		t.Fatalf("legacy v2 inspect = %s, %v", got, err)
+	}
+	if err := state.Write(statePath, output, content); err != nil {
+		t.Fatal(err)
+	}
+	migrated, err := os.ReadFile(statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(migrated), output) || !strings.Contains(string(migrated), "\"AGENTS.md\"") || !strings.Contains(string(migrated), "\"version\": 3") {
+		t.Fatalf("migrated state = %s", migrated)
 	}
 }

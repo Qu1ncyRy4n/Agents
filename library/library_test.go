@@ -136,8 +136,29 @@ func TestLoadUsesDirectoryPathAsHeadingPrefix(t *testing.T) {
 	if index.ByPath["lang"].Kind != library.NodeDirectory || index.ByPath["lang/go"].Kind != library.NodeDirectory {
 		t.Fatalf("directory nodes = %#v, %#v", index.ByPath["lang"], index.ByPath["lang/go"])
 	}
+	if index.ByPath["lang/go"].Heading != "Go" {
+		t.Fatalf("directory heading = %q", index.ByPath["lang/go"].Heading)
+	}
 	if len(index.Roots) != 1 || index.Roots[0].Path != "lang" || len(index.Roots[0].Children) != 1 {
 		t.Fatalf("directory tree = %#v", index.Roots)
+	}
+}
+
+func TestLoadFormatsDirectoryHeadings(t *testing.T) {
+	temporary := t.TempDir()
+	directory := filepath.Join(temporary, "decision-first")
+	if err := os.Mkdir(directory, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "rules.md"), []byte("# Rules\nChoose clearly.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	index, err := library.Load(temporary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if node := index.ByPath["decision-first"]; node == nil || node.Heading != "Decision First" {
+		t.Fatalf("directory node = %#v", node)
 	}
 }
 

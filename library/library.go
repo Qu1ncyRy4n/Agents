@@ -156,7 +156,7 @@ func (i *Index) buildTree(root string, directories map[string]bool) {
 			i.ByPath[path] = &Node{
 				Kind:    NodeDirectory,
 				Path:    path,
-				Heading: lastPathPart(path),
+				Heading: directoryHeading(lastPathPart(path)),
 			}
 		}
 	}
@@ -178,6 +178,19 @@ func (i *Index) buildTree(root string, directories map[string]bool) {
 		i.Roots = append(i.Roots, node)
 	}
 	orderTree(root, i.Roots)
+}
+
+func directoryHeading(name string) string {
+	words := strings.FieldsFunc(name, func(r rune) bool {
+		return r == '-' || r == '_' || unicode.IsSpace(r)
+	})
+	for index, word := range words {
+		for offset, r := range word {
+			words[index] = string(unicode.ToUpper(r)) + word[offset+len(string(r)):]
+			break
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 func orderTree(root string, nodes []*Node) {

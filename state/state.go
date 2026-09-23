@@ -9,13 +9,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
 )
 
 type generated struct {
-	OutputPath string            `json:"output_path"`
-	SHA256     string            `json:"sha256"`
+	Version    int               `json:"version,omitempty"`
+	OutputPath string            `json:"output_path,omitempty"`
+	SHA256     string            `json:"sha256,omitempty"`
 	Outputs    map[string]record `json:"outputs,omitempty"`
 }
 
@@ -57,7 +59,10 @@ func Inspect(outputPath, statePath string) (OutputState, error) {
 	if err != nil {
 		return "", err
 	}
-	record, found := previous.output(outputPath)
+	record, found, err := previous.output(outputPath, statePath)
+	if err != nil {
+		return "", err
+	}
 	if !found || record.Kind != "file" {
 		return OutputUntracked, nil
 	}
@@ -88,7 +93,10 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 	if err != nil {
 		return err
 	}
-	record, found := previous.output(outputPath)
+	record, found, err := previous.output(outputPath, statePath)
+	if err != nil {
+		return err
+	}
 	if !found || record.Kind != "file" {
 		return fmt.Errorf("refusing to overwrite untracked output %q; output path does not match generated-output state, rerun with --force", outputPath)
 	}
@@ -104,20 +112,29 @@ func Write(statePath, outputPath, output string) error {
 }
 
 // WriteAll records all generated files and directory trees together. It writes
-// the version-two shape but decode also accepts the original single-file shape.
+// the portable version-three shape but decode also accepts legacy absolute-path
+// state shapes.
 func WriteAll(statePath string, files map[string]string, directories map[string]map[string]string) error {
 	outputs := make(map[string]record, len(files)+len(directories))
 	for path, content := range files {
-		outputs[normalizedOutputPath(path)] = record{Kind: "file", SHA256: Hash([]byte(content))}
+		key, err := outputKey(statePath, path)
+		if err != nil {
+			return err
+		}
+		outputs[key] = record{Kind: "file", SHA256: Hash([]byte(content))}
 	}
 	for path, entries := range directories {
+		key, err := outputKey(statePath, path)
+		if err != nil {
+			return err
+		}
 		copy := make(map[string]string, len(entries))
 		for name, digest := range entries {
 			copy[name] = digest
 		}
-		outputs[normalizedOutputPath(path)] = record{Kind: "directory", Files: copy}
+		outputs[key] = record{Kind: "directory", Files: copy}
 	}
-	contents, err := json.MarshalIndent(generated{Outputs: outputs}, "", "  ")
+	contents, err := json.MarshalIndent(generated{Version: 3, Outputs: outputs}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode generated-output state: %w", err)
 	}
@@ -147,7 +164,10 @@ func InspectDirectory(outputPath, statePath string) (OutputState, error) {
 	if err != nil {
 		return "", err
 	}
-	record, found := previous.output(outputPath)
+	record, found, err := previous.output(outputPath, statePath)
+	if err != nil {
+		return "", err
+	}
 	if !found || record.Kind != "directory" {
 		return OutputUntracked, nil
 	}
@@ -208,6 +228,50 @@ func normalizedOutputPath(path string) string {
 	return filepath.Clean(absolute)
 }
 
+// outputKey identifies an output relative to the workspace containing statePath.
+// Resolving existing symlinks makes paths invoked through a workspace symlink use
+// the same key as paths invoked through the physical checkout location.
+func outputKey(statePath, outputPath string) (string, error) {
+	root, err := resolvedPath(filepath.Dir(filepath.Dir(statePath)))
+	if err != nil {
+		return "", fmt.Errorf("resolve workspace root for generated-output state: %w", err)
+	}
+	output, err := resolvedPath(outputPath)
+	if err != nil {
+		return "", fmt.Errorf("resolve generated output %q: %w", outputPath, err)
+	}
+	relative, err := filepath.Rel(root, output)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
+		return "", fmt.Errorf("generated output %q is outside workspace %q", outputPath, root)
+	}
+	return filepath.ToSlash(relative), nil
+}
+
+func resolvedPath(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	var suffix []string
+	for {
+		if _, err := os.Lstat(abs); err == nil {
+			resolved, err := filepath.EvalSymlinks(abs)
+			if err != nil {
+				return "", err
+			}
+			return filepath.Join(append([]string{resolved}, suffix...)...), nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+		parent := filepath.Dir(abs)
+		if parent == abs {
+			return "", fmt.Errorf("no existing parent")
+		}
+		suffix = append([]string{filepath.Base(abs)}, suffix...)
+		abs = parent
+	}
+}
+
 func Hash(content []byte) string {
 	digest := sha256.Sum256(content)
 	return hex.EncodeToString(digest[:])
@@ -233,13 +297,22 @@ func readState(path string) (generated, error) {
 	return value, nil
 }
 
-func (g generated) output(path string) (record, bool) {
-	path = normalizedOutputPath(path)
-	if value, ok := g.Outputs[path]; ok {
-		return value, true
+func (g generated) output(path, statePath string) (record, bool, error) {
+	key, err := outputKey(statePath, path)
+	if err != nil {
+		return record{}, false, err
 	}
-	if g.OutputPath == path && g.SHA256 != "" {
-		return record{Kind: "file", SHA256: g.SHA256}, true
+	if value, ok := g.Outputs[key]; ok {
+		return value, true, nil
 	}
-	return record{}, false
+	// Version two keyed outputs by absolute paths. Keep that read path only for
+	// migration; all writes emit version three portable keys.
+	abs := normalizedOutputPath(path)
+	if value, ok := g.Outputs[abs]; ok {
+		return value, true, nil
+	}
+	if g.OutputPath == abs && g.SHA256 != "" {
+		return record{Kind: "file", SHA256: g.SHA256}, true, nil
+	}
+	return record{}, false, nil
 }

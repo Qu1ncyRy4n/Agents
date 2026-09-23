@@ -23,10 +23,19 @@ type Result struct {
 	Warnings []string
 }
 
+// Options controls Markdown-only rendering behavior. Raw directory outputs are
+// copied by workspace unchanged.
+type Options struct{ PreserveHTMLComments bool }
+
 // Build loads all named local sources and renders the document tree.
 // Intent: refuse partial or ambiguous documents before a caller can replace an
 // existing AGENTS.md. Source: DI-vukam, DI-sufok.
 func Build(value *manifest.Manifest, manifestPath string) (*Result, error) {
+	return BuildWithOptions(value, manifestPath, Options{})
+}
+
+// BuildWithOptions renders a legacy document outline with explicit options.
+func BuildWithOptions(value *manifest.Manifest, manifestPath string, options Options) (*Result, error) {
 	sources, err := LoadDocumentSources(value, manifestPath)
 	if err != nil {
 		return nil, err
@@ -34,7 +43,7 @@ func Build(value *manifest.Manifest, manifestPath string) (*Result, error) {
 	result := &Result{}
 	var output strings.Builder
 	for _, entry := range value.Doc {
-		if err := renderEntry(&output, entry, 1, value.Vars, sources, result); err != nil {
+		if err := renderEntry(&output, entry, 1, value.Vars, sources, result, options); err != nil {
 			return nil, err
 		}
 	}
@@ -104,7 +113,7 @@ func loadSourceAliases(value *manifest.Manifest, manifestPath string, aliases []
 		if err != nil {
 			return nil, fmt.Errorf("source %q: %w", alias, err)
 		}
-		index, err := library.Load(filepath.Clean(path))
+		index, _, err := library.LoadWithSidecar(filepath.Clean(path))
 		if err != nil {
 			return nil, fmt.Errorf("source %q: %w", alias, err)
 		}
@@ -160,7 +169,7 @@ func isURL(value string) bool {
 	return strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://")
 }
 
-func renderEntry(output *strings.Builder, entry manifest.Entry, level int, vars map[string]any, sources map[string]*library.Index, result *Result) error {
+func renderEntry(output *strings.Builder, entry manifest.Entry, level int, vars map[string]any, sources map[string]*library.Index, result *Result, options Options) error {
 	if level > 6 {
 		return fmt.Errorf("manifest nesting under %q exceeds Markdown heading level 6", entry.Heading)
 	}
@@ -170,7 +179,7 @@ func renderEntry(output *strings.Builder, entry manifest.Entry, level int, vars 
 	output.WriteString("\n\n")
 	if len(entry.Children) > 0 {
 		for _, child := range entry.Children {
-			if err := renderEntry(output, child, level+1, vars, sources, result); err != nil {
+			if err := renderEntry(output, child, level+1, vars, sources, result, options); err != nil {
 				return err
 			}
 		}
@@ -206,7 +215,7 @@ func renderEntry(output *strings.Builder, entry manifest.Entry, level int, vars 
 				seenRelative[relative] = reference
 			}
 		}
-		if err := renderNode(output, node, level, alias, vars, excluded); err != nil {
+		if err := renderNode(output, node, level, alias, vars, excluded, options); err != nil {
 			return fmt.Errorf("entry %q: %w", entry.Heading, err)
 		}
 	}
@@ -253,7 +262,7 @@ func lookup(sources map[string]*library.Index, alias, path string) (*library.Nod
 	return node, nil
 }
 
-func renderNode(output *strings.Builder, node *library.Node, level int, alias string, vars map[string]any, excluded map[string]bool) error {
+func renderNode(output *strings.Builder, node *library.Node, level int, alias string, vars map[string]any, excluded map[string]bool, options Options) error {
 	if excluded[alias+":"+node.Path] {
 		return nil
 	}
@@ -262,6 +271,9 @@ func renderNode(output *strings.Builder, node *library.Node, level int, alias st
 		return err
 	}
 	if strings.TrimSpace(body) != "" {
+		if !options.PreserveHTMLComments {
+			body = stripHTMLComments(body)
+		}
 		output.WriteString(strings.TrimSpace(body))
 		output.WriteString("\n\n")
 	}
@@ -276,7 +288,7 @@ func renderNode(output *strings.Builder, node *library.Node, level int, alias st
 		output.WriteByte(' ')
 		output.WriteString(child.Heading)
 		output.WriteString("\n\n")
-		if err := renderNode(output, child, level+1, alias, vars, excluded); err != nil {
+		if err := renderNode(output, child, level+1, alias, vars, excluded, options); err != nil {
 			return err
 		}
 	}
@@ -301,8 +313,13 @@ func executeTemplate(name, content string, vars map[string]any) (string, error) 
 // RenderOutput renders one canonical Markdown output. Outputs without selectors
 // retain the legacy authored document outline.
 func RenderOutput(value *manifest.Manifest, manifestPath string, output manifest.Output) (*Result, error) {
+	return RenderOutputWithOptions(value, manifestPath, output, Options{})
+}
+
+// RenderOutputWithOptions renders one canonical Markdown output with explicit options.
+func RenderOutputWithOptions(value *manifest.Manifest, manifestPath string, output manifest.Output, options Options) (*Result, error) {
 	if len(output.Include) == 0 {
-		return Build(value, manifestPath)
+		return BuildWithOptions(value, manifestPath, options)
 	}
 	sources, err := loadSelectorSources(value, manifestPath, output)
 	if err != nil {
@@ -322,7 +339,7 @@ func RenderOutput(value *manifest.Manifest, manifestPath string, output manifest
 			continue
 		}
 		text.WriteString("# " + item.node.Heading + "\n\n")
-		if err := renderNode(&text, item.node, 1, item.alias, value.Vars, excluded); err != nil {
+		if err := renderNode(&text, item.node, 1, item.alias, value.Vars, excluded, options); err != nil {
 			return nil, err
 		}
 	}
@@ -331,6 +348,90 @@ func RenderOutput(value *manifest.Manifest, manifestPath string, output manifest
 		return nil, fmt.Errorf("output %q selects no renderable content", output.Path)
 	}
 	return &Result{Content: content + "\n"}, nil
+}
+
+// stripHTMLComments removes standard comments outside fenced code blocks while
+// preserving source line structure well enough for ordinary Markdown spacing.
+func stripHTMLComments(content string) string {
+	var output strings.Builder
+	inComment := false
+	fence := libraryFence{}
+	for _, line := range strings.SplitAfter(content, "\n") {
+		bare := strings.TrimSuffix(line, "\n")
+		if fence.active {
+			output.WriteString(line)
+			if fence.closes(bare) {
+				fence = libraryFence{}
+			}
+			continue
+		}
+		if opened := openFence(bare); opened.active {
+			fence = opened
+			output.WriteString(line)
+			continue
+		}
+		remaining := bare
+		for {
+			if inComment {
+				_, after, found := strings.Cut(remaining, "-->")
+				if !found {
+					remaining = ""
+					break
+				}
+				inComment = false
+				remaining = after
+				continue
+			}
+			before, after, found := strings.Cut(remaining, "<!--")
+			if !found {
+				output.WriteString(remaining)
+				break
+			}
+			output.WriteString(before)
+			inComment = true
+			remaining = after
+		}
+		if strings.HasSuffix(line, "\n") {
+			output.WriteByte('\n')
+		}
+	}
+	return output.String()
+}
+
+type libraryFence struct {
+	character byte
+	length    int
+	active    bool
+}
+
+func openFence(line string) libraryFence {
+	indent := len(line) - len(strings.TrimLeft(line, " "))
+	if indent > 3 || indent == len(line) {
+		return libraryFence{}
+	}
+	c := line[indent]
+	if c != '`' && c != '~' {
+		return libraryFence{}
+	}
+	n := 0
+	for indent+n < len(line) && line[indent+n] == c {
+		n++
+	}
+	if n < 3 {
+		return libraryFence{}
+	}
+	return libraryFence{c, n, true}
+}
+func (f libraryFence) closes(line string) bool {
+	indent := len(line) - len(strings.TrimLeft(line, " "))
+	if indent > 3 || indent == len(line) || line[indent] != f.character {
+		return false
+	}
+	n := 0
+	for indent+n < len(line) && line[indent+n] == f.character {
+		n++
+	}
+	return n >= f.length && strings.TrimSpace(line[indent+n:]) == ""
 }
 
 type selectorNode struct {

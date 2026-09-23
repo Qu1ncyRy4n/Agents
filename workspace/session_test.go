@@ -418,7 +418,7 @@ func TestSessionAddDirectoryPreviewExpandsSourceAndReportsRelations(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"/ engineering/", "# Staged Migration", "# Cutover"} {
+	for _, expected := range []string{"/ Engineering/", "# Staged Migration", "# Cutover"} {
 		if !strings.Contains(result.SourceTree, expected) {
 			t.Fatalf("source tree missing %q:\n%s", expected, result.SourceTree)
 		}

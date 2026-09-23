@@ -132,6 +132,7 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
 	force := flags.Bool("force", false, "replace an untracked or directly edited output")
+	preserveComments := flags.Bool("preserve-html-comments", false, "retain HTML comments in rendered Markdown")
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
@@ -146,11 +147,11 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	if len(outputs) == 0 || outputs[0].Directory() {
 		return fmt.Errorf("manifest requires a Markdown output")
 	}
-	result, err := render.RenderOutput(value, manifestPath, outputs[0])
+	result, err := render.RenderOutputWithOptions(value, manifestPath, outputs[0], render.Options{PreserveHTMLComments: *preserveComments})
 	if err != nil {
 		return err
 	}
-	if err := workspace.BuildOutputs(value, manifestPath, result.Content, *force); err != nil {
+	if err := workspace.BuildOutputsWithOptions(value, manifestPath, result.Content, *force, render.Options{PreserveHTMLComments: *preserveComments}); err != nil {
 		return err
 	}
 	for _, warning := range result.Warnings {

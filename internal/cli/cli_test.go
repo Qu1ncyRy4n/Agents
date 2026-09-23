@@ -55,6 +55,83 @@ func TestRunBuildWritesConfiguredOutput(t *testing.T) {
 	}
 }
 
+func TestRunLibInitScanAndCheck(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "rules.md"), []byte("# Rules\nBody.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"lib", "scan", libraryPath, "--dry-run"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "schema:\n    id: mogent/1") {
+		t.Fatalf("scan output = %q", stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(libraryPath, "library.mogent.yaml")); !os.IsNotExist(err) {
+		t.Fatalf("scan wrote sidecar: %v", err)
+	}
+	stdout.Reset()
+	if err := cli.Run([]string{"lib", "init", libraryPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.Run([]string{"lib", "check", libraryPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Library sidecar check passed") {
+		t.Fatalf("check output = %q", stdout.String())
+	}
+	if err := cli.Run([]string{"lib", "init", libraryPath}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "refusing to overwrite") {
+		t.Fatalf("overwrite error = %v", err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	if err := os.WriteFile(manifestPath, []byte("sources:\n  local: library\ndoc:\n  - Rules: local:rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := cli.Run([]string{"lib", "check", "--source", "local", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRunBuildPreservesHTMLCommentsOnlyWhenRequested(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "rules.md"), []byte("# Rules\n<!-- audit -->\nBody.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	if err := os.WriteFile(manifestPath, []byte("sources:\n  local: library\noutput: generated.md\ndoc:\n  - Rules: local:rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"build", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(filepath.Join(temporary, "generated.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(contents), "audit") {
+		t.Fatalf("default build retained comment: %q", contents)
+	}
+	if err := cli.Run([]string{"build", "--manifest", manifestPath, "--force", "--preserve-html-comments"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	contents, err = os.ReadFile(filepath.Join(temporary, "generated.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(contents), "<!-- audit -->") {
+		t.Fatalf("preserved build removed comment: %q", contents)
+	}
+}
+
 func TestRunBuildRemovesNewOutputWhenStateWriteFails(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

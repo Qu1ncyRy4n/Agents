@@ -3,6 +3,9 @@
 Status: in progress; source declaration is implemented through the public
 workspace API and the remaining command details stay reviewable.
 
+Library-root structural metadata, validation, and the planned `mogent lib`
+command family are specified in [Library Sidecar Design](LIBRARY-SIDECAR-DESIGN.md).
+
 ## Goal
 
 Make source declaration, manifest placement, reordering, and module creation

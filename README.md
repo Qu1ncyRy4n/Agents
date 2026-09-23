@@ -277,6 +277,25 @@ Use a non-default manifest path:
 mogent build --manifest testing-ground/metadata-library/agents.yaml
 ```
 
+## Library Sidecars
+
+An optional `library.mogent.yaml` at a library root records library identity,
+the exhaustive directory/heading tree, display titles, ordering, and validated
+relationships. When present, its complete valid tree controls rendered source
+ordering and headings without changing source references or Markdown bodies.
+Create or inspect a deterministic candidate and validate it with:
+
+```sh
+mogent lib init /path/to/library
+mogent lib scan /path/to/library --dry-run
+mogent lib check /path/to/library
+mogent lib check --source shared --manifest agents.yaml
+```
+
+`init` never overwrites an existing sidecar. Rendered Markdown strips HTML
+comments by default; use `mogent build --preserve-html-comments` for an audit
+render. Raw directory outputs always copy source files unchanged.
+
 Show workspace state:
 
 ```sh
