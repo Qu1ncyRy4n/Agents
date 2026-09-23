@@ -270,6 +270,97 @@ func TestRunStatusReportsWorkspaceState(t *testing.T) {
 	}
 }
 
+func TestRunStatusReportsRawDirectoryTree(t *testing.T) {
+	temporary := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(temporary, "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(temporary, "skills", "review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(temporary, "agents", "core.md"), []byte("# Core\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(temporary, "skills", "review", "SKILL.md"), []byte("# Review\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(temporary, "skills", "review", "asset.txt"), []byte("asset\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  agents: agents\n  skills: skills\noutputs:\n  - path: AGENTS.md\n    include:\n      - all: agents\n  - path: .agents/skills/\n    include:\n      - all: skills\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"status", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "- skills: skills (directory tree, 2 files)") {
+		t.Fatalf("status = %q", stdout.String())
+	}
+}
+
+func TestRunDriftDiffAndFlagParsing(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "rules.md"), []byte("# Rules\nExpected.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	if err := os.WriteFile(manifestPath, []byte("sources:\n  local: library\noutput: AGENTS.md\ndoc:\n  - Rules: local:rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"build", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(temporary, "AGENTS.md"), []byte("# Rules\nChanged.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	if err := cli.Run([]string{"drift", "--diff", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"--- expected", "+++ actual", "-Expected.", "+Changed."} {
+		if !strings.Contains(stdout.String(), expected) {
+			t.Fatalf("diff missing %q:\n%s", expected, stdout.String())
+		}
+	}
+	if err := cli.Run([]string{"drift", "--diff", "--reject", "--force", "--manifest", manifestPath}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "cannot be combined") {
+		t.Fatalf("flag error = %v", err)
+	}
+}
+
+func TestRunDriftDiffReportsCleanOutput(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "rules.md"), []byte("# Rules\nExpected.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	if err := os.WriteFile(manifestPath, []byte("sources:\n  local: library\noutput: AGENTS.md\ndoc:\n  - Rules: local:rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"build", "--manifest", manifestPath}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	if err := cli.Run([]string{"drift", "--manifest", manifestPath, "--diff"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "No Markdown drift: expected render matches on-disk output.") {
+		t.Fatalf("clean diff = %q", stdout.String())
+	}
+}
+
 func TestRunCoverageReportsUnusedSourceNodes(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

@@ -80,22 +80,7 @@ func LoadDocumentSources(value *manifest.Manifest, manifestPath string) (map[str
 // skipping aliases used only by raw directory outputs. Those outputs may contain
 // non-Mogent Markdown such as Agent Skills frontmatter.
 func LoadWorkspaceSources(value *manifest.Manifest, manifestPath string) (map[string]*library.Index, error) {
-	usedByDocument := documentSourceAliases(value.Doc)
-	directoryOnly := make(map[string]bool)
-	for _, output := range value.Outputs {
-		if !output.Directory() {
-			continue
-		}
-		if output.From != "" {
-			alias, _, err := manifest.SplitReference(output.From)
-			if err == nil && !usedByDocument[alias] {
-				directoryOnly[alias] = true
-			}
-		}
-		if len(output.Include) == 1 && output.Include[0].All != "" && len(output.Exclude) == 0 && !usedByDocument[output.Include[0].All] {
-			directoryOnly[output.Include[0].All] = true
-		}
-	}
+	directoryOnly := value.RawDirectorySourceAliases()
 	aliases := make([]string, 0, len(value.Sources))
 	for alias := range value.Sources {
 		if !directoryOnly[alias] {

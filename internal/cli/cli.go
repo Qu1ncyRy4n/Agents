@@ -21,7 +21,7 @@ func commands() []commandDefinition {
 		{name: "build", usage: "build [--manifest agents.yaml] [--force] [--preserve-html-comments]", run: runBuild},
 		{name: "lib", usage: "lib <init|scan|check> ...", run: runLib},
 		{name: "status", usage: "status [--manifest agents.yaml]", run: runStatus},
-		{name: "drift", usage: "drift [--manifest agents.yaml]", run: runDrift},
+		{name: "drift", usage: "drift [--manifest agents.yaml] [--diff]", run: runDrift},
 		{name: "coverage", usage: "coverage [source] [--manifest agents.yaml]", run: runCoverage},
 		{name: "source", usage: "source <add|list|show|pin|update> ...", run: runSource},
 		{name: "add", usage: "add <ref> [--under path [--first|--last] | --before path | --after path | --append]", run: runAdd},

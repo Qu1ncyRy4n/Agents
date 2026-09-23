@@ -52,23 +52,25 @@ library:
     default_branch: main
   license: null
 
+content:
+  markdown_roots: [agents]
+  directory_roots: [skills]
+
 tree:
-  - source: agents
+  - source: agents/intro
+    title: Intro
+
+  - source: agents/workflow
+    title: Workflow / Process
     children:
-      - source: agents/intro
-        title: Intro
-
-      - source: agents/workflow
-        title: Workflow / Process
+      - source: agents/workflow/decision-first
+        title: Decision First
         children:
-          - source: agents/workflow/decision-first
-            title: Decision First
-            children:
-              - source: agents/workflow/decision-first/plan-ahead
-                title: Plan Ahead
+          - source: agents/workflow/decision-first/plan-ahead
+            title: Plan Ahead
 
-      - source: agents/constraints
-        title: Constraints and Safety
+  - source: agents/constraints
+    title: Constraints and Safety
 
 groups:
   thought-experiment-trigger:
@@ -77,9 +79,21 @@ groups:
 
 `tree` is a sequence, so its order is deliberate YAML sequence order rather than
 mapping iteration order. `source` paths are library-root-relative. A source
-declared with `subdir: agents` maps back into the root sidecar at `agents/...`.
+alias may select a repository subdirectory, but that alias is manifest-local and
+is distinct from the library root that owns the sidecar.
 
-Every discovered directory and Markdown heading must appear once in the tree.
+`content.markdown_roots` declares the only Markdown subtrees this root sidecar
+loads and validates. `content.directory_roots` declares raw directory-copy
+subtrees; Mogent does not parse their Markdown. Roots must be distinct, existing
+ordinary directories and may not overlap. The configured Markdown root is
+virtual: `agents` is not a tree node, so an `all` selection renders `Intro`,
+`Workflow / Process`, and `Constraints and Safety` without an `Agents` wrapper.
+Archives or reference material outside these roots are ignored by sidecar-backed
+loading. A sidecar without `content` retains exhaustive whole-library behavior.
+
+Every discovered directory and Markdown heading within declared Markdown roots
+must appear once in the tree. With `content`, the root directories themselves
+are virtual and cannot appear in the tree.
 A node may be represented only by `source`; `title`, relationships, and other
 properties are optional. This makes the sidecar exhaustive without requiring
 metadata for every ordinary module.

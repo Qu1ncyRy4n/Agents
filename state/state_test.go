@@ -247,3 +247,32 @@ func TestLegacyAbsoluteV2StateMigratesOnWrite(t *testing.T) {
 		t.Fatalf("migrated state = %s", migrated)
 	}
 }
+
+func TestWritePreservesOtherOutputRecords(t *testing.T) {
+	workspace := t.TempDir()
+	statePath := filepath.Join(workspace, ".mogent", "state.json")
+	markdown := filepath.Join(workspace, "AGENTS.md")
+	skills := filepath.Join(workspace, ".agents", "skills")
+	if err := os.MkdirAll(skills, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(markdown, []byte("before\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skills, "SKILL.md"), []byte("skill\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	hashes, err := state.DirectoryHashes(skills)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.WriteAll(statePath, map[string]string{markdown: "before\n"}, map[string]map[string]string{skills: hashes}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Write(statePath, markdown, "after\n"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := state.InspectDirectory(skills, statePath); err != nil || got != state.OutputClean {
+		t.Fatalf("skills state after Markdown write = %s, %v", got, err)
+	}
+}

@@ -643,6 +643,61 @@ func (m *Manifest) EffectiveOutputs() []Output {
 	return append([]Output{{Path: m.Output}}, m.Outputs...)
 }
 
+// RawDirectorySourceAliases returns sources selected only for directory-tree
+// outputs. Such sources are copied without interpreting their Markdown.
+func (m *Manifest) RawDirectorySourceAliases() map[string]bool {
+	indexed := make(map[string]bool)
+	markEntries := func(entries []Entry) {}
+	markEntries = func(entries []Entry) {
+		for _, entry := range entries {
+			for _, reference := range append(entry.From, entry.Exclude...) {
+				if alias, _, err := SplitReference(reference); err == nil {
+					indexed[alias] = true
+				}
+			}
+			markEntries(entry.Children)
+		}
+	}
+	markEntries(m.Doc)
+
+	directory := make(map[string]bool)
+	for _, output := range m.EffectiveOutputs() {
+		if output.Directory() {
+			if output.From != "" {
+				if alias, _, err := SplitReference(output.From); err == nil {
+					directory[alias] = true
+				}
+			}
+			for _, selector := range output.Include {
+				if selector.All != "" {
+					directory[selector.All] = true
+				}
+			}
+			continue
+		}
+		for _, selector := range output.Include {
+			switch {
+			case selector.All != "":
+				indexed[selector.All] = true
+			case selector.Source != "":
+				if alias, _, err := SplitReference(selector.Source); err == nil {
+					indexed[alias] = true
+				}
+			case len(selector.Tags) > 0:
+				for alias := range m.Sources {
+					indexed[alias] = true
+				}
+			}
+		}
+	}
+	for alias := range directory {
+		if indexed[alias] {
+			delete(directory, alias)
+		}
+	}
+	return directory
+}
+
 func (e Entry) validate(location string) error {
 	if strings.TrimSpace(e.Heading) == "" {
 		return fmt.Errorf("%s requires heading", location)

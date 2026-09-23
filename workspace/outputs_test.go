@@ -85,3 +85,79 @@ func TestBuildOutputsRejectsSourceTargetsAndSymlinks(t *testing.T) {
 		t.Fatalf("symlink error = %v", err)
 	}
 }
+
+func TestSessionStatusDistinguishesRawDirectorySources(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "skills", "review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "agents", "core.md"), []byte("# Core\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "skills", "review", "SKILL.md"), []byte("# Review\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "skills", "review", "checklist.txt"), []byte("check\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(root, "agents.yaml")
+	value := &manifest.Manifest{Sources: map[string]manifest.Source{"agents": {Location: "agents"}, "skills": {Location: "skills"}}, Outputs: []manifest.Output{{Path: "AGENTS.md", Include: []manifest.Selector{{All: "agents"}}}, {Path: ".agents/skills/", Include: []manifest.Selector{{All: "skills"}}}}}
+	if err := manifest.WriteAtomically(manifestPath, value); err != nil {
+		t.Fatal(err)
+	}
+	session, err := New(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, err := session.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Sources[0].Alias != "agents" || status.Sources[0].DirectoryTree || status.Sources[0].Nodes != 1 {
+		t.Fatalf("indexed source = %#v", status.Sources[0])
+	}
+	if status.Sources[1].Alias != "skills" || !status.Sources[1].DirectoryTree || status.Sources[1].Files != 2 {
+		t.Fatalf("raw source = %#v", status.Sources[1])
+	}
+}
+
+func TestSessionStatusReportsRootSidecarDirectoryTrees(t *testing.T) {
+	root := t.TempDir()
+	libraryRoot := filepath.Join(root, "library")
+	if err := os.MkdirAll(filepath.Join(libraryRoot, "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(libraryRoot, "skills", "review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryRoot, "agents", "core.md"), []byte("# Core\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryRoot, "skills", "review", "SKILL.md"), []byte("# Review\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sidecar := "schema: {id: mogent/1}\nlibrary: {name: Test}\ncontent:\n  markdown_roots: [agents]\n  directory_roots: [skills]\ntree:\n  - source: agents/core\n"
+	if err := os.WriteFile(filepath.Join(libraryRoot, "library.mogent.yaml"), []byte(sidecar), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(root, "agents.yaml")
+	value := &manifest.Manifest{Sources: map[string]manifest.Source{"qmr": {Location: "library"}}, Outputs: []manifest.Output{{Path: "AGENTS.md", Include: []manifest.Selector{{All: "qmr"}}}, {Path: ".agents/skills/", From: "qmr:skills"}}}
+	if err := manifest.WriteAtomically(manifestPath, value); err != nil {
+		t.Fatal(err)
+	}
+	session, err := New(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, err := session.Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := status.Sources[0]
+	if source.Alias != "qmr" || source.Nodes != 1 || len(source.DirectoryTrees) != 1 || source.DirectoryTrees[0] != (DirectoryTreeStatus{Path: "skills", Files: 1}) {
+		t.Fatalf("root sidecar source = %#v", source)
+	}
+}

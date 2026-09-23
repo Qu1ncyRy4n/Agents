@@ -20,6 +20,7 @@ const SidecarFile = "library.mogent.yaml"
 type Sidecar struct {
 	Schema  SidecarSchema           `yaml:"schema"`
 	Library SidecarLibrary          `yaml:"library"`
+	Content *SidecarContent         `yaml:"content,omitempty"`
 	Tree    []SidecarTreeNode       `yaml:"tree"`
 	Groups  map[string]SidecarGroup `yaml:"groups,omitempty"`
 }
@@ -35,6 +36,13 @@ type SidecarLibrary struct {
 	Organization any    `yaml:"organization,omitempty"`
 	Repository   any    `yaml:"repository,omitempty"`
 	License      any    `yaml:"license,omitempty"`
+}
+
+// SidecarContent limits a root sidecar to explicitly publishable subtrees.
+// Directory roots are copied raw by directory outputs and are not parsed here.
+type SidecarContent struct {
+	MarkdownRoots  []string `yaml:"markdown_roots,omitempty"`
+	DirectoryRoots []string `yaml:"directory_roots,omitempty"`
 }
 type SidecarGroup struct {
 	Mode string `yaml:"mode"`
@@ -93,24 +101,36 @@ func LoadSidecar(root string) (*Sidecar, []string, error) {
 // presentation metadata. Load remains the raw source inventory API for scan
 // and validation callers.
 func LoadWithSidecar(root string) (*Index, []string, error) {
-	index, err := Load(root)
-	if err != nil {
-		return nil, nil, err
-	}
 	sidecar, warnings, err := LoadSidecar(root)
 	if errors.Is(err, os.ErrNotExist) {
+		index, loadErr := Load(root)
+		if loadErr != nil {
+			return nil, nil, loadErr
+		}
 		return index, nil, nil
 	}
 	if err != nil {
 		return nil, nil, err
 	}
-	report := validateSidecar(sidecar, index)
+	report := validateContentRoots(root, sidecar.Content)
+	if len(report.Errors) == 0 {
+		index, loadErr := loadForSidecar(root, sidecar)
+		if loadErr != nil {
+			return nil, append(warnings, report.Warnings...), loadErr
+		}
+		validation := validateSidecar(sidecar, index)
+		report.Errors = append(report.Errors, validation.Errors...)
+		report.Warnings = append(report.Warnings, validation.Warnings...)
+		if len(report.Errors) == 0 {
+			applySidecar(index, sidecar)
+			return index, append(warnings, report.Warnings...), nil
+		}
+	}
 	report.Warnings = append(warnings, report.Warnings...)
 	if len(report.Errors) > 0 {
 		return nil, report.Warnings, fmt.Errorf("library sidecar validation failed: %s", strings.Join(report.Errors, "; "))
 	}
-	applySidecar(index, sidecar)
-	return index, report.Warnings, nil
+	panic("unreachable")
 }
 
 // Check validates a sidecar against the Markdown source inventory.
@@ -119,14 +139,71 @@ func Check(root string) (*CheckReport, error) {
 	if err != nil {
 		return nil, err
 	}
-	index, err := Load(root)
-	if err != nil {
-		return nil, err
+	report := validateContentRoots(root, sidecar.Content)
+	if len(report.Errors) == 0 {
+		index, loadErr := loadForSidecar(root, sidecar)
+		if loadErr != nil {
+			return nil, loadErr
+		}
+		validation := validateSidecar(sidecar, index)
+		report.Errors = append(report.Errors, validation.Errors...)
+		report.Warnings = append(report.Warnings, validation.Warnings...)
 	}
-	report := validateSidecar(sidecar, index)
 	report.Warnings = append(warnings, report.Warnings...)
 	sort.Strings(report.Warnings)
 	return report, nil
+}
+
+func loadForSidecar(root string, sidecar *Sidecar) (*Index, error) {
+	if sidecar.Content == nil {
+		return Load(root)
+	}
+	return load(root, sidecar.Content.MarkdownRoots)
+}
+
+func validateContentRoots(root string, content *SidecarContent) *CheckReport {
+	report := &CheckReport{}
+	if content == nil {
+		return report
+	}
+	roots := append(append([]string(nil), content.MarkdownRoots...), content.DirectoryRoots...)
+	if len(content.MarkdownRoots) == 0 {
+		report.addError("content.markdown_roots must declare at least one Markdown root")
+	}
+	seen := map[string]bool{}
+	for _, path := range roots {
+		if !validSidecarPath(path) {
+			report.addError("content root %q is not a normalized library-relative path", path)
+			continue
+		}
+		if seen[path] {
+			report.addError("duplicate content root %q", path)
+		}
+		seen[path] = true
+		info, err := os.Lstat(filepath.Join(root, filepath.FromSlash(path)))
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				report.addError("content root %q does not exist", path)
+			} else {
+				report.addError("inspect content root %q: %v", path, err)
+			}
+			continue
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			report.addError("content root %q is an unsafe symlink", path)
+		} else if !info.IsDir() {
+			report.addError("content root %q is not a directory", path)
+		}
+	}
+	for left := range seen {
+		for right := range seen {
+			if left < right && (strings.HasPrefix(right, left+"/") || strings.HasPrefix(left, right+"/")) {
+				report.addError("content roots %q and %q overlap", left, right)
+			}
+		}
+	}
+	sort.Strings(report.Errors)
+	return report
 }
 
 func validateSidecar(sidecar *Sidecar, index *Index) *CheckReport {
@@ -163,6 +240,9 @@ func validateSidecar(sidecar *Sidecar, index *Index) *CheckReport {
 		}
 	}
 	for path, node := range declared {
+		if sidecar.Content != nil && !withinMarkdownRoots(path, sidecar.Content.MarkdownRoots) {
+			report.addError("tree source %q is outside declared Markdown content roots", path)
+		}
 		actual, found := index.ByPath[path]
 		for _, target := range append(append([]string(nil), node.Requires...), node.ConflictsWith...) {
 			if _, ok := declared[target]; !ok {
@@ -212,6 +292,15 @@ func validateSidecar(sidecar *Sidecar, index *Index) *CheckReport {
 	sort.Strings(report.Errors)
 	sort.Strings(report.Warnings)
 	return report
+}
+
+func withinMarkdownRoots(path string, roots []string) bool {
+	for _, root := range roots {
+		if strings.HasPrefix(path, root+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func applySidecar(index *Index, sidecar *Sidecar) {

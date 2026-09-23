@@ -59,6 +59,12 @@ type Index struct {
 // Load recursively reads Markdown files. A source must be a directory, and
 // duplicate heading paths are errors rather than arbitrary source precedence.
 func Load(root string) (*Index, error) {
+	return load(root, nil)
+}
+
+// load inventories either the entire source or only the supplied Markdown
+// roots. Scoped roots retain paths relative to root.
+func load(root string, markdownRoots []string) (*Index, error) {
 	info, err := os.Lstat(root)
 	if err != nil {
 		return nil, fmt.Errorf("read source %q: %w", root, err)
@@ -69,24 +75,33 @@ func Load(root string) (*Index, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("source %q is not a directory", root)
 	}
+	searchRoots := []string{root}
+	if markdownRoots != nil {
+		searchRoots = make([]string, 0, len(markdownRoots))
+		for _, markdownRoot := range markdownRoots {
+			searchRoots = append(searchRoots, filepath.Join(root, filepath.FromSlash(markdownRoot)))
+		}
+	}
 	var files []string
-	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.Type()&os.ModeSymlink != 0 {
-			return symlinkError(root, path)
-		}
-		if entry.IsDir() {
+	for _, searchRoot := range searchRoots {
+		err = filepath.WalkDir(searchRoot, func(path string, entry os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.Type()&os.ModeSymlink != 0 {
+				return symlinkError(root, path)
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			if strings.EqualFold(filepath.Ext(path), ".md") {
+				files = append(files, path)
+			}
 			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("walk source %q: %w", root, err)
 		}
-		if strings.EqualFold(filepath.Ext(path), ".md") {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("walk source %q: %w", root, err)
 	}
 	sort.Strings(files)
 	if len(files) == 0 {
@@ -114,7 +129,25 @@ func Load(root string) (*Index, error) {
 		}
 	}
 	index.buildTree(root, directories)
+	for _, markdownRoot := range markdownRoots {
+		index.removeVirtualRoot(markdownRoot)
+	}
 	return index, nil
+}
+
+func (i *Index) removeVirtualRoot(path string) {
+	virtual, found := i.ByPath[path]
+	if !found {
+		return
+	}
+	delete(i.ByPath, path)
+	for index, root := range i.Roots {
+		if root != virtual {
+			continue
+		}
+		i.Roots = append(append(i.Roots[:index:index], virtual.Children...), i.Roots[index+1:]...)
+		return
+	}
 }
 
 func symlinkError(root, path string) error {

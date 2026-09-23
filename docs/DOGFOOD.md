@@ -395,6 +395,7 @@ manifest section, then run:
 
 ```sh
 mogent drift --manifest "$mogent_manifest"
+mogent drift --manifest "$mogent_manifest" --diff
 mogent drift --manifest "$mogent_manifest" --import Instructions/Go\ Tests
 ```
 
@@ -413,6 +414,9 @@ mogent drift --manifest "$mogent_manifest" --reject --force
 ```
 
 Promotion back to a trusted shared source remains future work.
+`drift --diff` compares the expected generated Markdown with the local generated
+file only. Comparing source versions or pins is future work and is not part of
+`drift`.
 
 ## Stage 8: Pinned URL Sources
 

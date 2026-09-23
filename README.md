@@ -280,9 +280,24 @@ mogent build --manifest testing-ground/metadata-library/agents.yaml
 ## Library Sidecars
 
 An optional `library.mogent.yaml` at a library root records library identity,
-the exhaustive directory/heading tree, display titles, ordering, and validated
-relationships. When present, its complete valid tree controls rendered source
-ordering and headings without changing source references or Markdown bodies.
+the exhaustive selected directory/heading tree, display titles, ordering, and
+validated relationships. A central repository sidecar can explicitly select
+publishable Markdown and raw-copy roots while leaving unrelated material out:
+
+```yaml
+content:
+  markdown_roots: [agents]
+  directory_roots: [skills]
+```
+
+Markdown source paths remain repository-root-relative, such as
+`agents/intro`. The configured Markdown root is virtual, so selecting `all` of
+the repository renders its children without an `Agents` wrapper. `archive/`,
+`reference/`, and `proposals/` outside `content` are not parsed or indexed.
+`directory_roots` are declarative raw-copy trees and their Markdown is not
+parsed. A sidecar without `content` retains full-library behavior. When present,
+its complete valid tree controls rendered source ordering and headings without
+changing source references or Markdown bodies.
 Create or inspect a deterministic candidate and validate it with:
 
 ```sh
@@ -291,6 +306,11 @@ mogent lib scan /path/to/library --dry-run
 mogent lib check /path/to/library
 mogent lib check --source shared --manifest agents.yaml
 ```
+
+The manifest source alias (for example `qmr`) is a local manifest name, while a
+library root is the repository directory containing `library.mogent.yaml`.
+Aliases may still use `subdir` to address a narrow source root, but a central
+root sidecar always stores `tree.source` paths relative to its library root.
 
 `init` never overwrites an existing sidecar. Rendered Markdown strips HTML
 comments by default; use `mogent build --preserve-html-comments` for an audit
@@ -428,6 +448,7 @@ Inspect or explicitly resolve direct edits to generated output:
 
 ```sh
 mogent drift
+mogent drift --diff
 mogent drift --import Instructions/Testing
 mogent drift --reject --force
 ```
@@ -435,6 +456,9 @@ mogent drift --reject --force
 Localization writes ordinary Markdown under `.mogent/library`, records its
 origin in `.mogent/provenance.yaml`, and changes the selected manifest reference
 to `local:`. Drift import refuses edits outside the selected section.
+`drift --diff` compares the expected Markdown render with the local generated
+Markdown without writing files. Source-version drift and pin comparison are
+future work; they are not `drift` behavior.
 
 Open the TUI:
 
@@ -499,6 +523,7 @@ Mogent writes `agents.yaml` and `AGENTS.md` conservatively.
 - `localize --dry-run` writes nothing; localization never changes a shared source.
 - `drift --import` accepts only one unambiguous edited section.
 - `drift --reject` requires `--force` before discarding direct edits.
+- `drift --diff` is read-only and prints no patch when generated Markdown matches.
 - Shared source libraries are read-only inputs during normal build/add flows.
 
 ## Testing Ground

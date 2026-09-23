@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/manifest"
 	"github.com/Qu1ncyRy4n/Agents/render"
@@ -18,6 +19,7 @@ func runDrift(args []string, stdout, stderr io.Writer) error {
 	from := flags.String("from", "", "source reference to localize for a composed entry")
 	reject := flags.Bool("reject", false, "reject direct edits and rebuild from the manifest")
 	force := flags.Bool("force", false, "confirm rejection of direct edits")
+	diff := flags.Bool("diff", false, "print a unified diff of expected and on-disk Markdown")
 	args = reorderArgs(args, map[string]bool{
 		"-manifest": true, "--manifest": true,
 		"-import": true, "--import": true,
@@ -31,6 +33,9 @@ func runDrift(args []string, stdout, stderr io.Writer) error {
 	}
 	if *reject && *importHeading != "" {
 		return fmt.Errorf("drift accepts only one of --reject or --import")
+	}
+	if *diff && (*reject || *importHeading != "") {
+		return fmt.Errorf("drift --diff cannot be combined with --reject or --import")
 	}
 	session, err := workspace.New(*manifestFile)
 	if err != nil {
@@ -67,6 +72,17 @@ func runDrift(args []string, stdout, stderr io.Writer) error {
 	}
 	if report.DirectEdits {
 		if _, err := fmt.Fprintln(stdout, "Direct edits detected. Use --import <manifest-heading-path> or review and use --reject --force."); err != nil {
+			return fmt.Errorf("write drift result: %w", err)
+		}
+	}
+	if *diff {
+		if !report.Changed {
+			if _, err := fmt.Fprintln(stdout, "No Markdown drift: expected render matches on-disk output."); err != nil {
+				return fmt.Errorf("write drift result: %w", err)
+			}
+			return nil
+		}
+		if _, err := fmt.Fprint(stdout, workspace.UnifiedDiff(report.Expected, report.Actual)); err != nil {
 			return fmt.Errorf("write drift result: %w", err)
 		}
 	}
@@ -206,7 +222,21 @@ func runStatus(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("write status: %w", err)
 	}
 	for _, source := range status.Sources {
-		if _, err := fmt.Fprintf(stdout, "- %s: %s (%d nodes)\n", source.Alias, source.Path, source.Nodes); err != nil {
+		if source.DirectoryTree {
+			if _, err := fmt.Fprintf(stdout, "- %s: %s (directory tree, %d files)\n", source.Alias, source.Path, source.Files); err != nil {
+				return fmt.Errorf("write status: %w", err)
+			}
+			continue
+		}
+		detail := fmt.Sprintf("%d nodes", source.Nodes)
+		if len(source.DirectoryTrees) > 0 {
+			trees := make([]string, 0, len(source.DirectoryTrees))
+			for _, tree := range source.DirectoryTrees {
+				trees = append(trees, fmt.Sprintf("%s (%d files)", tree.Path, tree.Files))
+			}
+			detail += "; directory trees: " + strings.Join(trees, ", ")
+		}
+		if _, err := fmt.Fprintf(stdout, "- %s: %s (%s)\n", source.Alias, source.Path, detail); err != nil {
 			return fmt.Errorf("write status: %w", err)
 		}
 	}

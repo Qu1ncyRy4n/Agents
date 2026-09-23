@@ -108,7 +108,31 @@ func CheckOverwrite(outputPath, statePath string, force bool) error {
 
 // Write records exactly the content just written to the generated output.
 func Write(statePath, outputPath, output string) error {
-	return WriteAll(statePath, map[string]string{outputPath: output}, nil)
+	previous, err := readState(statePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	outputs := make(map[string]record, len(previous.Outputs)+1)
+	for path, value := range previous.Outputs {
+		key, err := portableStateKey(statePath, path)
+		if err != nil {
+			return err
+		}
+		outputs[key] = value
+	}
+	if previous.OutputPath != "" && previous.SHA256 != "" {
+		key, err := portableStateKey(statePath, previous.OutputPath)
+		if err != nil {
+			return err
+		}
+		outputs[key] = record{Kind: "file", SHA256: previous.SHA256}
+	}
+	key, err := outputKey(statePath, outputPath)
+	if err != nil {
+		return err
+	}
+	outputs[key] = record{Kind: "file", SHA256: Hash([]byte(output))}
+	return writeOutputs(statePath, outputs)
 }
 
 // WriteAll records all generated files and directory trees together. It writes
@@ -134,6 +158,17 @@ func WriteAll(statePath string, files map[string]string, directories map[string]
 		}
 		outputs[key] = record{Kind: "directory", Files: copy}
 	}
+	return writeOutputs(statePath, outputs)
+}
+
+func portableStateKey(statePath, path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return outputKey(statePath, path)
+	}
+	return filepath.ToSlash(path), nil
+}
+
+func writeOutputs(statePath string, outputs map[string]record) error {
 	contents, err := json.MarshalIndent(generated{Version: 3, Outputs: outputs}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode generated-output state: %w", err)

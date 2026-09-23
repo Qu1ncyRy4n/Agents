@@ -49,6 +49,21 @@ func TestLoadNormalizesCompactAndExplicitEntries(t *testing.T) {
 	}
 }
 
+func TestRawDirectorySourceAliasesKeepsCanonicalMarkdownSourcesIndexed(t *testing.T) {
+	value := &manifest.Manifest{
+		Sources: map[string]manifest.Source{"shared": {Location: "library"}, "skills": {Location: "skills"}},
+		Outputs: []manifest.Output{
+			{Path: "AGENTS.md", Include: []manifest.Selector{{All: "shared"}}},
+			{Path: ".agents/shared/", Include: []manifest.Selector{{All: "shared"}}},
+			{Path: ".agents/skills/", Include: []manifest.Selector{{All: "skills"}}},
+		},
+	}
+	raw := value.RawDirectorySourceAliases()
+	if raw["shared"] || !raw["skills"] || len(raw) != 1 {
+		t.Fatalf("raw directory sources = %#v", raw)
+	}
+}
+
 func TestLoadNormalizesCompactAndExplicitSources(t *testing.T) {
 	temporary := t.TempDir()
 	path := filepath.Join(temporary, "agents.yaml")

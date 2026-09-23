@@ -197,6 +197,55 @@ tree:
 	}
 }
 
+func TestRenderOutputAllUsesVirtualRootSidecarContent(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.MkdirAll(filepath.Join(libraryPath, "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "agents", "intro.md"), "# Intro\nIntro body.\n")
+	writeFile(t, filepath.Join(libraryPath, "agents", "workflow.md"), "# Workflow / Process\nWorkflow body.\n")
+	writeFile(t, filepath.Join(libraryPath, "agents", "constraints.md"), "# Constraints and Safety\nSafety body.\n")
+	if err := os.MkdirAll(filepath.Join(libraryPath, "archive"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(libraryPath, "archive", "broken.md"), "---\nunknown: true\n---\n# Broken\n")
+	writeFile(t, filepath.Join(libraryPath, "library.mogent.yaml"), `schema: {id: mogent/1}
+library: {name: Test}
+content:
+  markdown_roots: [agents]
+  directory_roots: [skills]
+tree:
+  - source: agents/intro
+    title: Intro
+  - source: agents/workflow-process
+    title: Workflow / Process
+  - source: agents/constraints-and-safety
+    title: Constraints and Safety
+`)
+	if err := os.Mkdir(filepath.Join(libraryPath, "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	writeFile(t, manifestPath, "roots:\n  qmr: library\nsources:\n  qmr: {path: {root: qmr}}\noutputs:\n  - path: AGENTS.md\n    include: [{all: qmr}]\n")
+	value, loadedPath, err := manifest.Load(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := render.RenderOutput(value, loadedPath, value.Outputs[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Content, "# Agents") {
+		t.Fatalf("virtual root rendered a wrapper:\n%s", result.Content)
+	}
+	for _, want := range []string{"# Intro", "# Workflow / Process", "# Constraints and Safety"} {
+		if !strings.Contains(result.Content, want) {
+			t.Fatalf("missing %q:\n%s", want, result.Content)
+		}
+	}
+}
+
 func TestBuildRejectsInvalidSidecar(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

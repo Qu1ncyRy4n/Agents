@@ -63,6 +63,121 @@ func TestLoadWithSidecarLeavesSidecarFreeLibraryUnchanged(t *testing.T) {
 	}
 }
 
+func TestLoadWithSidecarScopesRootContentAndHidesVirtualMarkdownRoot(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "agents", "intro.md"), "# Intro\nWelcome.\n")
+	if err := os.MkdirAll(filepath.Join(root, "archive"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "archive", "broken.md"), "---\nnot_a_mogent_field: true\n---\n# Broken\n")
+	writeTestFile(t, filepath.Join(root, "library.mogent.yaml"), `schema: {id: mogent/1}
+library: {name: Test}
+content:
+  markdown_roots: [agents]
+  directory_roots: [skills]
+tree:
+  - source: agents/intro
+`)
+	if err := os.Mkdir(filepath.Join(root, "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	loaded, _, err := library.LoadWithSidecar(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, found := loaded.ByPath["agents"]; found {
+		t.Fatal("configured Markdown root was retained as a selectable node")
+	}
+	if _, found := loaded.ByPath["archive/broken"]; found {
+		t.Fatal("unconfigured archive was indexed")
+	}
+	if len(loaded.Roots) != 1 || loaded.Roots[0].Path != "agents/intro" {
+		t.Fatalf("roots = %#v, want agents/intro", loaded.Roots)
+	}
+}
+
+func TestCheckRejectsInvalidContentRoots(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "agents", "nested"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "agents", "nested", "intro.md"), "# Intro\n")
+	writeTestFile(t, filepath.Join(root, "not-directory"), "file\n")
+	if err := os.Mkdir(filepath.Join(root, "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, library.SidecarFile), `schema: {id: mogent/1}
+library: {name: Test}
+content:
+  markdown_roots: [agents, agents/nested]
+  directory_roots: [skills, skills, not-directory, missing, ../outside]
+tree: []
+`)
+	report, err := library.Check(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"overlap", "duplicate content root", "not a directory", "does not exist", "not a normalized"} {
+		if !contains(report.Errors, want) {
+			t.Fatalf("errors missing %q: %#v", want, report.Errors)
+		}
+	}
+}
+
+func TestCheckRejectsTreeOutsideMarkdownContentRoots(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "agents", "intro.md"), "# Intro\n")
+	if err := os.Mkdir(filepath.Join(root, "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, library.SidecarFile), `schema: {id: mogent/1}
+library: {name: Test}
+content:
+  markdown_roots: [agents]
+  directory_roots: [skills]
+tree:
+  - source: agents/intro
+  - source: skills
+`)
+	report, err := library.Check(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !contains(report.Errors, "outside declared Markdown content roots") {
+		t.Fatalf("errors = %#v", report.Errors)
+	}
+}
+
+func TestSidecarWithoutContentStillIndexesEntireLibrary(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "rules.md"), "# Rules\n")
+	if err := os.Mkdir(filepath.Join(root, "archive"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "archive", "history.md"), "# History\n")
+	writeTestFile(t, filepath.Join(root, library.SidecarFile), `schema: {id: mogent/1}
+library: {name: Test}
+tree:
+  - source: archive
+    children:
+      - source: archive/history
+  - source: rules
+`)
+	loaded, _, err := library.LoadWithSidecar(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, found := loaded.ByPath["archive/history"]; !found {
+		t.Fatal("legacy sidecar did not inventory archive content")
+	}
+}
+
 func TestCheckReportsSidecarContractViolationsAndOwnershipWarnings(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, filepath.Join(root, "rules.md"), "---\nrequires: [other]\nconflicts_with: [other]\n---\n# Rules\n## Child\nBody.\n")
