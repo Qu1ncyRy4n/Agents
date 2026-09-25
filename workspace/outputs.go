@@ -193,32 +193,34 @@ func snapshotOutputTree(outputs []configuredOutput, statePath string) (*outputSn
 			if info.IsDir() {
 				hashes, hashErr := state.DirectoryHashes(output.path)
 				if hashErr != nil {
-					os.RemoveAll(root)
-					return nil, hashErr
+					return nil, cleanupSnapshot(root, hashErr)
 				}
 				s.directoryFiles[output.path] = hashes
 			}
 			backup := filepath.Join(root, fmt.Sprintf("%d", i))
 			s.backups[output.path] = backup
 			if err := copyPath(output.path, backup); err != nil {
-				os.RemoveAll(root)
-				return nil, err
+				return nil, cleanupSnapshot(root, err)
 			}
 		} else if !errors.Is(err, os.ErrNotExist) {
-			os.RemoveAll(root)
-			return nil, err
+			return nil, cleanupSnapshot(root, err)
 		}
 	}
 	s.state, s.stateExisted, err = readOptional(statePath)
 	if err != nil {
-		os.RemoveAll(root)
-		return nil, err
+		return nil, cleanupSnapshot(root, err)
 	}
 	return s, nil
 }
 
+func cleanupSnapshot(root string, original error) error {
+	if err := os.RemoveAll(root); err != nil {
+		return errors.Join(original, fmt.Errorf("remove rollback snapshot %q: %w", root, err))
+	}
+	return original
+}
+
 func rollbackOutputTree(original error, snapshot *outputSnapshot) error {
-	defer os.RemoveAll(snapshot.root)
 	var errs []error
 	for path, existed := range snapshot.paths {
 		if err := os.RemoveAll(path); err != nil {
@@ -237,6 +239,9 @@ func rollbackOutputTree(original error, snapshot *outputSnapshot) error {
 		}
 	} else if err := os.Remove(snapshot.statePath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		errs = append(errs, err)
+	}
+	if err := os.RemoveAll(snapshot.root); err != nil {
+		errs = append(errs, fmt.Errorf("remove rollback snapshot %q: %w", snapshot.root, err))
 	}
 	return errors.Join(append([]error{original}, errs...)...)
 }

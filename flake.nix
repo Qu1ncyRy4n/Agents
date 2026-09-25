@@ -24,6 +24,7 @@
           default = pkgs.mkShell {
             packages = [
               pkgs.go
+              pkgs.gotools
               pkgs.gcc
               pkgs.errcheck
               pkgs.ripgrep
