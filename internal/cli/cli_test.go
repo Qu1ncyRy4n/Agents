@@ -55,6 +55,35 @@ func TestRunBuildWritesConfiguredOutput(t *testing.T) {
 	}
 }
 
+func TestRunBuildDryRunWritesNothing(t *testing.T) {
+	temporary := t.TempDir()
+	libraryPath := filepath.Join(temporary, "library")
+	if err := os.Mkdir(libraryPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "identity.md"), []byte("# Identity\nHello.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(temporary, "agents.yaml")
+	manifest := "sources:\n  local: library\noutput: generated.md\ndoc:\n  - heading: Agent\n    from: [local:identity]\n"
+	if err := os.WriteFile(manifestPath, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"build", "--manifest", manifestPath, "--dry-run"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if stdout.String() != "Dry run: no files written\n" {
+		t.Fatalf("dry-run output = %q", stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(temporary, "generated.md")); !os.IsNotExist(err) {
+		t.Fatalf("dry-run wrote output: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(temporary, ".mogent", "state.json")); !os.IsNotExist(err) {
+		t.Fatalf("dry-run wrote state: %v", err)
+	}
+}
+
 func TestRunLibInitScanAndCheck(t *testing.T) {
 	temporary := t.TempDir()
 	libraryPath := filepath.Join(temporary, "library")

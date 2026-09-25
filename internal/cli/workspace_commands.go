@@ -147,6 +147,7 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	dryRun := flags.Bool("dry-run", false, "render and validate without writing output files")
 	force := flags.Bool("force", false, "replace an untracked or directly edited output")
 	preserveComments := flags.Bool("preserve-html-comments", false, "retain HTML comments in rendered Markdown")
 	if err := parseFlags(flags, args); err != nil {
@@ -167,15 +168,21 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := workspace.BuildOutputsWithOptions(value, manifestPath, result.Content, *force, render.Options{PreserveHTMLComments: *preserveComments}); err != nil {
-		return err
+	if !*dryRun {
+		if err := workspace.BuildOutputsWithOptions(value, manifestPath, result.Content, *force, render.Options{PreserveHTMLComments: *preserveComments}); err != nil {
+			return err
+		}
 	}
 	for _, warning := range result.Warnings {
 		if _, err := fmt.Fprintf(stderr, "mogent: warning: %s\n", warning); err != nil {
 			return fmt.Errorf("write warning: %w", err)
 		}
 	}
-	if _, err := fmt.Fprintf(stdout, "Wrote generated outputs\n"); err != nil {
+	message := "Wrote generated outputs\n"
+	if *dryRun {
+		message = "Dry run: no files written\n"
+	}
+	if _, err := fmt.Fprint(stdout, message); err != nil {
 		return fmt.Errorf("write success message: %w", err)
 	}
 	return nil
