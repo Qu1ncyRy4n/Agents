@@ -1,0 +1,80 @@
+#!/usr/bin/env sh
+set -eu
+
+target=${1:-/tmp/mogent-boss-demo/todo_app_project}
+todo_repo=${TODO_REPO:-/home/qix/dev/exocortex/todo_app_project}
+qmr_library=${QMR_LIBRARY:-/home/qix/dev/cdint/qmr-agents-library}
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+mogent_repo=$(dirname "$script_dir")
+
+if [ -e "$target" ]; then
+  printf '%s\n' "refusing to replace existing demo target: $target" >&2
+  printf '%s\n' "remove it explicitly after confirming the path, then rerun" >&2
+  exit 1
+fi
+if [ ! -d "$todo_repo/.git" ]; then
+  printf '%s\n' "todo repository not found: $todo_repo" >&2
+  exit 1
+fi
+if [ ! -f "$qmr_library/library.mogent.yaml" ]; then
+  printf '%s\n' "QMR library not found: $qmr_library" >&2
+  exit 1
+fi
+if ! command -v mogent >/dev/null 2>&1; then
+  printf '%s\n' "mogent is not installed; run $mogent_repo/tools/install first" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$target")"
+git clone --quiet --local --no-hardlinks "$todo_repo" "$target"
+git -C "$target" switch --quiet -c demo/mogent-boss
+
+# Begin with an unmanaged generated tree and two accidental direct edits. This
+# models adoption of a repository that already contains agent policy/tooling.
+rm -f "$target/.mogent/state.json"
+printf '\n%s\n' '<!-- demo: accidental local edit to generated policy -->' >> "$target/AGENTS.md"
+printf '\n%s\n' '<!-- demo: accidental edit to a generated skill -->' >> "$target/.agents/skills/rust-development/SKILL.md"
+
+mkdir -p "$target/demo-outline"
+cat > "$target/demo-outline/agents.yaml" <<EOF
+sources:
+  qmr: $qmr_library
+
+output: AGENTS.md
+
+doc:
+  - Intro:
+      - Assistant Agent: qmr:agents/intro/assistant-agent
+  - Instructions:
+      - Focused Change Loop: qmr:agents/constraints/focused-change-loop
+      - Security: qmr:agents/constraints/security
+EOF
+mogent build --manifest "$target/demo-outline/agents.yaml"
+
+mkdir -p "$target/demo-remote"
+cat > "$target/demo-remote/agents.yaml" <<EOF
+sources:
+  fixture: $mogent_repo/testing-ground/fixture-library/cdint
+
+output: AGENTS.md
+
+doc:
+  - Instructions:
+      - Focused Change Loop: fixture:shared-baseline/instructions/focused-change-loop
+EOF
+mogent build --manifest "$target/demo-remote/agents.yaml"
+
+cat <<EOF
+Prepared Mogent boss demo at:
+  $target
+
+Use these variables:
+  export MOGENT_REPO="$mogent_repo"
+  export QMR_LIBRARY="$qmr_library"
+  export DEMO_ROOT="$target"
+  export OUTLINE_MANIFEST="\$DEMO_ROOT/demo-outline/agents.yaml"
+  export REMOTE_MANIFEST="\$DEMO_ROOT/demo-remote/agents.yaml"
+
+The repository root is intentionally unmanaged and directly edited.
+The demo-outline and demo-remote workspaces begin clean.
+EOF

@@ -596,6 +596,8 @@ for stricter Claude behavior, while `GEMINI.md` might simply symlink to
 
 - [docs/DESIGN.md](docs/DESIGN.md) is the design of record.
 - [docs/DOGFOOD.md](docs/DOGFOOD.md) stages current features for dogfooding and issue reporting.
+- [docs/demo/MOGENT-BOSS-DEMO.md](docs/demo/MOGENT-BOSS-DEMO.md) is a
+  slide-separated live-demo runbook using a disposable todo-app clone.
 - [docs/dogfood/history/DOGFOOD-SESSION-3.md](docs/dogfood/history/DOGFOOD-SESSION-3.md) exercises only the new directory-tree and display work.
 - [docs/HANDOFF.md](docs/HANDOFF.md) is the stable handoff navigation entry;
   its linked dated pickup is the detailed current resume point.
