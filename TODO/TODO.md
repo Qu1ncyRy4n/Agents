@@ -113,6 +113,13 @@ the owner records an answer here.
 	- [ ] [blocked] **M-C5** Write external-style examples — after M-C3
 	- [ ] [ready] **M-C6** Merge outstanding branches
 	- [ ] [ready] **M-C7** Restructure remaining directories (carryover from the CLI split)
+	- [ ] [ready] **M-C8** Make coverage account for canonical `outputs:`
+	  selectors; current coverage reports selector-included nodes as unused because
+	  it follows only the legacy authored `doc:` tree
+	- [ ] [ready] **M-C9** Preserve and apply a repository-root
+	  `library.mogent.yaml` when pinning a whole remote library; current remote
+	  cache materialization omits the root sidecar, so consumers must pin a narrow
+	  `subdir` to avoid indexing unrelated repository Markdown
 	- [ ] [active] **M-Q1** Run one bounded QMR core-and-constraints template
 	  dogfood experiment in a real personal consumer repository; record the result
 	  in `docs/ACTIVE-DOGFOOD.md`
