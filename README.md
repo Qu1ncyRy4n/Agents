@@ -8,6 +8,12 @@ The short version:
 - Libraries hold reusable Markdown modules.
 - `agents.yaml` chooses, orders, and renames those modules for one repo.
 - `mogent build` renders the manifest to `AGENTS.md`.
+- `mogent build --dry-run` validates the render without writing outputs or state.
+
+## License
+
+No license is granted at this time. Do not copy, redistribute, or adopt Mogent
+outside this repository without explicit permission from its owner.
 
 This is usable for local and immutably pinned URL libraries, manifest-driven
 generation, copy-on-write localization, and conservative single-section drift
@@ -41,6 +47,18 @@ From the repository root, `go install .` is not: the root has no Go package.
 The Nix development shell includes GCC for diagnostics and dependencies that
 genuinely require a C compiler, but Mogent's supported install does not require
 it.
+
+## Handle Minting
+
+`mogent mint` generates an unused proquint handle after scanning the repository
+corpus. Use `-n` to verify a deterministic candidate without reserving it:
+
+```sh
+mogent mint -r . -w 1 -n
+```
+
+Use `-w 2` when a two-word handle is required. The command prints the handle; it
+does not create a file or modify the repository.
 
 The repository check entrypoint defaults to the pure-Go build and keeps its
 build cache under `/tmp`:
@@ -531,7 +549,7 @@ Mogent writes `agents.yaml` and `AGENTS.md` conservatively.
 For a feature-by-feature exercise sequence and issue template, see
 [`docs/DOGFOOD.md`](docs/DOGFOOD.md). For only the newest selectable-directory
 and unified-tree behavior, use
-[`docs/DOGFOOD-SESSION-3.md`](docs/DOGFOOD-SESSION-3.md).
+[`docs/dogfood/history/DOGFOOD-SESSION-3.md`](docs/dogfood/history/DOGFOOD-SESSION-3.md).
 
 Try the metadata-oriented sandbox:
 
@@ -578,7 +596,7 @@ for stricter Claude behavior, while `GEMINI.md` might simply symlink to
 
 - [docs/DESIGN.md](docs/DESIGN.md) is the design of record.
 - [docs/DOGFOOD.md](docs/DOGFOOD.md) stages current features for dogfooding and issue reporting.
-- [docs/DOGFOOD-SESSION-3.md](docs/DOGFOOD-SESSION-3.md) exercises only the new directory-tree and display work.
+- [docs/dogfood/history/DOGFOOD-SESSION-3.md](docs/dogfood/history/DOGFOOD-SESSION-3.md) exercises only the new directory-tree and display work.
 - [docs/HANDOFF.md](docs/HANDOFF.md) is the stable handoff navigation entry;
   its linked dated pickup is the detailed current resume point.
 - [docs/AUTHORING-PLAN.md](docs/AUTHORING-PLAN.md) stages source declaration, move/reorder, and guided module creation.

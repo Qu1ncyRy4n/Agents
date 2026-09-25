@@ -379,4 +379,4 @@ promoted independently into a lighter canonical workflow.
 The review batch is committed for durable inspection but remains pending owner
 feedback. Committed does not mean approved or promoted into an organization
 library. Canonical detailed task state now lives in `TODO/TODO.md`; use
-`TODO/PICKUP-2026-08-25-libv2-intake.md` as the current resume point.
+`TODO/archive/PICKUP-2026-08-25-libv2-intake.md` as the current resume point.

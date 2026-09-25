@@ -199,7 +199,7 @@ bundle:
 
 - staged deletion: `AGENTS.toml`;
 - unstaged deletion: `AGENTS.md`;
-- untracked: `2026-08-20_quickpres.md`;
+- archived: `docs/archive/2026-08-20_quickpres.md`;
 - untracked: `docs/notes_on_lib_mods.md`;
 - untracked: `docs/steve-feedback.txt`; and
 - untracked: `responsescratch.md`.

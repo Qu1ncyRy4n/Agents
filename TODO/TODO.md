@@ -4,8 +4,8 @@
 |--------|-------|--------|
 | jusuk | Mogent: Modular Agent Prompt Manager | [open](TODO-jusuk-mogent-agent-modules.md) |
 | pickup-2026-09-04-agents-library-dogfood | Current agents-library dogfood checkpoint | [active](PICKUP-2026-09-04-agents-library-dogfood.md) |
-| pickup-2026-08-25-libv2-intake | Historical libv2 intake checkpoint | [historical](PICKUP-2026-08-25-libv2-intake.md) |
-| pickup-2026-08-05-library-split | Historical library split checkpoint | [historical](PICKUP-2026-08-05-library-split.md) |
+| pickup-2026-08-25-libv2-intake | Historical libv2 intake checkpoint | [historical](archive/PICKUP-2026-08-25-libv2-intake.md) |
+| pickup-2026-08-05-library-split | Historical library split checkpoint | [historical](archive/PICKUP-2026-08-05-library-split.md) |
 
 ## Canonical Mogent Task List
 
@@ -34,7 +34,7 @@ Canonical repository tracking:
 
 - [`libv2-proto/WORKLIST.md`](../libv2-proto/WORKLIST.md) is historical intake
   evidence.
-- [`TODO/PICKUP-2026-08-25-libv2-intake.md`](PICKUP-2026-08-25-libv2-intake.md)
+- [`TODO/archive/PICKUP-2026-08-25-libv2-intake.md`](archive/PICKUP-2026-08-25-libv2-intake.md)
   is a historical checkpoint.
 - [`docs/library-curation/archive/LIBV2-PROTO-PROGRESS-REPORT.md`](../docs/library-curation/archive/LIBV2-PROTO-PROGRESS-REPORT.md)
   preserves the historical progress report.
