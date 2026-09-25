@@ -64,6 +64,20 @@ func TestRawDirectorySourceAliasesKeepsCanonicalMarkdownSourcesIndexed(t *testin
 	}
 }
 
+func TestEntrySourceAliasesIncludesNestedExclusions(t *testing.T) {
+	aliases := manifest.EntrySourceAliases([]manifest.Entry{{
+		Heading: "Parent",
+		Children: []manifest.Entry{{
+			Heading: "Child",
+			From:    []string{"shared:rules"},
+			Exclude: []string{"other:rules/draft"},
+		}},
+	}})
+	if !aliases["shared"] || !aliases["other"] || len(aliases) != 2 {
+		t.Fatalf("entry source aliases = %#v", aliases)
+	}
+}
+
 func TestLoadNormalizesCompactAndExplicitSources(t *testing.T) {
 	temporary := t.TempDir()
 	path := filepath.Join(temporary, "agents.yaml")

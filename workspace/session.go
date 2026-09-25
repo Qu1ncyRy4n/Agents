@@ -129,18 +129,3 @@ func readOptional(path string) ([]byte, bool, error) {
 	}
 	return contents, true, nil
 }
-
-func rollbackSave(saveErr error, manifestPath string, originalManifest []byte, outputPath string, originalOutput []byte, outputExisted bool) error {
-	var rollbackErrs []error
-	if err := render.WriteAtomically(manifestPath, string(originalManifest)); err != nil {
-		rollbackErrs = append(rollbackErrs, fmt.Errorf("restore manifest: %w", err))
-	}
-	if outputExisted {
-		if err := render.WriteAtomically(outputPath, string(originalOutput)); err != nil {
-			rollbackErrs = append(rollbackErrs, fmt.Errorf("restore output: %w", err))
-		}
-	} else if err := os.Remove(outputPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		rollbackErrs = append(rollbackErrs, fmt.Errorf("remove new output after failed save: %w", err))
-	}
-	return errors.Join(append([]error{saveErr}, rollbackErrs...)...)
-}

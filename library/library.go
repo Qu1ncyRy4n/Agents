@@ -284,7 +284,8 @@ func parseFile(root string, path string) ([]*Node, error) {
 	var roots []*Node
 	var stack []*parsedNode
 	var current *Node
-	var fence fenceState
+	var fence Fence
+	inFence := false
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 1024), 1024*1024)
 	lineNumber := 0
@@ -310,17 +311,17 @@ func parseFile(root string, path string) ([]*Node, error) {
 			frontmatter.WriteByte('\n')
 			continue
 		}
-		if fence.active {
-			if fence.closes(line) {
-				fence = fenceState{}
+		if inFence {
+			if fence.Closes(line) {
+				inFence = false
 			}
 			if current != nil {
 				current.Body += line + "\n"
 			}
 			continue
 		}
-		if opened := parseFence(line); opened.active {
-			fence = opened
+		if opened, ok := OpenFence(line); ok {
+			fence, inFence = opened, true
 			if current != nil {
 				current.Body += line + "\n"
 			}
@@ -388,35 +389,37 @@ func parseFile(root string, path string) ([]*Node, error) {
 	return roots, nil
 }
 
-type fenceState struct {
+// Fence identifies a CommonMark fenced code block delimiter.
+type Fence struct {
 	character byte
 	length    int
-	active    bool
 }
 
-func parseFence(line string) fenceState {
+// OpenFence reports whether line opens a CommonMark fenced code block.
+func OpenFence(line string) (Fence, bool) {
 	indent := 0
 	for indent < len(line) && line[indent] == ' ' {
 		indent++
 	}
 	if indent > 3 || indent == len(line) {
-		return fenceState{}
+		return Fence{}, false
 	}
 	character := line[indent]
 	if character != '`' && character != '~' {
-		return fenceState{}
+		return Fence{}, false
 	}
 	length := 0
 	for indent+length < len(line) && line[indent+length] == character {
 		length++
 	}
 	if length < 3 {
-		return fenceState{}
+		return Fence{}, false
 	}
-	return fenceState{character: character, length: length, active: true}
+	return Fence{character: character, length: length}, true
 }
 
-func (fence fenceState) closes(line string) bool {
+// Closes reports whether line closes this fence.
+func (fence Fence) Closes(line string) bool {
 	indent := 0
 	for indent < len(line) && line[indent] == ' ' {
 		indent++

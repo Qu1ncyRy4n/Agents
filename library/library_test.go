@@ -110,6 +110,31 @@ func TestLoadKeepsHeadingsInsideFencedBlocksInTheBody(t *testing.T) {
 	}
 }
 
+func TestOpenFenceRecognizesCommonMarkDelimiters(t *testing.T) {
+	tests := []struct {
+		line  string
+		opens bool
+		close string
+	}{
+		{line: "```go", opens: true, close: "```"},
+		{line: "   ~~~~", opens: true, close: "   ~~~~"},
+		{line: "    ```", opens: false},
+		{line: "``", opens: false},
+		{line: "---", opens: false},
+	}
+	for _, test := range tests {
+		t.Run(test.line, func(t *testing.T) {
+			fence, opens := library.OpenFence(test.line)
+			if opens != test.opens {
+				t.Fatalf("OpenFence(%q) opens = %t, want %t", test.line, opens, test.opens)
+			}
+			if test.close != "" && !fence.Closes(test.close) {
+				t.Fatalf("Fence from %q did not close with %q", test.line, test.close)
+			}
+		})
+	}
+}
+
 func TestLoadUsesDirectoryPathAsHeadingPrefix(t *testing.T) {
 	temporary := t.TempDir()
 	sourceDir := filepath.Join(temporary, "lang", "go")

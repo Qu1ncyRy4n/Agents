@@ -332,21 +332,6 @@ func (e *Entry) decodeOptions(options map[string]*yaml.Node) error {
 	return nil
 }
 
-func mappingNodes(value *yaml.Node) (map[string]*yaml.Node, error) {
-	if value.Kind != yaml.MappingNode || len(value.Content)%2 != 0 {
-		return nil, fmt.Errorf("entry options must be a mapping")
-	}
-	result := make(map[string]*yaml.Node, len(value.Content)/2)
-	for index := 0; index < len(value.Content); index += 2 {
-		key, node := value.Content[index].Value, value.Content[index+1]
-		if _, exists := result[key]; exists {
-			return nil, fmt.Errorf("duplicate entry key %q", key)
-		}
-		result[key] = node
-	}
-	return result, nil
-}
-
 func rejectUnknownEntryKeys(keys map[string]*yaml.Node) error {
 	for key := range keys {
 		if key != "heading" && key != "from" && key != "exclude" && key != "children" {
@@ -646,20 +631,7 @@ func (m *Manifest) EffectiveOutputs() []Output {
 // RawDirectorySourceAliases returns sources selected only for directory-tree
 // outputs. Such sources are copied without interpreting their Markdown.
 func (m *Manifest) RawDirectorySourceAliases() map[string]bool {
-	indexed := make(map[string]bool)
-	markEntries := func(entries []Entry) {}
-	markEntries = func(entries []Entry) {
-		for _, entry := range entries {
-			for _, reference := range append(entry.From, entry.Exclude...) {
-				if alias, _, err := SplitReference(reference); err == nil {
-					indexed[alias] = true
-				}
-			}
-			markEntries(entry.Children)
-		}
-	}
-	markEntries(m.Doc)
-
+	indexed := EntrySourceAliases(m.Doc)
 	directory := make(map[string]bool)
 	for _, output := range m.EffectiveOutputs() {
 		if output.Directory() {
@@ -696,6 +668,24 @@ func (m *Manifest) RawDirectorySourceAliases() map[string]bool {
 		}
 	}
 	return directory
+}
+
+// EntrySourceAliases returns aliases referenced by a document outline.
+func EntrySourceAliases(entries []Entry) map[string]bool {
+	aliases := make(map[string]bool)
+	var visit func([]Entry)
+	visit = func(entries []Entry) {
+		for _, entry := range entries {
+			for _, reference := range append(append([]string(nil), entry.From...), entry.Exclude...) {
+				if alias, _, err := SplitReference(reference); err == nil {
+					aliases[alias] = true
+				}
+			}
+			visit(entry.Children)
+		}
+	}
+	visit(entries)
+	return aliases
 }
 
 func (e Entry) validate(location string) error {

@@ -112,21 +112,7 @@ func loadSourceAliases(value *manifest.Manifest, manifestPath string, aliases []
 // require unrelated Markdown elsewhere in their source roots to parse as a
 // Mogent library.
 func documentSourceAliases(entries []manifest.Entry) map[string]bool {
-	aliases := make(map[string]bool)
-	var visit func([]manifest.Entry)
-	visit = func(entries []manifest.Entry) {
-		for _, entry := range entries {
-			for _, reference := range append(append([]string(nil), entry.From...), entry.Exclude...) {
-				alias, _, err := manifest.SplitReference(reference)
-				if err == nil {
-					aliases[alias] = true
-				}
-			}
-			visit(entry.Children)
-		}
-	}
-	visit(entries)
-	return aliases
+	return manifest.EntrySourceAliases(entries)
 }
 
 // ResolveSourcePath returns the physical root used for a source. Directory
@@ -340,18 +326,19 @@ func RenderOutputWithOptions(value *manifest.Manifest, manifestPath string, outp
 func stripHTMLComments(content string) string {
 	var output strings.Builder
 	inComment := false
-	fence := libraryFence{}
+	var fence library.Fence
+	inFence := false
 	for _, line := range strings.SplitAfter(content, "\n") {
 		bare := strings.TrimSuffix(line, "\n")
-		if fence.active {
+		if inFence {
 			output.WriteString(line)
-			if fence.closes(bare) {
-				fence = libraryFence{}
+			if fence.Closes(bare) {
+				inFence = false
 			}
 			continue
 		}
-		if opened := openFence(bare); opened.active {
-			fence = opened
+		if opened, ok := library.OpenFence(bare); ok {
+			fence, inFence = opened, true
 			output.WriteString(line)
 			continue
 		}
@@ -381,42 +368,6 @@ func stripHTMLComments(content string) string {
 		}
 	}
 	return output.String()
-}
-
-type libraryFence struct {
-	character byte
-	length    int
-	active    bool
-}
-
-func openFence(line string) libraryFence {
-	indent := len(line) - len(strings.TrimLeft(line, " "))
-	if indent > 3 || indent == len(line) {
-		return libraryFence{}
-	}
-	c := line[indent]
-	if c != '`' && c != '~' {
-		return libraryFence{}
-	}
-	n := 0
-	for indent+n < len(line) && line[indent+n] == c {
-		n++
-	}
-	if n < 3 {
-		return libraryFence{}
-	}
-	return libraryFence{c, n, true}
-}
-func (f libraryFence) closes(line string) bool {
-	indent := len(line) - len(strings.TrimLeft(line, " "))
-	if indent > 3 || indent == len(line) || line[indent] != f.character {
-		return false
-	}
-	n := 0
-	for indent+n < len(line) && line[indent+n] == f.character {
-		n++
-	}
-	return n >= f.length && strings.TrimSpace(line[indent+n:]) == ""
 }
 
 type selectorNode struct {

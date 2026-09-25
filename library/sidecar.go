@@ -130,7 +130,7 @@ func LoadWithSidecar(root string) (*Index, []string, error) {
 	if len(report.Errors) > 0 {
 		return nil, report.Warnings, fmt.Errorf("library sidecar validation failed: %s", strings.Join(report.Errors, "; "))
 	}
-	panic("unreachable")
+	return nil, report.Warnings, errors.New("library sidecar validation reached an invalid state")
 }
 
 // Check validates a sidecar against the Markdown source inventory.
