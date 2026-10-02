@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/starter"
+	"github.com/Qu1ncyRy4n/Agents/v2"
 	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
 
@@ -64,7 +65,9 @@ func (s sourceBindings) Set(value string) error {
 func runInit(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("init", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	manifestFile := flags.String("manifest", "agents.yaml", "new manifest path")
+	manifestFile := flags.String("manifest", "", "legacy YAML manifest path")
+	configFile := flags.String("config", v2.ConfigFile, "new v2 HCL configuration path")
+	root := flags.String("root", "agents", "v2 server-side Markdown root")
 	templateName := flags.String("template", "", "starter template name")
 	output := flags.String("output", "AGENTS.md", "generated output path")
 	listTemplates := flags.Bool("list-templates", false, "list starter templates")
@@ -77,6 +80,8 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 	flags.Var(variables, "var", "manifest template variable name=value; repeat as needed")
 	args = reorderArgs(args, map[string]bool{
 		"-manifest": true, "--manifest": true,
+		"-config": true, "--config": true,
+		"-root": true, "--root": true,
 		"-template": true, "--template": true,
 		"-output": true, "--output": true,
 		"-source": true, "--source": true,
@@ -91,6 +96,30 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 	}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("init accepts no positional arguments")
+	}
+	if *manifestFile == "" && !*listTemplates {
+		if *templateName != "" || len(sources) != 1 || len(variables) != 0 {
+			if len(sources) == 0 && *templateName == "" && len(variables) == 0 {
+				_, err := fmt.Fprintln(stdout, "HCL v2 setup:\n  mogent init --source alias=local-path\n\nNext: mogent init --source cdint=../cdint-demo-lib")
+				return err
+			}
+			return fmt.Errorf("v2 init requires --config, exactly one --source alias=local-path, and optional --output or --root")
+		}
+		for alias, local := range sources {
+			content, err := v2.Init(*configFile, alias, local, *root, *output, *dryRun)
+			if err != nil {
+				return err
+			}
+			if *dryRun {
+				_, err = fmt.Fprint(stdout, content)
+			} else {
+				_, err = fmt.Fprintf(stdout, "Wrote starter config %s\nNext: mogent plan --config %s\n", *configFile, *configFile)
+			}
+			return err
+		}
+	}
+	if *manifestFile == "" && !*listTemplates {
+		return fmt.Errorf("legacy YAML init requires --manifest agents.yaml")
 	}
 	if *listTemplates || *templateName == "" {
 		if _, err := fmt.Fprintln(stdout, "Starter templates:"); err != nil {
