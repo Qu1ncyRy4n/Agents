@@ -458,6 +458,9 @@ Tag-based selection and a polished core library are necessary; a TUI is not.
 
 ## Open Questions
 
+- The attribute name `offer` is provisional. The alternatives considered,
+  the reasoning for the provisional choice, and the rename checklist are in
+  `DR/DR-nalan-offer-attribute-name.md` (owner decision C13).
 - Behavior of a branch with no `offer`. Options: treat as `optional` with
   `default = true` (library must say less), or require `offer` on every branch
   (library must say more, consumer never guesses). Leaning: require it, since

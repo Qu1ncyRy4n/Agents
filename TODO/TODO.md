@@ -92,6 +92,12 @@ the owner records an answer here.
 	- [x] [historical] [decision] **C10 — Dogfood sequence:** complete libv2 before
 	  dogfooding. Decided 2026-08-25; superseded for bounded QMR personal-library
 	  dogfooding by the Current Library Direction above.
+- [ ] [ready] [decision] **C13 — Finalize the sidecar selection-guidance
+  attribute name:** `offer` (library voice, Promise Theory `+` promise, values
+  `foundation | choose | optional | opt_in`) is in use provisionally; the
+  live alternative is `choice` with consumer-voice values. Reasoning and the
+  rename checklist are in [`DR/DR-nalan-offer-attribute-name.md`](../DR/DR-nalan-offer-attribute-name.md).
+  Decide together with whether `offer` becomes required on every branch.
 - [x] [done] [decision] **C12 — Todo app's role:** use it first as a dogfood
   target, then for planned multi-agent features, and possibly as a product.
   Decided 2026-08-25.

@@ -185,10 +185,9 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
 
 Record blockers here as they appear, with the task number.
 
-- V2-1: the attribute name `offer` is a placeholder the owner has not
-  confirmed. Candidates discussed: `offer`, `policy`, `intent`, `tier`.
-  Change `OfferFoundation` and siblings in `v2/library.go`, the HCL tag on
-  `sectionBlock.Offer`, the spec, and the QMR sidecar together.
+- V2-1: the attribute name `offer` is provisional (owner decision C13).
+  Candidates, reasoning, and the rename checklist:
+  `DR/DR-nalan-offer-attribute-name.md`.
 - Spec: whether `offer` becomes required on every branch section.
 - V2-7: a pinned `git` checkout is trusted by its commit directory name; no
   content hash is re-verified on read. Git's own content addressing is the

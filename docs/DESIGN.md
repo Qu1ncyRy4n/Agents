@@ -513,7 +513,10 @@ stale.
 | `TODO/PICKUP-<date>-<workstream>.md` | Detailed, replaceable resume checkpoint for one active workstream | active or historical |
 | `docs/HANDOFF.md` | Stable navigation entry point for agent transfer | active |
 | `docs/IMPLEMENTATION-M3.md` | Core-first localization and drift contract | active |
-| `docs/IMPLEMENTATION-M4.md` | Immutable URL source pinning contract | active |
+| `docs/IMPLEMENTATION-M4.md` | Immutable URL source pinning contract (v1) | active |
+| `docs/proposals/MOGENT-HCL-V2-SPEC.md` | v2 `mogent.hcl` configuration, sidecar offers, commit pinning, plan/apply/update | active |
+| `TODO/TODO-pupab-hcl-v2-rollout.md` | v2 implementation checklist and open questions | active |
+| `DR/DR-nalan-offer-attribute-name.md` | Naming of the sidecar `offer` attribute, candidates and reasoning | open |
 | `docs/MULTIPLE-OUTPUTS-PLAN.md` | Planned schema, transaction, drift, and decision work for multiple outputs | planning |
 | `docs/PUBLIC-API-AND-CLEANUP-PLAN.md` | Public Go API decisions, cleanup backlog, skills research, and owner dogfood tasks | planning |
 | `docs/LIBRARY-REVIEW-PLAN.md` | Owner-notes triage, library cleanup sequence, relationship decisions, and protected source-comparison method | planning |
