@@ -1,0 +1,118 @@
+#!/usr/bin/env sh
+# Run the v2 acceptance scenarios from docs/proposals/MOGENT-HCL-V2-SPEC.md
+# against a library checkout. Default library: ../qmr-agents-library.
+#
+#   tools/v2-stories [/path/to/library]
+#
+# Each scenario runs in a fresh temporary consumer directory. The script
+# fails on the first assertion that does not hold and prints the command
+# output that was being checked.
+set -eu
+
+library="${1:-$(cd "$(dirname "$0")/.." && pwd)/../qmr-agents-library}"
+library="$(cd "$library" && pwd)"
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+export CGO_ENABLED="${CGO_ENABLED:-0}"
+export GOCACHE="${GOCACHE:-/tmp/mogent-gocache}"
+export GOMODCACHE="${GOMODCACHE:-/tmp/mogent-gopath/pkg/mod}"
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+(cd "$repo" && go build -o "$work/mogent" ./cmd/mogent)
+mogent="$work/mogent"
+
+expect() { # expect <needle> <file>
+  if ! grep -qF -- "$1" "$2"; then
+    echo "v2-stories: expected $(printf %s "$1" | head -c 80) in output:" >&2
+    cat "$2" >&2
+    exit 1
+  fi
+}
+refuse() { # refuse <needle> <file>
+  if grep -qF -- "$1" "$2"; then
+    echo "v2-stories: did not expect $1 in output:" >&2
+    cat "$2" >&2
+    exit 1
+  fi
+}
+
+qmr_select='select = {
+        intro       = true
+        workflow    = { accept_defaults = true }
+        constraints = true
+      }'
+
+echo "US-1 new repository"
+mkdir "$work/new" && cd "$work/new"
+"$mogent" init --template qmr-core --source "qmr=$library" > out.txt
+expect "Wrote starter config mogent.hcl" out.txt
+"$mogent" source list qmr --tldr > out.txt
+expect "intro  Intro  [foundation]" out.txt
+expect "workflow  Workflow / Process  [choose]" out.txt
+expect "qmr:skills  (tree, root skills)" out.txt
+"$mogent" plan > out.txt 2> err.txt
+expect "AGENTS.md: new" out.txt
+expect ".agents/skills/: new" out.txt
+expect "warning[MOGENT203]: accepted default true for qmr:workflow/git-commit-mode" err.txt
+"$mogent" apply > out.txt 2> err.txt
+expect "Applied 2 output(s): AGENTS.md, .agents/skills/" out.txt
+test -f AGENTS.md && test -f .agents/skills/git-change-finalization/SKILL.md
+"$mogent" plan > out.txt 2> err.txt
+expect "Plan: 0 to add, 0 to change, 2 unchanged" out.txt
+
+echo "US-4 adopt an existing repository"
+mkdir "$work/adopt" && cd "$work/adopt"
+printf '# Hand written\n\nKeep me.\n' > AGENTS.md
+"$mogent" init --template qmr-core --source "qmr=$library" > out.txt
+"$mogent" plan > out.txt 2> err.txt
+expect "AGENTS.md: changed" out.txt
+expect "-Keep me." out.txt
+expect "warning[MOGENT208]: output \"AGENTS.md\" exists but is not managed by Mogent" err.txt
+if "$mogent" apply > out.txt 2> err.txt; then
+  echo "v2-stories: apply must refuse an unmanaged output" >&2; exit 1
+fi
+expect "untracked output" err.txt
+"$mogent" apply --force > out.txt 2> err.txt
+expect "Applied 2 output(s)" out.txt
+refuse "Keep me." AGENTS.md
+
+echo "US-2 update a working repository"
+upstream="$work/upstream"
+cp -R "$library" "$upstream"
+rm -rf "$upstream/.git"
+git -C "$upstream" init -q
+git -C "$upstream" -c user.name=t -c user.email=t@example.test add . >/dev/null
+git -C "$upstream" -c user.name=t -c user.email=t@example.test commit -q -m "Library"
+mkdir "$work/update" && cd "$work/update"
+"$mogent" init --template qmr-core --source "qmr=file://$upstream" > out.txt
+"$mogent" plan > out.txt 2> err.txt
+expect "warning[MOGENT206]: source \"qmr\" has no commit" err.txt
+"$mogent" apply > out.txt 2> err.txt
+expect "Pinned qmr to " out.txt
+grep -q 'commit = "' mogent.hcl
+"$mogent" update > out.txt
+expect "qmr: up to date at" out.txt
+printf '# Security\n\nUpdated security guidance.\n' > "$upstream/agents/constraints/security.md"
+git -C "$upstream" -c user.name=t -c user.email=t@example.test commit -q -am "Revise security"
+"$mogent" update > out.txt
+expect "+Updated security guidance." out.txt
+expect "Run \`mogent update qmr --accept\`" out.txt
+"$mogent" update qmr --accept > out.txt
+expect "Pinned qmr to" out.txt
+"$mogent" plan > out.txt 2> err.txt
+expect "AGENTS.md: changed" out.txt
+"$mogent" apply > out.txt 2> err.txt
+expect "Applied 2 output(s)" out.txt
+grep -q "Updated security guidance." AGENTS.md
+
+echo "US-5 share a library"
+mkdir "$work/share" && cd "$work/share"
+"$mogent" init --source "qmr=file://$upstream" > out.txt
+"$mogent" source show qmr:constraints/security > out.txt
+expect "Title:  Security" out.txt
+expect "Parent: constraints offers foundation" out.txt
+expect "TLDR:   Protect confidential information" out.txt
+"$mogent" source show qmr:skills > out.txt
+expect "Entry:  nix-development (nix-development)" out.txt
+
+echo "v2-stories: all scenarios passed"

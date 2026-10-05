@@ -208,6 +208,39 @@ func TestOptInChildSelectedExplicitlyWarns(t *testing.T) {
 	}
 }
 
+func TestTagQueriesSelectLeavesAndWarnWhenUnmatched(t *testing.T) {
+	config := loadPlanConfig(t, `
+mogent { format = 2 }
+sources {
+  source "shared" { local = "library" }
+}
+outputs {
+  output "agents" {
+    path = "AGENTS.md"
+    kind = "markdown"
+    source "shared" {
+      from     = "shared:agents"
+      select   = { else = "exclude" }
+      tags_any = ["lang/go", "ghost/none"]
+    }
+  }
+}
+`)
+	library := offerLibrary(t)
+	library.ByPath["org/extras/triage"].Tags = []string{"lang/go/testing"}
+	plan := Compile(config, map[string]*Library{"shared": library})
+	if got := planErrors(plan); len(got) != 0 {
+		t.Fatalf("errors = %#v", got)
+	}
+	if got := strings.Join(selectedPaths(plan), " "); got != "org/extras/triage" {
+		t.Fatalf("selected = %q", got)
+	}
+	codes := diagnosticCodes(plan)
+	if len(codes) != 1 || codes[0] != "MOGENT201" || !strings.Contains(plan.Diagnostics[0].Message, "ghost/none") {
+		t.Fatalf("diagnostics = %#v", plan.Diagnostics)
+	}
+}
+
 func TestLoadLibraryRejectsBadOffers(t *testing.T) {
 	leaf := "section \"leaf\" {\n        title = \"Leaf\"\n        source = \"leaf.md\"\n      }"
 	cases := []struct{ name, section, want string }{

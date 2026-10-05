@@ -17,7 +17,7 @@ type commandDefinition struct {
 // completion, and typo suggestions.
 func commands() []commandDefinition {
 	return []commandDefinition{
-		{name: "init", usage: "init [--template name] [--source alias=path] [--var name=value] | --config mogent.hcl --source alias=local-path|git-url", run: runInit},
+		{name: "init", usage: "init [--template name] [--source alias=path] [--var name=value] | [--template minimal|qmr-core] --source alias=local-path|git-url [--config mogent.hcl]", run: runInit},
 		{name: "build", usage: "build [--manifest agents.yaml] [--dry-run] [--force] [--preserve-html-comments]", run: runBuild},
 		{name: "plan", usage: "plan [--config mogent.hcl]", run: runPlan},
 		{name: "apply", usage: "apply [--config mogent.hcl] [--force]", run: runApply},
@@ -26,7 +26,7 @@ func commands() []commandDefinition {
 		{name: "status", usage: "status [--manifest agents.yaml]", run: runStatus},
 		{name: "drift", usage: "drift [--manifest agents.yaml] [--diff]", run: runDrift},
 		{name: "coverage", usage: "coverage [source] [--manifest agents.yaml]", run: runCoverage},
-		{name: "source", usage: "source <add|list|show|pin|update> ...", run: runSource},
+		{name: "source", usage: "source <add|list|show|pin|update> ... | source list [alias] [--config mogent.hcl] [--tldr] [--tags] | source show alias:path [--config mogent.hcl] [--lines n]", run: runSource},
 		{name: "add", usage: "add <ref> [--under path [--first|--last] | --before path | --after path | --append]", run: runAdd},
 		{name: "localize", usage: "localize <manifest-heading-path> [--from source-ref]", run: runLocalize},
 		{name: "complete", usage: "complete <kind> [--manifest agents.yaml]", run: runComplete},

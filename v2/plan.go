@@ -111,7 +111,7 @@ func Compile(config *Config, libraries map[string]*Library) *Plan {
 			for _, section := range library.Sections {
 				resolver.resolve(section, selection.children[section.Name], selection, false, &plannedSource.Sections)
 			}
-			appendTagSelections(library, configuredSource, &plannedSource.Sections)
+			appendTagSelections(plan, library, configuredSource, &plannedSource.Sections)
 			if len(plannedSource.Sections) == 0 {
 				plan.Diagnostics = append(plan.Diagnostics, Diagnostic{
 					Severity: SeverityWarning,
@@ -144,7 +144,7 @@ func planTreeOutput(plan *Plan, outputName string, source OutputSource, library 
 	}
 }
 
-func appendTagSelections(library *Library, source OutputSource, selected *[]*Section) {
+func appendTagSelections(plan *Plan, library *Library, source OutputSource, selected *[]*Section) {
 	if len(source.TagsAll) == 0 && len(source.TagsAny) == 0 {
 		return
 	}
@@ -152,12 +152,29 @@ func appendTagSelections(library *Library, source OutputSource, selected *[]*Sec
 	for _, section := range *selected {
 		seen[section.Path] = true
 	}
-	for _, section := range libraryLeaves(library.Sections) {
+	leaves := libraryLeaves(library.Sections)
+	for _, section := range leaves {
 		if seen[section.Path] || !matchesTags(library.EffectiveTags(section), source.TagsAll, source.TagsAny) {
 			continue
 		}
 		*selected = append(*selected, section)
 		seen[section.Path] = true
+	}
+	for _, query := range append(append([]string(nil), source.TagsAll...), source.TagsAny...) {
+		matched := false
+		for _, section := range leaves {
+			if containsTag(library.EffectiveTags(section), query) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			plan.Diagnostics = append(plan.Diagnostics, Diagnostic{
+				Severity: SeverityWarning,
+				Code:     "MOGENT201",
+				Message:  fmt.Sprintf("tag %q matches no section in source %q", query, source.Name),
+			})
+		}
 	}
 }
 

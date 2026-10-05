@@ -127,6 +127,40 @@ func TestRunApplyRefusesEditedOutputUntilForced(t *testing.T) {
 	}
 }
 
+func TestRunV2SourceListAndShow(t *testing.T) {
+	root, configPath := writeV2Fixture(t)
+	var stdout, stderr bytes.Buffer
+	if err := cli.Run([]string{"source", "list", "--config", configPath, "--tldr"}, &stdout, &stderr); err != nil {
+		t.Fatalf("source list error = %v\n%s", err, stderr.String())
+	}
+	for _, want := range []string{"shared: Test (local library)\n", "shared:agents\n", "  intro  Intro\n", "    role  Role\n"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("source list missing %q:\n%s", want, stdout.String())
+		}
+	}
+	stdout.Reset()
+	if err := cli.Run([]string{"source", "show", "shared:intro/role", "--config", configPath, "--lines", "1"}, &stdout, &stderr); err != nil {
+		t.Fatalf("source show error = %v\n%s", err, stderr.String())
+	}
+	for _, want := range []string{"shared:intro/role\n", "Title:  Role\n", "Source: " + filepath.Join(root, "library", "agents", "intro", "role.md") + "\n", "---\n# Role\n... (2 more lines)\n"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("source show missing %q:\n%s", want, stdout.String())
+		}
+	}
+	err := cli.Run([]string{"source", "show", "shared:intro/ghost", "--config", configPath}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "no section or tree") {
+		t.Fatalf("missing section error = %v", err)
+	}
+	t.Chdir(root)
+	stdout.Reset()
+	if err := cli.Run([]string{"source", "list"}, &stdout, &stderr); err != nil {
+		t.Fatalf("implicit v2 source list error = %v", err)
+	}
+	if !strings.Contains(stdout.String(), "shared:agents\n") {
+		t.Fatalf("implicit v2 source list output:\n%s", stdout.String())
+	}
+}
+
 func TestRunUpdateRequiresGitSource(t *testing.T) {
 	_, configPath := writeV2Fixture(t)
 	var stdout, stderr bytes.Buffer

@@ -98,15 +98,15 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("init accepts no positional arguments")
 	}
 	if *manifestFile == "" && !*listTemplates {
-		if *templateName != "" || len(sources) != 1 || len(variables) != 0 {
+		if len(sources) != 1 || len(variables) != 0 {
 			if len(sources) == 0 && *templateName == "" && len(variables) == 0 {
-				_, err := fmt.Fprintln(stdout, "HCL v2 setup:\n  mogent init --source alias=local-path\n  mogent init --source alias=https://host/library.git\n\nNext: mogent init --source qmr=../qmr-agents-library")
+				_, err := fmt.Fprintln(stdout, "HCL v2 setup:\n  mogent init --source alias=local-path\n  mogent init --source alias=https://host/library.git\n  mogent init --template qmr-core --source qmr=../qmr-agents-library\n\nTemplates: mogent init --list-templates")
 				return err
 			}
-			return fmt.Errorf("v2 init requires --config, exactly one --source alias=local-path|git-url, and optional --output or --root")
+			return fmt.Errorf("v2 init requires --config, exactly one --source alias=local-path|git-url, and optional --template, --output, or --root")
 		}
 		for alias, local := range sources {
-			content, err := v2.Init(*configFile, alias, local, *root, *output, *dryRun)
+			content, err := v2.Init(*configFile, *templateName, alias, local, *root, *output, *dryRun)
 			if err != nil {
 				return err
 			}
@@ -122,7 +122,15 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("legacy YAML init requires --manifest agents.yaml")
 	}
 	if *listTemplates || *templateName == "" {
-		if _, err := fmt.Fprintln(stdout, "Starter templates:"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "HCL v2 templates (mogent init --template <name> --source alias=path|url):"); err != nil {
+			return fmt.Errorf("write template list: %w", err)
+		}
+		for _, template := range v2.InitTemplates() {
+			if _, err := fmt.Fprintf(stdout, "  %s: %s\n", template.Name, template.Description); err != nil {
+				return fmt.Errorf("write template list: %w", err)
+			}
+		}
+		if _, err := fmt.Fprintln(stdout, "\nStarter templates:"); err != nil {
 			return fmt.Errorf("write init guide: %w", err)
 		}
 		for _, value := range starter.List() {

@@ -26,8 +26,14 @@ func runSource(args []string, stdout, stderr io.Writer) error {
 	case "add":
 		return runSourceAdd(args[1:], stdout, stderr)
 	case "list":
+		if v2SourceRequested(args[1:]) {
+			return runV2SourceList(args[1:], stdout, stderr)
+		}
 		return runSourceList(args[1:], stdout, stderr)
 	case "show":
+		if v2SourceRequested(args[1:]) {
+			return runV2SourceShow(args[1:], stdout, stderr)
+		}
 		return runSourceShow(args[1:], stdout, stderr)
 	case "pin":
 		return runSourcePin(args[1:], stdout, stderr)
