@@ -8,10 +8,12 @@ specifically tests drift handling.
 > [!IMPORTANT]
 > Stages -1 through 8 below are the historical v1 runbook. They assume the
 > removed `Agents/libraries/` tree and must not be run unchanged. The current
-> personal-library smoke target is the sibling QMR library and its
-> `templates/core-and-constraints/agents.yaml` manifest. Update this runbook
-> with a reviewed QMR consumer workflow before treating it as the current
-> end-to-end dogfood procedure.
+> end-to-end dogfood procedure is the HCL v2 flow against the sibling QMR
+> library: `tools/v2-stories` runs the acceptance scenarios from
+> `docs/proposals/MOGENT-HCL-V2-SPEC.md` (new repository, adopt an existing
+> repository, update a working repository, share a library) in disposable
+> directories and fails on the first assertion that does not hold. Run it
+> after any v2 change; add a scenario there before adding a stage here.
 
 For only the newly implemented directory-tree, unified-coverage, alignment,
 and display-character work, start with

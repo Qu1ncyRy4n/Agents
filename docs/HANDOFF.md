@@ -26,6 +26,15 @@ above, inspect the authority and current working tree.
 
 ## Current Resume Point
 
+The active product workstream is the HCL v2 rollout:
+[`TODO/TODO-pupab-hcl-v2-rollout.md`](../TODO/TODO-pupab-hcl-v2-rollout.md)
+against [`proposals/MOGENT-HCL-V2-SPEC.md`](proposals/MOGENT-HCL-V2-SPEC.md).
+`plan`, `apply`, `update`, commit pinning, offers, tree outputs, and v2
+`source list`/`show` are implemented; `tools/v2-stories` exercises the
+acceptance scenarios against the sibling QMR library. Open owner decisions:
+the final name of the `offer` attribute, and whether `offer` becomes required
+on every branch.
+
 CDINT source review remains paused pending Steve curation. For a request such
 as "I'm Steve, I'm here to do the content curation that Quincy requested.
 Please guide me through it.", read the [Steve library curation

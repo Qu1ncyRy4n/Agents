@@ -33,7 +33,8 @@ once, and every repo renders the same `AGENTS.md`/skill set from an
   commit.
 - Each source repo gets a manifest selecting those modules and renders an
   `AGENTS.md` that matches its current one modulo intentional edits, proven by
-  `mogent build --dry-run`.
+  `mogent build --dry-run` (v1 `agents.yaml`) or `mogent plan` (v2
+  `mogent.hcl`).
 - Divergences between repos are surfaced as conflicts for review, not silently
   normalized, and historical DI/TE/DR handles remain resolvable.
 - Adding a new CIWG repo requires only a manifest, not a fresh copy of the

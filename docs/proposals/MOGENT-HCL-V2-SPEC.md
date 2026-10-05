@@ -447,7 +447,8 @@ Tag-based selection and a polished core library are necessary; a TUI is not.
   starting points for now.
 - Conditionals, heredocs, arbitrary expressions.
 - Procedural file or Markdown-section replacement.
-- Wildcard tag queries.
+- Wildcard tag queries, and tag-based exclusion (`tags_exclude`). Both were
+  sketched in the QMR metadata proposal; neither has a demonstrated use yet.
 - Automatic merging of same-named headings across libraries.
 - A TUI. The command-line `init`, `source`, `plan`, `apply`, `update` flow must
   be complete first.

@@ -220,7 +220,9 @@ rules:
 Open design questions to argue about while playing:
 
 1. Should selection live in the manifest only, and the library sidecar only
-   describe the library? (Today both can express structure.)
+   describe the library? (Today both can express structure.) Answered yes
+   for v2: `mogent.hcl` selects, `library.mogent.hcl` describes and offers.
+   See `proposals/MOGENT-HCL-V2-SPEC.md`.
 2. Should the source alias stay in the reference string, or become a separate
    field (`source: org` + `module: lang/go/development`)?
 3. Should there be one reference syntax for `doc` and `outputs`, or is the split

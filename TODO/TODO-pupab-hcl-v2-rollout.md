@@ -115,11 +115,11 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
 
 ### P2 — discovery and library polish
 
-- [ ] **V2-11 `MOGENT201` zero-match tag warning.** Each `tags_all` or
+- [x] **V2-11 `MOGENT201` zero-match tag warning.** [done 2026-10-05] Each `tags_all` or
   `tags_any` query that matched no leaf is a warning naming the query.
   Tests: matching and non-matching query.
 
-- [ ] **V2-12 `mogent source list [alias] [--tldr] [--tags]` for v2.**
+- [x] **V2-12 `mogent source list [alias] [--tldr] [--tags]` for v2.** [done 2026-10-05; plain indented rows rather than the v1 presentation tree, golden test deferred to V2-16]
   Tree view of the sidecar: path, title, `offer` with `default`/`defaults`,
   tags with `--tags`, TLDR with `--tldr`. Trees listed after sections with
   their entries. Reuse `internal/presentation` tree helpers. Dispatch: when
@@ -127,12 +127,12 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
   the v2 listing.
   Tests: golden output for the QMR fixture.
 
-- [ ] **V2-13 `mogent source show alias:path` for v2.** [dep: V2-12]
+- [x] **V2-13 `mogent source show alias:path` for v2.** [done 2026-10-05]
   One section: path, title, offer, tags (effective, with inherited marked),
   TLDR, source file, first N body lines.
   Tests: branch and leaf.
 
-- [ ] **V2-14 Promote QMR metadata into the live sidecar.** [dep: V2-1]
+- [x] **V2-14 Promote QMR metadata into the live sidecar.** [done 2026-10-05 in qmr-agents-library; note the acceptance below is corrected: a broad `all = true` over a `choose` branch is MOGENT102 by design, so the clean selection is `workflow = { accept_defaults = true }`]
   In `qmr-agents-library`: move `tldr`, `tags`, and `offer` from
   `library-tmp.mogent.hcl` into `library.mogent.hcl` using the new
   vocabulary. Add tree `entry` blocks for every skill directory. Delete
@@ -142,7 +142,7 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
   true }` produces zero errors and the expected `MOGENT203` warnings for
   `workflow`.
 
-- [ ] **V2-15 Replace `templates/core-and-constraints/agents.yaml` with an HCL consumer template.** [dep: V2-14]
+- [x] **V2-15 Replace `templates/core-and-constraints/agents.yaml` with an HCL consumer template.** [done 2026-10-05; `mogent init --template qmr-core`, YAML archived in the QMR repo]
   `mogent init --template qmr-core --source qmr=<path>` should produce a
   `mogent.hcl` that selects `intro` and `constraints` as foundation and
   `workflow` with `accept_defaults`. Keep the YAML file under
@@ -150,14 +150,14 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
 
 ### P3 — user story verification
 
-- [ ] **V2-16 Script the four acceptance scenarios.** [dep: V2-9, V2-14]
+- [x] **V2-16 Script the four acceptance scenarios.** [done 2026-10-05; `tools/v2-stories`, passes against QMR]
   Add `tools/v2-stories` (sh) that creates a temp consumer directory, runs
   each scenario from the spec against `../qmr-agents-library`, and asserts
   exit codes and key output lines. The scenarios map to US-1, US-2, US-4,
   and US-5 in `docs/user-stories.md`; mark those stories' v2 status there. Not part of `tools/check`; documented in
   `docs/DOGFOOD.md`.
 
-- [ ] **V2-17 Reconcile docs.** [dep: V2-16]
+- [x] **V2-17 Reconcile docs.** [done 2026-10-05; README v2 section, DESIGN §6 rows, HANDOFF resume point, DOGFOOD note, spike pointer, yaml sandbox and CIWG story notes]
   `README.md` v2 section, `docs/DESIGN.md` §6 command table, and
   `docs/HANDOFF.md` resume point reflect `plan`/`apply`/`update`, `offer`,
   and no-lock pinning. Delete stale `mogent lock` mentions. `HCL-CONFIG-SPIKE`
@@ -185,4 +185,12 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
 
 Record blockers here as they appear, with the task number.
 
-- (none yet)
+- V2-1: the attribute name `offer` is a placeholder the owner has not
+  confirmed. Candidates discussed: `offer`, `policy`, `intent`, `tier`.
+  Change `OfferFoundation` and siblings in `v2/library.go`, the HCL tag on
+  `sectionBlock.Offer`, the spec, and the QMR sidecar together.
+- Spec: whether `offer` becomes required on every branch section.
+- V2-7: a pinned `git` checkout is trusted by its commit directory name; no
+  content hash is re-verified on read. Git's own content addressing is the
+  argument for leaving it so. Revisit if a cache is ever shared between
+  machines.

@@ -1,8 +1,9 @@
 # HCL Configuration Spike
 
-Status: superseded as the detailed design by
-[`MOGENT-HCL-V2-SPEC.md`](MOGENT-HCL-V2-SPEC.md). Current Mogent reads
-`agents.yaml`; it does not read or execute `mogent.hcl`.
+Status: historical rationale for choosing HCL. The design of record is
+[`MOGENT-HCL-V2-SPEC.md`](MOGENT-HCL-V2-SPEC.md), which `mogent plan`,
+`apply`, and `update` now implement. Details below that differ from the
+specification (a lock file, `include` lists) are superseded.
 
 The companion demo is
 [`testing-ground/hcl-v2-demo/mogent.hcl`](../../testing-ground/hcl-v2-demo/mogent.hcl).

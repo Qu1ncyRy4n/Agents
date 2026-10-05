@@ -156,6 +156,42 @@ doc:
 Mogent does not currently stitch separate files into one implicit cross-file
 subtree. That keeps source selection explicit while the library model settles.
 
+## HCL v2 Configuration
+
+`mogent.hcl` is the v2 consumer configuration. It is a separate format from
+`agents.yaml`; a repository uses one or the other. The design of record is
+[`docs/proposals/MOGENT-HCL-V2-SPEC.md`](docs/proposals/MOGENT-HCL-V2-SPEC.md).
+
+Start from a library and look at what it offers:
+
+```sh
+mogent init --template qmr-core --source qmr=../qmr-agents-library
+mogent source list qmr --tldr
+mogent source show qmr:constraints/security
+```
+
+Show what would change, then write:
+
+```sh
+mogent plan    # unified diff per output path, diagnostics, no writes
+mogent apply   # writes outputs, state, and any newly resolved commit pin
+```
+
+A library is `local` (read as checked out) or `git` (pinned by `commit`,
+which `apply` writes into `mogent.hcl`). Move a pin forward with review:
+
+```sh
+mogent update            # show new commit and the output diff it causes
+mogent update qmr --accept
+```
+
+The library sidecar `library.mogent.hcl` declares each branch's `offer`:
+`foundation` (in unless dropped with a reason), `choose` (decide per child
+or `accept_defaults`), `optional` (library default applies), `opt_in`
+(excluded unless named). `plan` reports every accepted default, forced
+exclusion, unpinned source, and hand-edited output with a stable `MOGENT`
+code. `tools/v2-stories` runs the spec's acceptance scenarios end to end.
+
 ## Manifest
 
 New manifests use output-scoped selectors, so every target is independent:
@@ -595,6 +631,10 @@ for stricter Claude behavior, while `GEMINI.md` might simply symlink to
 ## Design Docs
 
 - [docs/DESIGN.md](docs/DESIGN.md) is the design of record.
+- [docs/proposals/MOGENT-HCL-V2-SPEC.md](docs/proposals/MOGENT-HCL-V2-SPEC.md)
+  is the v2 configuration specification; `TODO/TODO-pupab-hcl-v2-rollout.md`
+  tracks its implementation.
+- [docs/user-stories.md](docs/user-stories.md) holds the product user stories.
 - [docs/DOGFOOD.md](docs/DOGFOOD.md) stages current features for dogfooding and issue reporting.
 - [docs/demo/MOGENT-BOSS-DEMO.md](docs/demo/MOGENT-BOSS-DEMO.md) is a
   slide-separated live-demo runbook using a disposable todo-app clone.

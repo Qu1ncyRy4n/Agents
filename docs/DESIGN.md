@@ -256,6 +256,15 @@ Other entry points are the same model:
 | `mogent drift` | inspect direct edits; explicitly import one section or reject edits |
 | `mogent diff` | manifest vs rendered output; later, drift vs on-disk `AGENTS.md` |
 | `mogent edit <node>` | direct shortcut to the copy-on-write edit action |
+| `mogent plan` (v2) | render `mogent.hcl` in memory and print a unified diff per output path plus diagnostics; writes nothing |
+| `mogent apply` (v2) | write the planned outputs, their state, and newly resolved commit pins transactionally |
+| `mogent update [alias]` (v2) | re-resolve a git source's ref, show the output diff, and pin the new commit with `--accept` |
+
+The v2 configuration model (`mogent.hcl`, the `library.mogent.hcl` sidecar,
+offers, and commit pinning) is specified in
+`docs/proposals/MOGENT-HCL-V2-SPEC.md`. Where that specification and this
+section disagree about v2 behavior, the specification wins; this section
+remains authoritative for v1 `agents.yaml`.
 
 Current implementation status: mogent supports local libraries, strict
 manifests, deterministic rendering, source browsing, coverage, metadata filters,
