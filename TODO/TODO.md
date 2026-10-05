@@ -3,6 +3,7 @@
 | Handle | Title | Status |
 |--------|-------|--------|
 | jusuk | Mogent: Modular Agent Prompt Manager | [open](TODO-jusuk-mogent-agent-modules.md) |
+| pupab | HCL v2 rollout: offer vocabulary, plan/apply, commit pinning | [active](TODO-pupab-hcl-v2-rollout.md) |
 | pickup-2026-09-04-agents-library-dogfood | Current agents-library dogfood checkpoint | [active](PICKUP-2026-09-04-agents-library-dogfood.md) |
 | pickup-2026-08-25-libv2-intake | Historical libv2 intake checkpoint | [historical](archive/PICKUP-2026-08-25-libv2-intake.md) |
 | pickup-2026-08-05-library-split | Historical library split checkpoint | [historical](archive/PICKUP-2026-08-05-library-split.md) |
