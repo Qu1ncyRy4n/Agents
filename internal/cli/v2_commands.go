@@ -70,11 +70,14 @@ func runApply(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	paths := make([]string, 0, len(result.Changes))
+	paths := make([]string, 0, len(result.Changes)+len(result.Trees))
 	for _, change := range result.Changes {
 		paths = append(paths, change.Path)
 	}
-	if _, err := fmt.Fprintf(stdout, "Applied %d file(s): %s\n", len(paths), strings.Join(paths, ", ")); err != nil {
+	for _, tree := range result.Trees {
+		paths = append(paths, tree.Path+"/")
+	}
+	if _, err := fmt.Fprintf(stdout, "Applied %d output(s): %s\n", len(paths), strings.Join(paths, ", ")); err != nil {
 		return fmt.Errorf("write apply result: %w", err)
 	}
 	for _, alias := range sortedKeys(result.Pins) {
@@ -181,12 +184,13 @@ func writePlanChanges(stdout io.Writer, result *v2.Result) error {
 			return fmt.Errorf("write plan diff: %w", err)
 		}
 	}
-	for _, output := range result.Plan.Outputs {
-		if output.Kind != "tree" {
-			continue
+	for _, tree := range result.Trees {
+		counts[tree.Status]++
+		if _, err := fmt.Fprintf(stdout, "%s/: %s (%d files)\n", tree.Path, tree.Status, tree.FileCount()); err != nil {
+			return fmt.Errorf("write plan change: %w", err)
 		}
-		for _, path := range output.Paths {
-			if _, err := fmt.Fprintf(stdout, "%s: skipped (tree outputs are not yet written by apply)\n", path); err != nil {
+		for _, line := range treeLines(tree) {
+			if _, err := fmt.Fprintln(stdout, line); err != nil {
 				return fmt.Errorf("write plan change: %w", err)
 			}
 		}
@@ -198,6 +202,20 @@ func writePlanChanges(stdout io.Writer, result *v2.Result) error {
 		return fmt.Errorf("write plan summary: %w", err)
 	}
 	return nil
+}
+
+func treeLines(tree v2.TreeChange) []string {
+	var lines []string
+	for _, path := range tree.Added {
+		lines = append(lines, "  + "+path)
+	}
+	for _, path := range tree.Changed {
+		lines = append(lines, "  ~ "+path)
+	}
+	for _, path := range tree.Removed {
+		lines = append(lines, "  - "+path)
+	}
+	return lines
 }
 
 func writePlanDiagnostics(stderr io.Writer, plan *v2.Plan) error {

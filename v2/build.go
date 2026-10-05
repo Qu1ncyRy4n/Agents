@@ -32,15 +32,15 @@ type FileChange struct {
 	Content  string
 }
 
-// Result is a resolved plan plus the file changes it implies. Tree outputs are
-// compiled but not yet written, so they produce no FileChange. Pins lists the
-// commits apply writes into mogent.hcl for sources that had none.
+// Result is a resolved plan plus the file and tree changes it implies. Pins
+// lists the commits apply writes into mogent.hcl for sources that had none.
 type Result struct {
 	Plan      *Plan
 	Libraries map[string]*Library
 	Sources   map[string]ResolvedSource
 	Rendered  map[string]string
 	Changes   []FileChange
+	Trees     []TreeChange
 	Pins      map[string]string
 	statePath string
 }
@@ -77,6 +77,9 @@ func PlanConfig(config *Config) (*Result, error) {
 			}
 			result.Changes = append(result.Changes, change)
 		}
+	}
+	if err := planTrees(result, root); err != nil {
+		return result, err
 	}
 	result.Pins = make(map[string]string)
 	for alias, source := range result.Sources {
@@ -170,6 +173,11 @@ func Apply(config *Config, force bool) (*Result, error) {
 		}
 		writes[change.Absolute] = change.Content
 	}
+	for _, tree := range result.Trees {
+		if err := checkTreeOverwrite(tree, result.statePath, force); err != nil {
+			return result, err
+		}
+	}
 	if len(result.Pins) > 0 {
 		pinned, err := SetCommits(config.Path, result.Pins)
 		if err != nil {
@@ -186,12 +194,24 @@ func Apply(config *Config, force bool) (*Result, error) {
 			return result, snapshot.restore(err)
 		}
 	}
+	for _, tree := range result.Trees {
+		backup, err := stageTree(tree.Source, tree.Absolute)
+		if err != nil {
+			return result, snapshot.restore(err)
+		}
+		snapshot.trees = append(snapshot.trees, backup)
+	}
 	for _, change := range result.Changes {
 		if err := state.Write(result.statePath, change.Absolute, change.Content); err != nil {
 			return result, snapshot.restore(err)
 		}
 	}
-	return result, nil
+	for _, tree := range result.Trees {
+		if err := state.WriteDirectory(result.statePath, tree.Absolute, tree.hashes); err != nil {
+			return result, snapshot.restore(err)
+		}
+	}
+	return result, snapshot.commit()
 }
 
 // UpdateResult describes one git source after re-resolving its ref.
@@ -303,6 +323,18 @@ type fileSnapshot struct {
 	state        []byte
 	stateExisted bool
 	statePath    string
+	trees        []treeBackup
+}
+
+// commit discards the tree backups once every write and state record landed.
+func (s *fileSnapshot) commit() error {
+	var errs []error
+	for _, tree := range s.trees {
+		if err := tree.discard(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func snapshotFiles(files map[string]string, statePath string) (*fileSnapshot, error) {
@@ -349,6 +381,11 @@ func (s *fileSnapshot) restore(original error) error {
 		}
 	} else if err := os.Remove(s.statePath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		errs = append(errs, err)
+	}
+	for _, tree := range s.trees {
+		if err := tree.restore(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	return errors.Join(append([]error{original}, errs...)...)
 }

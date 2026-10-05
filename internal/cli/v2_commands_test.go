@@ -85,7 +85,7 @@ func TestRunApplyWritesOutputsThenPlanIsUnchanged(t *testing.T) {
 	if err := cli.Run([]string{"apply", "--config", configPath}, &stdout, &stderr); err != nil {
 		t.Fatalf("apply error = %v\nstderr:\n%s", err, stderr.String())
 	}
-	if !strings.Contains(stdout.String(), "Applied 1 file(s): AGENTS.md") {
+	if !strings.Contains(stdout.String(), "Applied 1 output(s): AGENTS.md") {
 		t.Fatalf("apply output = %q", stdout.String())
 	}
 	written, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))

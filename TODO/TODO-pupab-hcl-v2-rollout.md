@@ -168,11 +168,10 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
 
 ### Found during implementation
 
-- [ ] **V2-18 Write `tree` outputs in `apply`.** The planner validates tree
-  outputs but `apply` skips them and `plan` says so. Copy the declared tree
-  root recursively, record per-file hashes with `state.WriteDirectory`, and
-  include the directory in the transaction snapshot. Needed for the QMR
-  `skills/` tree. [dep: V2-3]
+- [x] **V2-18 Write `tree` outputs in `apply`.** [done 2026-10-05; `v2/tree.go`.
+  `plan` lists added, changed, and removed files; `apply` replaces the
+  directory atomically with rollback; a tree path may end in `/`; sidecar
+  `entry` blocks are parsed and validated]
 
 ## Deferred To The Next Feature Set
 

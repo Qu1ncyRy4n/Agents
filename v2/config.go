@@ -246,7 +246,11 @@ func normalizeOutput(block outputBlock, sources map[string]Source) (Output, erro
 		return Output{}, fmt.Errorf("kind must be markdown or tree")
 	}
 	seenPaths := make(map[string]bool)
-	for _, path := range output.Paths {
+	for index, path := range output.Paths {
+		if output.Kind == "tree" && len(path) > 1 && strings.HasSuffix(path, "/") {
+			path = strings.TrimSuffix(path, "/")
+			output.Paths[index] = path
+		}
 		if err := validateRelativePath(path, "path"); err != nil {
 			return Output{}, err
 		}

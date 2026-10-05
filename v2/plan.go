@@ -60,6 +60,15 @@ func Compile(config *Config, libraries map[string]*Library) *Plan {
 	plan := &Plan{}
 	for _, output := range config.Outputs {
 		plannedOutput := PlannedOutput{Name: output.Name, Paths: append([]string(nil), output.Paths...), Kind: output.Kind}
+		if output.Kind == "tree" && len(output.Sources) != 1 {
+			plan.Diagnostics = append(plan.Diagnostics, Diagnostic{
+				Severity: SeverityError,
+				Code:     "MOGENT105",
+				Message:  fmt.Sprintf("tree output %q must select exactly one source tree", output.Name),
+			})
+			plan.Outputs = append(plan.Outputs, plannedOutput)
+			continue
+		}
 		for _, configuredSource := range output.Sources {
 			library, found := libraries[configuredSource.Name]
 			if !found {

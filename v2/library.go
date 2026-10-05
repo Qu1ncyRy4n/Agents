@@ -26,9 +26,20 @@ type Library struct {
 }
 
 // Tree declares one raw server-side directory root eligible for a tree output.
+// Entries are optional discovery metadata for subdirectories of that root;
+// they never change what a tree output copies.
 type Tree struct {
+	Name    string
+	Root    string
+	Entries []TreeEntry
+}
+
+// TreeEntry describes one subdirectory of a tree for browsing.
+type TreeEntry struct {
 	Name string
-	Root string
+	Path string
+	TLDR string
+	Tags []string
 }
 
 // Section is one hierarchy node. Tags are metadata attached to this node; they
@@ -72,8 +83,16 @@ type treesBlock struct {
 }
 
 type treeBlock struct {
-	Name string `hcl:"name,label"`
-	Root string `hcl:"root"`
+	Name    string           `hcl:"name,label"`
+	Root    string           `hcl:"root"`
+	Entries []treeEntryBlock `hcl:"entry,block"`
+}
+
+type treeEntryBlock struct {
+	Name string   `hcl:"name,label"`
+	Path string   `hcl:"path"`
+	TLDR *string  `hcl:"tldr,optional"`
+	Tags []string `hcl:"tags,optional"`
 }
 
 type libraryBlock struct {
@@ -181,7 +200,35 @@ func LoadLibrary(root string) (*Library, error) {
 			if !info.IsDir() {
 				return nil, fmt.Errorf("tree %q root %q is not a directory", rawTree.Name, rawTree.Root)
 			}
-			library.Trees[rawTree.Name] = Tree{Name: rawTree.Name, Root: rawTree.Root}
+			tree := Tree{Name: rawTree.Name, Root: rawTree.Root}
+			seen := make(map[string]bool, len(rawTree.Entries))
+			for _, rawEntry := range rawTree.Entries {
+				if rawEntry.Name == "" || seen[rawEntry.Name] {
+					return nil, fmt.Errorf("tree %q has an empty or duplicate entry %q", rawTree.Name, rawEntry.Name)
+				}
+				seen[rawEntry.Name] = true
+				if err := validateRelativePath(rawEntry.Path, "entry path"); err != nil {
+					return nil, fmt.Errorf("tree %q entry %q: %w", rawTree.Name, rawEntry.Name, err)
+				}
+				entryInfo, err := os.Stat(filepath.Join(root, filepath.FromSlash(rawTree.Root), filepath.FromSlash(rawEntry.Path)))
+				if err != nil {
+					return nil, fmt.Errorf("tree %q entry %q path %q: %w", rawTree.Name, rawEntry.Name, rawEntry.Path, err)
+				}
+				if !entryInfo.IsDir() {
+					return nil, fmt.Errorf("tree %q entry %q path %q is not a directory", rawTree.Name, rawEntry.Name, rawEntry.Path)
+				}
+				for _, tag := range rawEntry.Tags {
+					if err := validateTag(tag); err != nil {
+						return nil, fmt.Errorf("tree %q entry %q: %w", rawTree.Name, rawEntry.Name, err)
+					}
+				}
+				entry := TreeEntry{Name: rawEntry.Name, Path: rawEntry.Path, Tags: append([]string(nil), rawEntry.Tags...)}
+				if rawEntry.TLDR != nil {
+					entry.TLDR = *rawEntry.TLDR
+				}
+				tree.Entries = append(tree.Entries, entry)
+			}
+			library.Trees[rawTree.Name] = tree
 		}
 	}
 	return library, nil
