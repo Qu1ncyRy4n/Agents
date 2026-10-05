@@ -35,7 +35,7 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
 
 ### P0 — vocabulary and CLI shape
 
-- [ ] **V2-1 Rename `inclusion` block to `offer` attribute.**
+- [x] **V2-1 Rename `inclusion` block to `offer` attribute.** [done 2026-10-05; word `offer` is a placeholder pending owner confirmation, one constant block in `v2/library.go` to change]
   Sidecar schema: `offer` string attribute on a section; `defaults` map and
   `default` bool become sibling attributes of the section, not a sub-block.
   Values `foundation`, `choose`, `optional`, `opt_in`. Validation rules per
@@ -47,7 +47,7 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
   reject old `inclusion` block with a helpful message. Update the fixture in
   `v2/test_helpers_test.go` and `testing-ground/hcl-v2-demo/`.
 
-- [ ] **V2-2 Add `MOGENT107` and `MOGENT108`.** `force_exclude` on a child
+- [x] **V2-2 Add `MOGENT107` and `MOGENT108`.** [done 2026-10-05; also fixed `force_exclude` being parsed but never applied] `force_exclude` on a child
   whose parent is not `foundation`, or without a non-empty `reason`, is an
   error. `accept_defaults` under a non-`choose` branch is an error. Today both
   are silently accepted. Add `MOGENT205` warning when a `foundation` child is

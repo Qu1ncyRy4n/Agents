@@ -322,14 +322,30 @@ func (r selectionResolver) resolve(section *Section, selection *selectionNode, p
 	if !include {
 		return
 	}
+	if selection.acceptDefaults && section.Offer != OfferChoose {
+		r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+			Severity: SeverityError,
+			Code:     "MOGENT108",
+			Message:  fmt.Sprintf("accept_defaults is valid only under a choose offer; %s:%s offers %s", r.source, section.Path, offerName(section)),
+		})
+		return
+	}
 	if len(section.Children) == 0 {
 		*selected = append(*selected, section)
 		return
 	}
 	r.unknownChildren(section.Path, selection, section.Children)
+	if section.Offer == OfferFoundation && selection.otherwise != nil && !*selection.otherwise {
+		r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+			Severity: SeverityError,
+			Code:     "MOGENT107",
+			Message:  fmt.Sprintf("else = \"exclude\" cannot drop foundation children of %s:%s; use force_exclude = true with a reason per child", r.source, section.Path),
+		})
+		return
+	}
 
 	broad := inherited || parent.all || selection.all || selection.include != nil && *selection.include || selection.acceptDefaults
-	if section.Inclusion != nil && section.Inclusion.Policy == "explicit" && broad && !selection.acceptDefaults {
+	if section.Offer == OfferChoose && broad && !selection.acceptDefaults {
 		missing := make([]string, 0)
 		for _, child := range section.Children {
 			if _, found := selection.children[child.Name]; !found {
@@ -351,25 +367,88 @@ func (r selectionResolver) resolve(section *Section, selection *selectionNode, p
 	for _, child := range section.Children {
 		childSelection := selection.children[child.Name]
 		childInherited := false
-		if selection.acceptDefaults && section.Inclusion != nil && section.Inclusion.Policy == "explicit" {
-			defaultValue := section.Inclusion.Defaults[child.Name]
+		if childSelection != nil && !r.allowChildSelection(section, child, childSelection) {
+			continue
+		}
+		if selection.acceptDefaults && section.Offer == OfferChoose {
+			defaultValue := section.Defaults[child.Name]
 			childSelection = &selectionNode{include: &defaultValue, children: make(map[string]*selectionNode), exclude: make(map[string]*selectionNode)}
 			r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{Severity: SeverityWarning, Code: "MOGENT203", Message: fmt.Sprintf("accepted default %t for %s:%s", defaultValue, r.source, child.Path)})
 		} else if childSelection == nil {
 			childInherited = broad
-			if section.Inclusion != nil {
-				switch section.Inclusion.Policy {
-				case "baseline":
-					childInherited = true
-				case "optional":
-					childInherited = *section.Inclusion.Default
-				case "opt_in", "explicit":
-					childInherited = false
-				}
+			switch section.Offer {
+			case OfferFoundation:
+				childInherited = true
+			case OfferOptional:
+				childInherited = *section.Default
+			case OfferOptIn, OfferChoose:
+				childInherited = false
 			}
 		}
 		r.resolve(child, childSelection, selection, childInherited, selected)
 	}
+}
+
+// allowChildSelection validates a consumer's explicit entry for one child
+// against the parent's offer. It returns false when the child must be skipped,
+// after recording the diagnostic that explains why.
+func (r selectionResolver) allowChildSelection(section, child *Section, selection *selectionNode) bool {
+	location := r.source + ":" + child.Path
+	if selection.forceExclude {
+		if section.Offer != OfferFoundation {
+			r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+				Severity: SeverityError,
+				Code:     "MOGENT107",
+				Message:  fmt.Sprintf("force_exclude is valid only for a foundation child; %s is offered as %s, use %s = false", location, offerName(section), child.Name),
+			})
+			return false
+		}
+		if strings.TrimSpace(selection.reason) == "" {
+			r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+				Severity: SeverityError,
+				Code:     "MOGENT107",
+				Message:  fmt.Sprintf("force_exclude of foundation section %s requires a non-empty reason", location),
+			})
+			return false
+		}
+		r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+			Severity: SeverityWarning,
+			Code:     "MOGENT205",
+			Message:  fmt.Sprintf("foundation section %s force-excluded: %s", location, strings.TrimSpace(selection.reason)),
+		})
+		return false
+	}
+	if selection.reason != "" {
+		r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+			Severity: SeverityError,
+			Code:     "MOGENT107",
+			Message:  fmt.Sprintf("reason is valid only with force_exclude = true at %s", location),
+		})
+		return false
+	}
+	if section.Offer == OfferFoundation && selection.include != nil && !*selection.include {
+		r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+			Severity: SeverityError,
+			Code:     "MOGENT107",
+			Message:  fmt.Sprintf("dropping foundation section %s requires force_exclude = true and a reason", location),
+		})
+		return false
+	}
+	if section.Offer == OfferOptIn && (selection.all || len(selection.children) > 0 || selection.acceptDefaults || selection.include != nil && *selection.include) {
+		r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
+			Severity: SeverityWarning,
+			Code:     "MOGENT204",
+			Message:  fmt.Sprintf("selected opt-in section %s", location),
+		})
+	}
+	return true
+}
+
+func offerName(section *Section) string {
+	if section.Offer == "" {
+		return "nothing"
+	}
+	return section.Offer
 }
 
 func (r selectionResolver) unknownChildren(parentPath string, selection *selectionNode, children []*Section) {
@@ -422,13 +501,13 @@ func suggestedChoices(section *Section, missing []string) string {
 			output.WriteString(name)
 		}
 		output.WriteString(" = ")
-		output.WriteString(fmt.Sprintf("%t", section.Inclusion.Defaults[name]))
+		output.WriteString(fmt.Sprintf("%t", section.Defaults[name]))
 		output.WriteString("\n")
 	}
 	for index := len(parts); index > 0; index-- {
 		output.WriteString(strings.Repeat("  ", index))
 		output.WriteString("}\n")
 	}
-	output.WriteString("\nOr use accept_defaults = true inside the core block.")
+	output.WriteString(fmt.Sprintf("\nOr use accept_defaults = true inside the %s block.", section.Name))
 	return output.String()
 }

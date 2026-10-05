@@ -114,12 +114,10 @@ sections {
     title = "Organization"
     section "core" {
       title = "Core"
-      inclusion {
-        policy = "explicit"
-        defaults = {
-          review = true
-          release = false
-        }
+      offer = "choose"
+      defaults = {
+        review = true
+        release = false
       }
       section "review" {
         title = "Review"

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsimple"
 )
 
@@ -32,23 +33,32 @@ type Tree struct {
 
 // Section is one hierarchy node. Tags are metadata attached to this node; they
 // are not an alternative structure.
+//
+// Offer is the library's promise about a branch's direct children when the
+// consumer selects the branch broadly: "foundation" includes them all and a
+// drop needs a reason; "choose" needs a decision per child or accept_defaults;
+// "optional" applies Default; "opt_in" excludes them unless named. A leaf has
+// no Offer.
 type Section struct {
-	Name      string
-	Title     string
-	Source    string
-	TLDR      string
-	Tags      []string
-	Inclusion *Inclusion
-	Children  []*Section
-	Path      string
-}
-
-// Inclusion describes server-side selection guidance for one branch.
-type Inclusion struct {
-	Policy   string
+	Name     string
+	Title    string
+	Source   string
+	TLDR     string
+	Tags     []string
+	Offer    string
 	Defaults map[string]bool
 	Default  *bool
+	Children []*Section
+	Path     string
 }
+
+// Offer values a branch section may declare.
+const (
+	OfferFoundation = "foundation"
+	OfferChoose     = "choose"
+	OfferOptional   = "optional"
+	OfferOptIn      = "opt_in"
+)
 
 type libraryFile struct {
 	Library  []libraryBlock  `hcl:"library,block"`
@@ -82,19 +92,22 @@ type sectionsBlock struct {
 }
 
 type sectionBlock struct {
-	Name      string           `hcl:"name,label"`
-	Title     string           `hcl:"title"`
-	Source    *string          `hcl:"source,optional"`
-	TLDR      *string          `hcl:"tldr,optional"`
-	Tags      []string         `hcl:"tags,optional"`
-	Inclusion []inclusionBlock `hcl:"inclusion,block"`
-	Children  []sectionBlock   `hcl:"section,block"`
+	Name     string                 `hcl:"name,label"`
+	Title    string                 `hcl:"title"`
+	Source   *string                `hcl:"source,optional"`
+	TLDR     *string                `hcl:"tldr,optional"`
+	Tags     []string               `hcl:"tags,optional"`
+	Offer    *string                `hcl:"offer,optional"`
+	Defaults map[string]bool        `hcl:"defaults,optional"`
+	Default  *bool                  `hcl:"default,optional"`
+	Legacy   []legacyInclusionBlock `hcl:"inclusion,block"`
+	Children []sectionBlock         `hcl:"section,block"`
 }
 
-type inclusionBlock struct {
-	Policy   string          `hcl:"policy"`
-	Defaults map[string]bool `hcl:"defaults,optional"`
-	Default  *bool           `hcl:"default,optional"`
+// legacyInclusionBlock recognizes the removed inclusion block so the loader
+// can name its replacement instead of reporting an unsupported block type.
+type legacyInclusionBlock struct {
+	Remain hcl.Body `hcl:",remain"`
 }
 
 // LoadLibrary reads and validates library.mogent.hcl from root.
@@ -211,15 +224,11 @@ func loadSection(root string, library *Library, parent string, raw sectionBlock)
 			return nil, fmt.Errorf("section %q: %w", path, err)
 		}
 	}
-	if len(raw.Inclusion) > 1 {
-		return nil, fmt.Errorf("section %q has more than one inclusion block", path)
+	if len(raw.Legacy) > 0 {
+		return nil, fmt.Errorf("section %q uses the removed inclusion block; set offer = \"foundation|choose|optional|opt_in\" on the section, with defaults or default beside it", path)
 	}
-	if len(raw.Inclusion) == 1 {
-		inclusion, err := validateInclusion(path, raw.Inclusion[0], raw.Children)
-		if err != nil {
-			return nil, err
-		}
-		section.Inclusion = inclusion
+	if err := validateOffer(path, raw, section); err != nil {
+		return nil, err
 	}
 	if section.Source != "" && len(raw.Children) > 0 {
 		return nil, fmt.Errorf("section %q cannot declare both source and child sections", path)
@@ -238,37 +247,49 @@ func loadSection(root string, library *Library, parent string, raw sectionBlock)
 	return section, nil
 }
 
-func validateInclusion(path string, raw inclusionBlock, children []sectionBlock) (*Inclusion, error) {
-	inclusion := &Inclusion{Policy: raw.Policy, Defaults: raw.Defaults, Default: raw.Default}
-	switch inclusion.Policy {
-	case "baseline", "explicit", "optional", "opt_in":
-	default:
-		return nil, fmt.Errorf("section %q has unknown inclusion policy %q", path, inclusion.Policy)
-	}
-	if len(children) == 0 {
-		return nil, fmt.Errorf("section %q inclusion requires child sections", path)
-	}
-	if inclusion.Policy == "explicit" {
-		if inclusion.Default != nil || len(inclusion.Defaults) != len(children) {
-			return nil, fmt.Errorf("section %q explicit inclusion requires defaults for every direct child", path)
+func validateOffer(path string, raw sectionBlock, section *Section) error {
+	if raw.Offer == nil {
+		if len(raw.Defaults) != 0 || raw.Default != nil {
+			return fmt.Errorf("section %q declares defaults or default without offer", path)
 		}
-		for _, child := range children {
-			if _, found := inclusion.Defaults[child.Name]; !found {
-				return nil, fmt.Errorf("section %q explicit inclusion has no default for child %q", path, child.Name)
+		return nil
+	}
+	offer := *raw.Offer
+	switch offer {
+	case OfferFoundation, OfferChoose, OfferOptional, OfferOptIn:
+	default:
+		return fmt.Errorf("section %q has unknown offer %q; use foundation, choose, optional, or opt_in", path, offer)
+	}
+	if len(raw.Children) == 0 {
+		return fmt.Errorf("section %q offer requires child sections", path)
+	}
+	section.Offer = offer
+	section.Defaults = raw.Defaults
+	section.Default = raw.Default
+	if offer == OfferChoose {
+		if raw.Default != nil {
+			return fmt.Errorf("section %q choose offer takes defaults, not default", path)
+		}
+		if len(raw.Defaults) != len(raw.Children) {
+			return fmt.Errorf("section %q choose offer requires defaults for every direct child", path)
+		}
+		for _, child := range raw.Children {
+			if _, found := raw.Defaults[child.Name]; !found {
+				return fmt.Errorf("section %q choose offer has no default for child %q", path, child.Name)
 			}
 		}
-		return inclusion, nil
+		return nil
 	}
-	if len(inclusion.Defaults) != 0 {
-		return nil, fmt.Errorf("section %q only explicit inclusion may declare defaults", path)
+	if len(raw.Defaults) != 0 {
+		return fmt.Errorf("section %q only a choose offer may declare defaults", path)
 	}
-	if inclusion.Policy == "optional" && inclusion.Default == nil {
-		return nil, fmt.Errorf("section %q optional inclusion requires default", path)
+	if offer == OfferOptional && raw.Default == nil {
+		return fmt.Errorf("section %q optional offer requires default", path)
 	}
-	if inclusion.Policy != "optional" && inclusion.Default != nil {
-		return nil, fmt.Errorf("section %q only optional inclusion may declare default", path)
+	if offer != OfferOptional && raw.Default != nil {
+		return fmt.Errorf("section %q only an optional offer may declare default", path)
 	}
-	return inclusion, nil
+	return nil
 }
 
 func validateSectionName(value string) error {
