@@ -4,6 +4,7 @@ package v2
 
 import (
 	"fmt"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
@@ -22,34 +23,14 @@ type Config struct {
 	Outputs []Output
 }
 
-// LoadLocalLibraries loads every local server-side library declared by config.
-// Remote resolution is intentionally deferred to the lock implementation.
-func LoadLocalLibraries(config *Config) (map[string]*Library, error) {
-	libraries := make(map[string]*Library)
-	for alias, source := range config.Sources {
-		if source.Git != "" {
-			return nil, fmt.Errorf("source %q is remote; run mogent lock after remote v2 resolution is implemented", alias)
-		}
-		root := source.Local
-		if !filepath.IsAbs(root) {
-			root = filepath.Join(filepath.Dir(config.Path), root)
-		}
-		if source.Subdir != "" {
-			root = filepath.Join(root, filepath.FromSlash(source.Subdir))
-		}
-		library, err := LoadLibrary(filepath.Clean(root))
-		if err != nil {
-			return nil, fmt.Errorf("source %q: %w", alias, err)
-		}
-		libraries[alias] = library
-	}
-	return libraries, nil
-}
-
+// Source is one declared library location. Git is pinned by Commit, which
+// Mogent writes into the configuration; Ref records the branch or tag the
+// consumer intends to follow. Local sources read whatever is on disk.
 type Source struct {
 	Name   string
 	Git    string
 	Ref    string
+	Commit string
 	Local  string
 	Subdir string
 }
@@ -87,6 +68,7 @@ type sourceBlock struct {
 	Name   string  `hcl:"name,label"`
 	Git    *string `hcl:"git,optional"`
 	Ref    *string `hcl:"ref,optional"`
+	Commit *string `hcl:"commit,optional"`
 	Local  *string `hcl:"local,optional"`
 	Subdir *string `hcl:"subdir,optional"`
 }
@@ -178,6 +160,9 @@ func normalizeSource(block sourceBlock) (Source, error) {
 	if block.Ref != nil {
 		source.Ref = *block.Ref
 	}
+	if block.Commit != nil {
+		source.Commit = *block.Commit
+	}
 	if block.Local != nil {
 		source.Local = *block.Local
 	}
@@ -190,10 +175,56 @@ func normalizeSource(block sourceBlock) (Source, error) {
 	if source.Local != "" && source.Ref != "" {
 		return Source{}, fmt.Errorf("ref is valid only for git sources")
 	}
+	if source.Local != "" && source.Commit != "" {
+		return Source{}, fmt.Errorf("commit is valid only for git sources")
+	}
+	if source.Git != "" {
+		if err := validateGitURL(source.Git); err != nil {
+			return Source{}, err
+		}
+		if source.Commit != "" && !isFullCommit(source.Commit) {
+			return Source{}, fmt.Errorf("commit %q must be a full 40-character lowercase hex SHA", source.Commit)
+		}
+		if strings.HasPrefix(source.Ref, "-") {
+			return Source{}, fmt.Errorf("ref %q is invalid", source.Ref)
+		}
+	}
 	if err := validateRelativePath(source.Subdir, "subdir"); err != nil {
 		return Source{}, err
 	}
 	return source, nil
+}
+
+func validateGitURL(value string) error {
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.User != nil {
+		return fmt.Errorf("git %q must be an http(s) or file URL without embedded credentials", value)
+	}
+	switch parsed.Scheme {
+	case "http", "https":
+		if parsed.Host == "" {
+			return fmt.Errorf("git %q must name a host", value)
+		}
+	case "file":
+		if parsed.Path == "" {
+			return fmt.Errorf("git %q must name a path", value)
+		}
+	default:
+		return fmt.Errorf("git %q must be an http(s) or file URL", value)
+	}
+	return nil
+}
+
+func isFullCommit(value string) bool {
+	if len(value) != 40 {
+		return false
+	}
+	for _, character := range value {
+		if !strings.ContainsRune("0123456789abcdef", character) {
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeOutput(block outputBlock, sources map[string]Source) (Output, error) {

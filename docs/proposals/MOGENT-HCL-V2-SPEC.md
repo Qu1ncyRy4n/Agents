@@ -120,7 +120,7 @@ A source is `local` or `git`, never both.
 | Attribute | Meaning |
 |---|---|
 | `local` | Directory path, relative to `mogent.hcl`. Read as checked out right now. |
-| `git` | HTTP(S) Git URL. |
+| `git` | `https://`, `http://`, or `file://` Git URL. No embedded credentials. |
 | `ref` | Branch or tag the consumer intends to follow. Optional; default `HEAD`. |
 | `commit` | Full 40-hex commit the consumer is pinned to. Written by Mogent. |
 | `subdir` | Library root inside the repository. Optional. |
@@ -365,14 +365,14 @@ fix. `plan` prints suggested HCL for incomplete selections.
 | MOGENT106 | error | Selection names a child the library does not have. |
 | MOGENT107 | error | `force_exclude` on a non-`foundation` child, or without `reason`. |
 | MOGENT108 | error | `accept_defaults` under a branch that is not `choose`. |
-| MOGENT109 | error | `commit` is not a full 40-hex SHA, or does not exist at `git`. |
+| MOGENT109 | error | Reserved. A malformed `commit` is a configuration load error; a commit the remote cannot serve is a fetch error. Both name the source. |
 | MOGENT201 | warning | A tag query matched no leaf. |
 | MOGENT202 | warning | A source selects no content. |
 | MOGENT203 | warning | A default was accepted for a `choose` child. |
 | MOGENT204 | warning | An `opt_in` child was selected. |
 | MOGENT205 | warning | A `foundation` child was force-excluded. |
 | MOGENT206 | warning | A `git` source has no `commit`; `apply` will write one. |
-| MOGENT207 | info | A `local` source's Git HEAD and dirty state. |
+| MOGENT207 | info | A `local` source's Git HEAD and clean or dirty state. Printed only when the directory is inside a Git work tree and `git` is on PATH. |
 | MOGENT208 | warning | An output on disk differs from its recorded state (drift). |
 
 Sidecar validation failures (unknown `offer`, incomplete `defaults`, missing

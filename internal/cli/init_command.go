@@ -100,10 +100,10 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 	if *manifestFile == "" && !*listTemplates {
 		if *templateName != "" || len(sources) != 1 || len(variables) != 0 {
 			if len(sources) == 0 && *templateName == "" && len(variables) == 0 {
-				_, err := fmt.Fprintln(stdout, "HCL v2 setup:\n  mogent init --source alias=local-path\n\nNext: mogent init --source cdint=../cdint-demo-lib")
+				_, err := fmt.Fprintln(stdout, "HCL v2 setup:\n  mogent init --source alias=local-path\n  mogent init --source alias=https://host/library.git\n\nNext: mogent init --source qmr=../qmr-agents-library")
 				return err
 			}
-			return fmt.Errorf("v2 init requires --config, exactly one --source alias=local-path, and optional --output or --root")
+			return fmt.Errorf("v2 init requires --config, exactly one --source alias=local-path|git-url, and optional --output or --root")
 		}
 		for alias, local := range sources {
 			content, err := v2.Init(*configFile, alias, local, *root, *output, *dryRun)

@@ -77,11 +77,11 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
 
 ### P1 — Git sources and pinning
 
-- [ ] **V2-6 Parse `commit` on `git` sources.** Full 40-hex only; `MOGENT109`
+- [x] **V2-6 Parse `commit` on `git` sources.** [done 2026-10-05; malformed commit is a load error, MOGENT109 left reserved] Full 40-hex only; `MOGENT109`
   otherwise. `commit` forbidden on `local`. `ref` optional, default `HEAD`.
   Tests: valid, short SHA rejected, `commit` on local rejected.
 
-- [ ] **V2-7 Resolve and fetch `git` sources into `.mogent/sources/<alias>/<commit>/`.** [dep: V2-6]
+- [x] **V2-7 Resolve and fetch `git` sources into `.mogent/sources/<alias>/<commit>/`.** [done 2026-10-05; `v2/sources.go`, whole work tree cached without `.git`, `file://` accepted for local mirrors and tests]
   Reuse `sourcecache.fetchCandidate` mechanics (shallow clone at a ref,
   `rev-parse HEAD`) but do not touch `mogent.lock.yaml`. When `commit` is set
   and the checkout exists, read it with no network. When `commit` is set and
@@ -93,7 +93,7 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
   through the existing `ValidateRemote`). Cover: pinned and cached, pinned
   and missing, unpinned.
 
-- [ ] **V2-8 `apply` writes resolved `commit` into `mogent.hcl`.** [dep: V2-7]
+- [x] **V2-8 `apply` writes resolved `commit` into `mogent.hcl`.** [done 2026-10-05; hclwrite, config in the transaction snapshot]
   Use `hclwrite` to set the attribute on the exact `source` block. Preserve
   every other byte, including comments. Write atomically after outputs and
   state succeed; include the config file in the transaction snapshot so a
@@ -101,13 +101,13 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
   Tests: commit written; comments preserved; failed state write restores
   config.
 
-- [ ] **V2-9 `mogent update [alias] [--accept]`.** [dep: V2-8]
+- [x] **V2-9 `mogent update [alias] [--accept]`.** [done 2026-10-05]
   Re-resolve `ref` for one or all `git` sources. Print old and new commit.
   Render the configured outputs under both and print the unified diff. With
   `--accept`, rewrite `commit` and nothing else. Without, write nothing.
   Tests: no change, change shown without accept, change accepted.
 
-- [ ] **V2-10 `MOGENT207` local source Git info.** [dep: V2-7]
+- [x] **V2-10 `MOGENT207` local source Git info.** [done 2026-10-05]
   If a `local` source directory is inside a Git work tree, print its HEAD
   short commit and dirty flag as an info diagnostic in `plan`. If `git` is
   not on PATH or the directory is not a repository, print nothing.

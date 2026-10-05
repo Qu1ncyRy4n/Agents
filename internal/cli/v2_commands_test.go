@@ -127,6 +127,19 @@ func TestRunApplyRefusesEditedOutputUntilForced(t *testing.T) {
 	}
 }
 
+func TestRunUpdateRequiresGitSource(t *testing.T) {
+	_, configPath := writeV2Fixture(t)
+	var stdout, stderr bytes.Buffer
+	err := cli.Run([]string{"update", "--config", configPath}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "no git sources") {
+		t.Fatalf("update error = %v", err)
+	}
+	err = cli.Run([]string{"update", "shared", "--config", configPath}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "not a declared git source") {
+		t.Fatalf("update alias error = %v", err)
+	}
+}
+
 func TestRunBuildRejectsHCLConfig(t *testing.T) {
 	_, configPath := writeV2Fixture(t)
 	var stdout, stderr bytes.Buffer

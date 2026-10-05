@@ -57,7 +57,7 @@ outputs {
 
 func TestPlanLocalReportsNewFileWithoutWriting(t *testing.T) {
 	config := applyFixture(t)
-	result, err := PlanLocal(config)
+	result, err := PlanConfig(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestApplyWritesOutputAndStateThenPlanIsUnchanged(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, ".mogent", "state.json")); err != nil {
 		t.Fatalf("state not written: %v", err)
 	}
-	result, err := PlanLocal(config)
+	result, err := PlanConfig(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestPlanWarnsAndApplyRefusesEditedOutputUntilForced(t *testing.T) {
 	if err := os.WriteFile(output, []byte("# Intro\n\nhand edit\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	result, err := PlanLocal(config)
+	result, err := PlanConfig(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestPlanWarnsAndApplyRefusesUnmanagedOutputUntilForced(t *testing.T) {
 	if err := os.WriteFile(output, []byte("# Hand written\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	result, err := PlanLocal(config)
+	result, err := PlanConfig(config)
 	if err != nil {
 		t.Fatal(err)
 	}
