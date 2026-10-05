@@ -135,6 +135,40 @@ func Write(statePath, outputPath, output string) error {
 	return writeOutputs(statePath, outputs)
 }
 
+// WriteDirectory records one generated directory while preserving records for
+// every other output. Callers provide hashes for paths relative to outputPath.
+func WriteDirectory(statePath, outputPath string, files map[string]string) error {
+	previous, err := readState(statePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	outputs := make(map[string]record, len(previous.Outputs)+1)
+	for path, value := range previous.Outputs {
+		key, err := portableStateKey(statePath, path)
+		if err != nil {
+			return err
+		}
+		outputs[key] = value
+	}
+	if previous.OutputPath != "" && previous.SHA256 != "" {
+		key, err := portableStateKey(statePath, previous.OutputPath)
+		if err != nil {
+			return err
+		}
+		outputs[key] = record{Kind: "file", SHA256: previous.SHA256}
+	}
+	key, err := outputKey(statePath, outputPath)
+	if err != nil {
+		return err
+	}
+	copy := make(map[string]string, len(files))
+	for path, digest := range files {
+		copy[path] = digest
+	}
+	outputs[key] = record{Kind: "directory", Files: copy}
+	return writeOutputs(statePath, outputs)
+}
+
 // WriteAll records all generated files and directory trees together. It writes
 // the portable version-three shape but decode also accepts legacy absolute-path
 // state shapes.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Qu1ncyRy4n/Agents/manifest"
 	"github.com/Qu1ncyRy4n/Agents/render"
+	"github.com/Qu1ncyRy4n/Agents/v2"
 	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
 
@@ -146,7 +147,8 @@ func runLocalize(args []string, stdout, stderr io.Writer) error {
 func runBuild(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
+	manifestFile := flags.String("manifest", "", "legacy YAML manifest path")
+	configFile := flags.String("config", v2.ConfigFile, "path to v2 HCL configuration")
 	dryRun := flags.Bool("dry-run", false, "render and validate without writing output files")
 	force := flags.Bool("force", false, "replace an untracked or directly edited output")
 	preserveComments := flags.Bool("preserve-html-comments", false, "retain HTML comments in rendered Markdown")
@@ -155,6 +157,21 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("build accepts no positional arguments")
+	}
+	if *manifestFile == "" {
+		if *preserveComments {
+			return fmt.Errorf("--preserve-html-comments is supported only with --manifest")
+		}
+		return runV2Build(*configFile, *force, *dryRun, stdout, stderr)
+	}
+	if strings.HasSuffix(*manifestFile, ".hcl") {
+		if *configFile != v2.ConfigFile {
+			return fmt.Errorf("build accepts only one HCL config path")
+		}
+		return runV2Build(*manifestFile, *force, *dryRun, stdout, stderr)
+	}
+	if *configFile != v2.ConfigFile {
+		return fmt.Errorf("build accepts only one of --manifest or --config")
 	}
 	value, manifestPath, err := manifest.Load(*manifestFile)
 	if err != nil {
