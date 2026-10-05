@@ -265,6 +265,17 @@ the owner records an answer here.
 	- [ ] [blocked] **M-D6** Get Mogent working for Steve in the cdint-grid repo — first outside-the-repo feedback — after M-D5
 	- [ ] [blocked] **M-D7** Use Mogent on Quincy's own projects once it's good enough — after M-D5
 	- [ ] [ready] **M-D8** Look at JJ's dev guide as a reference implementation
+- **o. User stories**
+	- [ ] [ready] **US-tujom** Drive the CIWG/PromiseGrid consolidation user story
+	  in [`docs/user-stories-ciwg.md`](../docs/user-stories-ciwg.md) to an
+	  approved library-consolidation plan: inventory the captured agents and
+	  skills in `docs/other_repo_agents/`, classify each by scope, and select a
+	  bounded first consolidation target
+	- [ ] [active] **US-rujop** Maintain the Mogent user-story set in
+	  [`docs/user-stories.md`](../docs/user-stories.md): core stories US-1..US-4
+	  are in priority order, US-5..US-8 are review-later, and the CIWG
+	  consolidation story is separate in
+	  [`docs/user-stories-ciwg.md`](../docs/user-stories-ciwg.md)
 
 #### Mogent dependency graph
 
