@@ -55,21 +55,21 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
   is selected.
   Tests: one per code.
 
-- [ ] **V2-3 Replace v2 `build` with `apply`; delete v2 `--dry-run`.**
+- [x] **V2-3 Replace v2 `build` with `apply`; delete v2 `--dry-run`.** [done 2026-10-05]
   `apply [--config] [--force]`. `build` with `--config` returns an error
   pointing at `apply`. `build` with `--manifest` is untouched. `plan` gains
   nothing yet. Update `commands()` usage lines, completion output, and
   `README.md` v2 section. `v2.BuildLocal` loses its `dryRun` parameter.
   Tests: `apply` writes; `build --config` errors; v1 `build` tests unchanged.
 
-- [ ] **V2-4 `plan` prints a unified diff per output path.** [dep: V2-3]
+- [x] **V2-4 `plan` prints a unified diff per output path.** [done 2026-10-05; diff moved to `textdiff/`]
   Render in memory, read current file if present, print `--- a/path` /
   `+++ b/path` unified diff, or "new file" / "unchanged". Use a small internal
   diff; `workspace/diff.go` may already have one to reuse. Diagnostics after
   the diffs. Non-zero exit on any error diagnostic.
   Tests: new file, changed file, unchanged file.
 
-- [ ] **V2-5 `MOGENT208` drift warning in `plan` and `apply`.** [dep: V2-4]
+- [x] **V2-5 `MOGENT208` drift warning in `plan` and `apply`.** [done 2026-10-05]
   If an output path exists and its content hash differs from
   `.mogent/state.json`, warn in `plan` and refuse in `apply` without
   `--force`. `state.Inspect` already classifies this for v1; reuse it.
@@ -165,6 +165,14 @@ Priority order. `[dep: X]` means the task cannot start before X is committed.
   question 1 (selection in manifest only, sidecar describes only) is answered
   yes by v2; note that there. `docs/user-stories-ciwg.md` acceptance criteria
   still name `agents.yaml` and `build --dry-run`; add the v2 equivalents.
+
+### Found during implementation
+
+- [ ] **V2-18 Write `tree` outputs in `apply`.** The planner validates tree
+  outputs but `apply` skips them and `plan` says so. Copy the declared tree
+  root recursively, record per-file hashes with `state.WriteDirectory`, and
+  include the directory in the transaction snapshot. Needed for the QMR
+  `skills/` tree. [dep: V2-3]
 
 ## Deferred To The Next Feature Set
 

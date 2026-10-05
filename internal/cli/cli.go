@@ -18,8 +18,9 @@ type commandDefinition struct {
 func commands() []commandDefinition {
 	return []commandDefinition{
 		{name: "init", usage: "init [--template name] [--source alias=path] [--var name=value] | --config mogent.hcl --source alias=local-path", run: runInit},
-		{name: "build", usage: "build [--config mogent.hcl] [--dry-run] [--force]", run: runBuild},
+		{name: "build", usage: "build [--manifest agents.yaml] [--dry-run] [--force] [--preserve-html-comments]", run: runBuild},
 		{name: "plan", usage: "plan [--config mogent.hcl]", run: runPlan},
+		{name: "apply", usage: "apply [--config mogent.hcl] [--force]", run: runApply},
 		{name: "lib", usage: "lib <init|scan|check> ...", run: runLib},
 		{name: "status", usage: "status [--manifest agents.yaml]", run: runStatus},
 		{name: "drift", usage: "drift [--manifest agents.yaml] [--diff]", run: runDrift},

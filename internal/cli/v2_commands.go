@@ -4,10 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/v2"
 )
 
+// runPlan shows what apply would write: one unified diff per Markdown output
+// path, then diagnostics. It never writes files.
 func runPlan(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("plan", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -22,63 +25,98 @@ func runPlan(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	libraries, err := v2.LoadLocalLibraries(config)
+	result, err := v2.PlanLocal(config)
+	if result != nil {
+		if writeErr := writePlanChanges(stdout, result); writeErr != nil {
+			return writeErr
+		}
+		if writeErr := writePlanDiagnostics(stderr, result.Plan); writeErr != nil {
+			return writeErr
+		}
+	}
 	if err != nil {
 		return err
 	}
-	plan := v2.Compile(config, libraries)
-	for _, output := range plan.Outputs {
-		if _, err := fmt.Fprintf(stdout, "Output %s: %v\n", output.Name, output.Paths); err != nil {
-			return fmt.Errorf("write plan output: %w", err)
-		}
-		for _, source := range output.Sources {
-			if _, err := fmt.Fprintf(stdout, "  %s:\n", source.From); err != nil {
-				return fmt.Errorf("write plan source: %w", err)
-			}
-			for _, section := range source.Sections {
-				if _, err := fmt.Fprintf(stdout, "    %s\n", section.Path); err != nil {
-					return fmt.Errorf("write plan section: %w", err)
-				}
-			}
-		}
-	}
-	hasErrors := false
-	for _, diagnostic := range plan.Diagnostics {
-		if diagnostic.Severity == v2.SeverityError {
-			hasErrors = true
-		}
-		if _, err := fmt.Fprintln(stderr, diagnostic.String()); err != nil {
-			return fmt.Errorf("write plan diagnostic: %w", err)
-		}
-	}
-	if hasErrors {
+	if result.HasErrors() {
 		return fmt.Errorf("plan contains errors")
 	}
 	return nil
 }
 
-func runV2Build(configPath string, force, dryRun bool, stdout, stderr io.Writer) error {
-	config, err := v2.Load(configPath)
+// runApply writes every planned output transactionally after the same checks
+// plan performs. Unmanaged or hand-edited outputs require --force.
+func runApply(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("apply", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	configPath := flags.String("config", v2.ConfigFile, "path to v2 HCL configuration")
+	force := flags.Bool("force", false, "replace an unmanaged or directly edited output")
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("apply accepts no positional arguments")
+	}
+	config, err := v2.Load(*configPath)
 	if err != nil {
 		return err
 	}
-	plan, err := v2.BuildLocal(config, force, dryRun)
-	if plan != nil {
-		for _, diagnostic := range plan.Diagnostics {
-			if _, writeErr := fmt.Fprintln(stderr, diagnostic.String()); writeErr != nil {
-				return fmt.Errorf("write build diagnostic: %w", writeErr)
-			}
+	result, err := v2.Apply(config, *force)
+	if result != nil {
+		if writeErr := writePlanDiagnostics(stderr, result.Plan); writeErr != nil {
+			return writeErr
 		}
 	}
 	if err != nil {
 		return err
 	}
-	message := "Wrote generated outputs\n"
-	if dryRun {
-		message = "Dry run: no files written\n"
+	paths := make([]string, 0, len(result.Changes))
+	for _, change := range result.Changes {
+		paths = append(paths, change.Path)
 	}
-	if _, err := fmt.Fprint(stdout, message); err != nil {
-		return fmt.Errorf("write build result: %w", err)
+	if _, err := fmt.Fprintf(stdout, "Applied %d file(s): %s\n", len(paths), strings.Join(paths, ", ")); err != nil {
+		return fmt.Errorf("write apply result: %w", err)
+	}
+	return nil
+}
+
+func writePlanChanges(stdout io.Writer, result *v2.Result) error {
+	counts := map[v2.FileStatus]int{}
+	for _, change := range result.Changes {
+		counts[change.Status]++
+		if _, err := fmt.Fprintf(stdout, "%s: %s\n", change.Path, change.Status); err != nil {
+			return fmt.Errorf("write plan change: %w", err)
+		}
+		if change.Diff == "" {
+			continue
+		}
+		if _, err := fmt.Fprint(stdout, change.Diff); err != nil {
+			return fmt.Errorf("write plan diff: %w", err)
+		}
+	}
+	for _, output := range result.Plan.Outputs {
+		if output.Kind != "tree" {
+			continue
+		}
+		for _, path := range output.Paths {
+			if _, err := fmt.Fprintf(stdout, "%s: skipped (tree outputs are not yet written by apply)\n", path); err != nil {
+				return fmt.Errorf("write plan change: %w", err)
+			}
+		}
+	}
+	if result.HasErrors() {
+		return nil
+	}
+	if _, err := fmt.Fprintf(stdout, "Plan: %d to add, %d to change, %d unchanged\n", counts[v2.FileNew], counts[v2.FileChanged], counts[v2.FileUnchanged]); err != nil {
+		return fmt.Errorf("write plan summary: %w", err)
+	}
+	return nil
+}
+
+func writePlanDiagnostics(stderr io.Writer, plan *v2.Plan) error {
+	for _, diagnostic := range plan.Diagnostics {
+		if _, err := fmt.Fprintln(stderr, diagnostic.String()); err != nil {
+			return fmt.Errorf("write diagnostic: %w", err)
+		}
 	}
 	return nil
 }
