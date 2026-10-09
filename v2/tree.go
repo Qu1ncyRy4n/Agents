@@ -61,7 +61,7 @@ func planTrees(result *Result, root string) error {
 
 func inspectTree(result *Result, outputName, relative, absolute, source string, hashes map[string]string) (TreeChange, error) {
 	change := TreeChange{Output: outputName, Path: relative, Absolute: absolute, Source: source, hashes: hashes}
-	if err := rejectTargetSymlinks(absolute, filepath.Dir(result.statePath)); err != nil {
+	if err := rejectTargetSymlinks(absolute, filepath.Dir(filepath.Dir(result.statePath))); err != nil {
 		return change, fmt.Errorf("output %q: %w", outputName, err)
 	}
 	info, err := os.Lstat(absolute)
@@ -256,6 +256,15 @@ func verifySourceTree(root string) error {
 }
 
 func rejectTargetSymlinks(path, workspaceRoot string) error {
+	canonicalRoot, err := filepath.EvalSymlinks(workspaceRoot)
+	if err != nil {
+		return fmt.Errorf("resolve workspace root %q: %w", workspaceRoot, err)
+	}
+	relative, err := filepath.Rel(workspaceRoot, path)
+	if err != nil {
+		return fmt.Errorf("relativize output target %q: %w", path, err)
+	}
+	path = filepath.Join(canonicalRoot, relative)
 	for current := filepath.Clean(path); ; current = filepath.Dir(current) {
 		info, err := os.Lstat(current)
 		if err == nil && info.Mode()&os.ModeSymlink != 0 {
@@ -264,7 +273,7 @@ func rejectTargetSymlinks(path, workspaceRoot string) error {
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("inspect output target %q: %w", current, err)
 		}
-		if current == filepath.Clean(workspaceRoot) || current == filepath.Dir(current) {
+		if current == canonicalRoot || current == filepath.Dir(current) {
 			return nil
 		}
 	}
