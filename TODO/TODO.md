@@ -4,6 +4,7 @@
 |--------|-------|--------|
 | jusuk | Mogent: Modular Agent Prompt Manager | [open](TODO-jusuk-mogent-agent-modules.md) |
 | pupab | HCL v2 rollout: offer vocabulary, plan/apply, commit pinning | [active](TODO-pupab-hcl-v2-rollout.md) |
+| tugur | HCL v2 composition follow-up: curate, selection, tree overlays | [active](TODO-tugur-v2-composition-followup.md) |
 | pickup-2026-09-04-agents-library-dogfood | Current agents-library dogfood checkpoint | [active](PICKUP-2026-09-04-agents-library-dogfood.md) |
 | pickup-2026-08-25-libv2-intake | Historical libv2 intake checkpoint | [historical](archive/PICKUP-2026-08-25-libv2-intake.md) |
 | pickup-2026-08-05-library-split | Historical library split checkpoint | [historical](archive/PICKUP-2026-08-05-library-split.md) |
@@ -92,12 +93,11 @@ the owner records an answer here.
 	- [x] [historical] [decision] **C10 — Dogfood sequence:** complete libv2 before
 	  dogfooding. Decided 2026-08-25; superseded for bounded QMR personal-library
 	  dogfooding by the Current Library Direction above.
-- [ ] [ready] [decision] **C13 — Finalize the sidecar selection-guidance
-  attribute name:** `offer` (library voice, Promise Theory `+` promise, values
-  `foundation | choose | optional | opt_in`) is in use provisionally; the
-  live alternative is `choice` with consumer-voice values. Reasoning and the
-  rename checklist are in [`DR/DR-nalan-offer-attribute-name.md`](../DR/DR-nalan-offer-attribute-name.md).
-  Decide together with whether `offer` becomes required on every branch.
+- [x] [done] [decision] **C13 — Choose the sidecar selection-guidance
+  attribute name:** `curate` is the v2 key, with values
+  `foundation | choose | optional | opt_in`. A later rename needs a new decision
+  and explicit migration, not parser fallback. See
+  [`DR/DR-nalan-offer-attribute-name.md`](../DR/DR-nalan-offer-attribute-name.md).
 - [x] [done] [decision] **C12 — Todo app's role:** use it first as a dogfood
   target, then for planned multi-agent features, and possibly as a product.
   Decided 2026-08-25.
