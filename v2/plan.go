@@ -29,6 +29,7 @@ type PlannedSource struct {
 	From     string
 	Sections []*Section
 	TreeRoot string
+	Exclude  []string
 }
 
 type Severity string
@@ -81,7 +82,7 @@ func Compile(config *Config, libraries map[string]*Library) *Plan {
 			}
 			if output.Kind == "tree" {
 				planTreeOutput(plan, output.Name, configuredSource, library)
-				plannedOutput.Sources = append(plannedOutput.Sources, PlannedSource{Name: configuredSource.Name, From: configuredSource.From, TreeRoot: strings.TrimPrefix(configuredSource.From, configuredSource.Name+":")})
+				plannedOutput.Sources = append(plannedOutput.Sources, PlannedSource{Name: configuredSource.Name, From: configuredSource.From, TreeRoot: strings.TrimPrefix(configuredSource.From, configuredSource.Name+":"), Exclude: append([]string(nil), configuredSource.Exclude...)})
 				continue
 			}
 			if output.Kind != "markdown" {

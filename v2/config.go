@@ -48,6 +48,7 @@ type OutputSource struct {
 	Select  hcl.Expression
 	TagsAll []string
 	TagsAny []string
+	Exclude []string
 }
 
 type fileConfig struct {
@@ -91,6 +92,7 @@ type outputSourceBlock struct {
 	Select  hcl.Expression `hcl:"select,optional"`
 	TagsAll []string       `hcl:"tags_all,optional"`
 	TagsAny []string       `hcl:"tags_any,optional"`
+	Exclude []string       `hcl:"exclude,optional"`
 }
 
 // Load reads and validates one v2 user-side configuration.
@@ -277,7 +279,20 @@ func normalizeOutput(block outputBlock, sources map[string]Source) (Output, erro
 				return Output{}, err
 			}
 		}
-		output.Sources = append(output.Sources, OutputSource{Name: blockSource.Name, From: blockSource.From, Select: blockSource.Select, TagsAll: blockSource.TagsAll, TagsAny: blockSource.TagsAny})
+		if output.Kind != "tree" && len(blockSource.Exclude) > 0 {
+			return Output{}, fmt.Errorf("source block %q: exclude is valid only for tree outputs", blockSource.Name)
+		}
+		seenExcludes := make(map[string]bool, len(blockSource.Exclude))
+		for _, excluded := range blockSource.Exclude {
+			if err := validateRelativePath(excluded, "exclude"); err != nil || excluded == "." {
+				return Output{}, fmt.Errorf("source block %q: exclude %q must be a safe non-root relative path", blockSource.Name, excluded)
+			}
+			if seenExcludes[excluded] {
+				return Output{}, fmt.Errorf("source block %q: exclude path %q is repeated", blockSource.Name, excluded)
+			}
+			seenExcludes[excluded] = true
+		}
+		output.Sources = append(output.Sources, OutputSource{Name: blockSource.Name, From: blockSource.From, Select: blockSource.Select, TagsAll: blockSource.TagsAll, TagsAny: blockSource.TagsAny, Exclude: append([]string(nil), blockSource.Exclude...)})
 	}
 	return output, nil
 }

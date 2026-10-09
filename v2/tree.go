@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/state"
@@ -23,6 +24,7 @@ type TreeChange struct {
 	Added    []string
 	Changed  []string
 	Removed  []string
+	Exclude  []string
 	hashes   map[string]string
 }
 
@@ -48,11 +50,18 @@ func planTrees(result *Result, root string) error {
 		if err != nil {
 			return fmt.Errorf("output %q: %w", output.Name, err)
 		}
+		for _, excluded := range planned.Exclude {
+			if _, err := os.Lstat(filepath.Join(source, filepath.FromSlash(excluded))); err != nil {
+				return fmt.Errorf("output %q: exclude path %q does not exist in tree source %q", output.Name, excluded, planned.Name)
+			}
+		}
+		hashes = filterTreeHashes(hashes, planned.Exclude)
 		for _, relative := range output.Paths {
 			change, err := inspectTree(result, output.Name, relative, filepath.Join(root, filepath.FromSlash(relative)), source, hashes)
 			if err != nil {
 				return err
 			}
+			change.Exclude = append([]string(nil), planned.Exclude...)
 			result.Trees = append(result.Trees, change)
 		}
 	}
@@ -148,7 +157,7 @@ type treeBackup struct {
 // stageTree replaces target with a fresh copy of source. The previous target,
 // when present, is moved aside and returned so a failed transaction can put it
 // back; the caller removes it after the transaction commits.
-func stageTree(source, target string) (treeBackup, error) {
+func stageTree(source, target string, excludes []string) (treeBackup, error) {
 	backup := treeBackup{target: target}
 	parent := filepath.Dir(target)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
@@ -158,7 +167,7 @@ func stageTree(source, target string) (treeBackup, error) {
 	if err != nil {
 		return backup, fmt.Errorf("create tree staging directory: %w", err)
 	}
-	if err := copyTree(source, staging); err != nil {
+	if err := copyTree(source, staging, excludes); err != nil {
 		_ = os.RemoveAll(staging)
 		return backup, err
 	}
@@ -208,7 +217,7 @@ func (b treeBackup) discard() error {
 	return os.RemoveAll(b.backup)
 }
 
-func copyTree(source, target string) error {
+func copyTree(source, target string, excludes []string) error {
 	return filepath.WalkDir(source, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -216,6 +225,12 @@ func copyTree(source, target string) error {
 		relative, err := filepath.Rel(source, path)
 		if err != nil {
 			return err
+		}
+		if relative != "." && isExcludedTreePath(filepath.ToSlash(relative), excludes) {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 		destination := filepath.Join(target, relative)
 		if entry.IsDir() {
@@ -277,6 +292,25 @@ func rejectTargetSymlinks(path, workspaceRoot string) error {
 			return nil
 		}
 	}
+}
+
+func filterTreeHashes(hashes map[string]string, excludes []string) map[string]string {
+	filtered := make(map[string]string, len(hashes))
+	for relative, digest := range hashes {
+		if !isExcludedTreePath(relative, excludes) {
+			filtered[relative] = digest
+		}
+	}
+	return filtered
+}
+
+func isExcludedTreePath(relative string, excludes []string) bool {
+	for _, excluded := range excludes {
+		if relative == excluded || strings.HasPrefix(relative, excluded+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func sortedPaths(hashes map[string]string) []string {

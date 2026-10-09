@@ -101,6 +101,7 @@ outputs {
     source "personal" {
       from   = "personal:skills"
       select = { all = true }
+      exclude = ["experimental"]
     }
   }
 }
@@ -112,6 +113,12 @@ outputs. It does not create symlinks.
 `source` blocks within an output are evaluated in file order. Each selects from
 one library and appends its content as a separate root. Mogent does not merge
 headings from different libraries by title.
+
+For a `tree` output, `exclude` is an optional list of safe, non-root paths
+relative to the declared tree root. It omits that file or directory recursively
+from the managed result. An excluded path must exist in the selected source
+tree; it is still checked for unsafe source entries before Mogent copies the
+filtered tree. Tree outputs currently accept exactly one source.
 
 ### Sources And Pinning
 

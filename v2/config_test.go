@@ -48,6 +48,29 @@ outputs {
 	}
 }
 
+func TestLoadParsesTreeExcludes(t *testing.T) {
+	config := mustLoadConfig(t, `
+mogent { format = 2 }
+sources {
+  source "shared" { local = "library" }
+}
+outputs {
+  output "skills" {
+    path = ".agents/skills"
+    kind = "tree"
+    source "shared" {
+      from = "shared:skills"
+      select = { all = true }
+      exclude = ["experimental", "legacy/old-skill"]
+    }
+  }
+}
+`)
+	if got := strings.Join(config.Outputs[0].Sources[0].Exclude, " "); got != "experimental legacy/old-skill" {
+		t.Fatalf("exclude = %q", got)
+	}
+}
+
 func TestLoadRejectsInvalidStructuralConfig(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -68,6 +91,16 @@ func TestLoadRejectsInvalidStructuralConfig(t *testing.T) {
 			name:    "undeclared-output-source",
 			content: "mogent {\n  format = 2\n}\n\nsources {\n  source \"local\" {\n    local = \"library\"\n  }\n}\n\noutputs {\n  output \"x\" {\n    path = \"AGENTS.md\"\n    kind = \"markdown\"\n    source \"other\" {\n      from = \"other:agents\"\n      select = {}\n    }\n  }\n}\n",
 			want:    "is not declared in sources",
+		},
+		{
+			name:    "markdown-exclude",
+			content: "mogent {\n  format = 2\n}\n\nsources {\n  source \"local\" { local = \"library\" }\n}\n\noutputs {\n  output \"x\" {\n    path = \"AGENTS.md\"\n    kind = \"markdown\"\n    source \"local\" {\n      from = \"local:agents\"\n      select = {}\n      exclude = [\"old\"]\n    }\n  }\n}\n",
+			want:    "exclude is valid only for tree outputs",
+		},
+		{
+			name:    "unsafe-tree-exclude",
+			content: "mogent {\n  format = 2\n}\n\nsources {\n  source \"local\" { local = \"library\" }\n}\n\noutputs {\n  output \"x\" {\n    path = \".agents\"\n    kind = \"tree\"\n    source \"local\" {\n      from = \"local:skills\"\n      select = { all = true }\n      exclude = [\"../old\"]\n    }\n  }\n}\n",
+			want:    "safe non-root relative path",
 		},
 	}
 	for _, test := range cases {

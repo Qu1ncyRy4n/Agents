@@ -186,6 +186,36 @@ func TestTreeOutputRefusesUnmanagedTargetAndSymlinkSource(t *testing.T) {
 	}
 }
 
+func TestTreeOutputExcludesPaths(t *testing.T) {
+	config := treeFixture(t)
+	config.Outputs[1].Sources[0].Exclude = []string{"beta"}
+	root := filepath.Dir(config.Path)
+
+	result, err := PlanConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(result.Trees[0].Added, " "); got != "alpha/SKILL.md" {
+		t.Fatalf("added = %q", got)
+	}
+	if _, err := Apply(config, false); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(root, ".agents", "skills")
+	if _, err := os.Stat(filepath.Join(target, "beta")); !os.IsNotExist(err) {
+		t.Fatalf("excluded directory exists: %v", err)
+	}
+
+	config.Outputs[1].Sources[0].Exclude = nil
+	result, err = PlanConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(result.Trees[0].Added, " "); got != "beta/notes.txt" {
+		t.Fatalf("added after removing exclude = %q", got)
+	}
+}
+
 func TestLoadLibraryValidatesTreeEntries(t *testing.T) {
 	root := t.TempDir()
 	writeLibraryFile(t, root, "agents/a.md", "# A\n")

@@ -195,7 +195,7 @@ func Apply(config *Config, force bool) (*Result, error) {
 		}
 	}
 	for _, tree := range result.Trees {
-		backup, err := stageTree(tree.Source, tree.Absolute)
+		backup, err := stageTree(tree.Source, tree.Absolute, tree.Exclude)
 		if err != nil {
 			return result, snapshot.restore(err)
 		}
