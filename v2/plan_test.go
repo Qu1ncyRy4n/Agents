@@ -114,7 +114,7 @@ sections {
     title = "Organization"
     section "core" {
       title = "Core"
-      offer = "choose"
+      curate = "choose"
       defaults = {
         review = true
         release = false

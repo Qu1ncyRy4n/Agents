@@ -27,7 +27,7 @@ sections {
     title = "Organization"
     section "base" {
       title = "Base"
-      offer = "foundation"
+      curate = "foundation"
       section "identity" {
         title = "Identity"
         source = "identity.md"
@@ -39,7 +39,7 @@ sections {
     }
     section "core" {
       title = "Core"
-      offer = "choose"
+      curate = "choose"
       defaults = {
         review = true
         release = false
@@ -55,7 +55,7 @@ sections {
     }
     section "extras" {
       title = "Extras"
-      offer = "optional"
+      curate = "optional"
       default = false
       section "triage" {
         title = "Triage"
@@ -64,7 +64,7 @@ sections {
     }
     section "lab" {
       title = "Lab"
-      offer = "opt_in"
+      curate = "opt_in"
       section "experiment" {
         title = "Experiment"
         source = "experiment.md"
@@ -190,7 +190,7 @@ func TestForceExcludeOutsideFoundationIsError(t *testing.T) {
 func TestAcceptDefaultsOutsideChooseIsError(t *testing.T) {
 	plan := Compile(offerConfig(t, `{ org = { extras = { accept_defaults = true } } }`), map[string]*Library{"shared": offerLibrary(t)})
 	got := planErrors(plan)
-	if len(got) != 1 || got[0].Code != "MOGENT108" || !strings.Contains(got[0].Message, "offers optional") {
+	if len(got) != 1 || got[0].Code != "MOGENT108" || !strings.Contains(got[0].Message, "curates as optional") {
 		t.Fatalf("errors = %#v", got)
 	}
 }
@@ -245,14 +245,15 @@ func TestLoadLibraryRejectsBadOffers(t *testing.T) {
 	leaf := "section \"leaf\" {\n        title = \"Leaf\"\n        source = \"leaf.md\"\n      }"
 	cases := []struct{ name, section, want string }{
 		{"legacy-inclusion", "section \"b\" {\n      title = \"B\"\n      inclusion { policy = \"baseline\" }\n      " + leaf + "\n    }", "removed inclusion block"},
-		{"unknown-offer", "section \"b\" {\n      title = \"B\"\n      offer = \"baseline\"\n      " + leaf + "\n    }", "unknown offer \"baseline\""},
-		{"offer-on-leaf", "section \"b\" {\n      title = \"B\"\n      offer = \"foundation\"\n      source = \"leaf.md\"\n    }", "offer requires child sections"},
-		{"choose-missing-default", "section \"b\" {\n      title = \"B\"\n      offer = \"choose\"\n      defaults = {}\n      " + leaf + "\n    }", "requires defaults for every direct child"},
-		{"choose-unknown-default", "section \"b\" {\n      title = \"B\"\n      offer = \"choose\"\n      defaults = { ghost = true }\n      " + leaf + "\n    }", "no default for child \"leaf\""},
-		{"optional-without-default", "section \"b\" {\n      title = \"B\"\n      offer = \"optional\"\n      " + leaf + "\n    }", "optional offer requires default"},
-		{"foundation-with-default", "section \"b\" {\n      title = \"B\"\n      offer = \"foundation\"\n      default = true\n      " + leaf + "\n    }", "only an optional offer may declare default"},
-		{"opt-in-with-defaults", "section \"b\" {\n      title = \"B\"\n      offer = \"opt_in\"\n      defaults = { leaf = true }\n      " + leaf + "\n    }", "only a choose offer may declare defaults"},
-		{"defaults-without-offer", "section \"b\" {\n      title = \"B\"\n      defaults = { leaf = true }\n      " + leaf + "\n    }", "without offer"},
+		{"removed-offer", "section \"b\" {\n      title = \"B\"\n      offer = \"foundation\"\n      " + leaf + "\n    }", "uses removed offer; rename it to curate"},
+		{"unknown-curate", "section \"b\" {\n      title = \"B\"\n      curate = \"baseline\"\n      " + leaf + "\n    }", "unknown curate value \"baseline\""},
+		{"curate-on-leaf", "section \"b\" {\n      title = \"B\"\n      curate = \"foundation\"\n      source = \"leaf.md\"\n    }", "curate requires child sections"},
+		{"choose-missing-default", "section \"b\" {\n      title = \"B\"\n      curate = \"choose\"\n      defaults = {}\n      " + leaf + "\n    }", "requires defaults for every direct child"},
+		{"choose-unknown-default", "section \"b\" {\n      title = \"B\"\n      curate = \"choose\"\n      defaults = { ghost = true }\n      " + leaf + "\n    }", "no default for child \"leaf\""},
+		{"optional-without-default", "section \"b\" {\n      title = \"B\"\n      curate = \"optional\"\n      " + leaf + "\n    }", "optional curate requires default"},
+		{"foundation-with-default", "section \"b\" {\n      title = \"B\"\n      curate = \"foundation\"\n      default = true\n      " + leaf + "\n    }", "only an optional curate may declare default"},
+		{"opt-in-with-defaults", "section \"b\" {\n      title = \"B\"\n      curate = \"opt_in\"\n      defaults = { leaf = true }\n      " + leaf + "\n    }", "only a choose curate may declare defaults"},
+		{"defaults-without-curate", "section \"b\" {\n      title = \"B\"\n      defaults = { leaf = true }\n      " + leaf + "\n    }", "without curate"},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {

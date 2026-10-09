@@ -185,7 +185,8 @@ mogent update            # show new commit and the output diff it causes
 mogent update qmr --accept
 ```
 
-The library sidecar `library.mogent.hcl` declares each branch's `offer`:
+The library sidecar `library.mogent.hcl` declares how each branch should
+`curate` its children:
 `foundation` (in unless dropped with a reason), `choose` (decide per child
 or `accept_defaults`), `optional` (library default applies), `opt_in`
 (excluded unless named). `plan` reports every accepted default, forced

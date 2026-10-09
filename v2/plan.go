@@ -352,7 +352,7 @@ func (r selectionResolver) resolve(section *Section, selection *selectionNode, p
 		r.plan.Diagnostics = append(r.plan.Diagnostics, Diagnostic{
 			Severity: SeverityError,
 			Code:     "MOGENT108",
-			Message:  fmt.Sprintf("accept_defaults is valid only under a choose offer; %s:%s offers %s", r.source, section.Path, offerName(section)),
+			Message:  fmt.Sprintf("accept_defaults is valid only under a choose curate branch; %s:%s curates as %s", r.source, section.Path, offerName(section)),
 		})
 		return
 	}

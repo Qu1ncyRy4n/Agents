@@ -110,7 +110,7 @@ mkdir "$work/share" && cd "$work/share"
 "$mogent" init --source "qmr=file://$upstream" > out.txt
 "$mogent" source show qmr:constraints/security > out.txt
 expect "Title:  Security" out.txt
-expect "Parent: constraints offers foundation" out.txt
+expect "Parent: constraints curates as foundation" out.txt
 expect "TLDR:   Protect confidential information" out.txt
 "$mogent" source show qmr:skills > out.txt
 expect "Entry:  nix-development (nix-development)" out.txt

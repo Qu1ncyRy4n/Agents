@@ -167,7 +167,7 @@ sections {
     title = "Intro"
     tldr  = "Working relationship and instruction-conflict guidance."
     tags  = ["scope/core"]
-    offer = "foundation"
+    curate = "foundation"
 
     section "assistant-agent" {
       title  = "Assistant Agent"
@@ -179,7 +179,7 @@ sections {
   section "workflow" {
     title = "Workflow / Process"
     tags  = ["scope/core", "topic/workflow"]
-    offer = "choose"
+    curate = "choose"
 
     defaults = {
       "principled-code-and-tool-use" = true
@@ -200,7 +200,7 @@ sections {
 
   section "presentation" {
     title   = "Presentation"
-    offer   = "optional"
+    curate  = "optional"
     default = false
 
     section "caveman" {
@@ -232,22 +232,22 @@ with children.
 Tags and TLDRs are sidecar metadata. A tag on an ancestor is effective for every
 descendant during tag matching; it is not copied onto leaves.
 
-### Offer
+### Curation
 
-`offer` is a flat attribute on a branch section. It states how strongly the
+`curate` is a flat attribute on a branch section. It states how strongly the
 library stands behind the branch's direct children when the consumer selects
 the branch broadly. Selecting one exact descendant is always allowed and never
 requires resolving unrelated siblings.
 
-| `offer` | Library says | Broad selection of the parent does | Consumer must |
+| `curate` | Library says | Broad selection of the parent does | Consumer must |
 |---|---|---|---|
 | `foundation` | "You should not run without this." | Include every direct child. | Give `force_exclude = true` and a non-empty `reason` to drop one. |
 | `choose` | "Decide each of these yourself." | Nothing implicit. | Say `true` or `false` per direct child, or `accept_defaults = true`. |
 | `optional` | "Take it or leave it; here is my default." | Apply the section's `default`. | Nothing. Omitted children follow `default`. |
 | `opt_in` | "Here if you ask; probably not for you." | Exclude every direct child. | Name a child explicitly. Mogent warns. |
 
-A branch without `offer` inherits its parent's broad selection unchanged, as
-the current planner does. Whether `offer` should become required is an open
+A branch without `curate` inherits its parent's broad selection unchanged, as
+the current planner does. Whether `curate` should become required is an open
 question below.
 
 `defaults` is required and complete for `choose`, forbidden otherwise. `default`
@@ -375,7 +375,7 @@ fix. `plan` prints suggested HCL for incomplete selections.
 | MOGENT207 | info | A `local` source's Git HEAD and clean or dirty state. Printed only when the directory is inside a Git work tree and `git` is on PATH. |
 | MOGENT208 | warning | An output on disk differs from its recorded state (drift). |
 
-Sidecar validation failures (unknown `offer`, incomplete `defaults`, missing
+Sidecar validation failures (unknown `curate`, incomplete `defaults`, missing
 source file, bad heading) are load errors with the sidecar path and line, not
 plan diagnostics.
 
@@ -403,7 +403,7 @@ the story it serves.
 
 **New repository (US-1).** Run `mogent init --source qmr=../qmr-agents-library`. Run
 `mogent source list qmr --tldr` to see what the library offers, with each
-branch's `offer` visible. Edit `select`. Run `mogent plan`; it shows the full
+branch's `curate` guidance visible. Edit `select`. Run `mogent plan`; it shows the full
 `AGENTS.md` as an addition diff plus any `choose` branches left undecided, with
 suggested HCL. Fix, re-plan, `apply`.
 
@@ -420,7 +420,7 @@ shows the commit range and a diff of the rendered output under the new commit.
 one ordinary Git diff: `mogent.hcl` changed one line, `AGENTS.md` changed
 content.
 
-**Share a library (US-5, CIWG story).** A library author adds `offer`, `tldr`, and `tags` to the
+**Share a library (US-5, CIWG story).** A library author adds `curate`, `tldr`, and `tags` to the
 sidecar, pushes, and hands a consumer a URL. The consumer's `init` plus `plan`
 produces a useful baseline with no further reading. See the threshold below.
 
@@ -430,7 +430,7 @@ Draft; owner to confirm. A library is ready to hand to another person when:
 
 1. `git` sources with `commit` pinning work, so the consumer gets what the
    author tested.
-2. Every branch in the sidecar has `offer`, and every leaf has `tldr`, so
+2. Every branch in the sidecar has `curate`, and every leaf has `tldr`, so
    `source list` is self-explanatory.
 3. Tags exist on at least language, tool, and scope axes, so `tags_any` is
    useful.
@@ -458,11 +458,10 @@ Tag-based selection and a polished core library are necessary; a TUI is not.
 
 ## Open Questions
 
-- The attribute name `offer` is provisional. The alternatives considered,
-  the reasoning for the provisional choice, and the rename checklist are in
+- `curate` is the current v2 attribute. Its naming review is recorded in
   `DR/DR-nalan-offer-attribute-name.md` (owner decision C13).
-- Behavior of a branch with no `offer`. Options: treat as `optional` with
-  `default = true` (library must say less), or require `offer` on every branch
+- Behavior of a branch with no `curate`. Options: treat as `optional` with
+  `default = true` (library must say less), or require `curate` on every branch
   (library must say more, consumer never guesses). Leaning: require it, since
   the sidecar is small and the whole point is explicitness.
 - Whether `plan` should accept `--out` to write the rendered result somewhere
@@ -473,8 +472,9 @@ Tag-based selection and a polished core library are necessary; a TUI is not.
 - The earlier draft's `mogent.lock` file and `mogent lock` command are removed.
   V1's `mogent.lock.yaml` under `docs/IMPLEMENTATION-M4.md` and DI-fipam is a
   V1 contract and is untouched.
-- The `inclusion { policy = ... }` block is replaced by the `offer` attribute.
-  `baseline` becomes `foundation`; `explicit` becomes `choose`.
+- The `inclusion { policy = ... }` block and earlier `offer` attribute are
+  replaced by `curate`. `baseline` becomes `foundation`; `explicit` becomes
+  `choose`.
 - `mogent build --dry-run` for v2 is replaced by `mogent plan`; `mogent build`
   for v2 is replaced by `mogent apply`.
 - `docs/proposals/HCL-CONFIG-SPIKE.md` remains the historical rationale for

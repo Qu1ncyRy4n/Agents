@@ -83,7 +83,7 @@ func (p *printer) flush() error {
 }
 
 // runV2SourceList prints every declared library as a tree of section paths
-// with titles and offers, followed by its raw trees.
+// with titles and curation guidance, followed by its raw trees.
 func runV2SourceList(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("source list", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -160,7 +160,7 @@ func describeSource(source v2.Source, resolved v2.ResolvedSource) string {
 
 func writeSectionRows(out *printer, section, parent *v2.Section, depth int, showTLDR, showTags bool) {
 	row := strings.Repeat("  ", depth) + section.Name + "  " + section.Title
-	if label := offerLabel(section); label != "" {
+	if label := curateLabel(section); label != "" {
 		row += "  [" + label + "]"
 	}
 	if parent != nil && parent.Offer == v2.OfferChoose {
@@ -178,7 +178,7 @@ func writeSectionRows(out *printer, section, parent *v2.Section, depth int, show
 	}
 }
 
-func offerLabel(section *v2.Section) string {
+func curateLabel(section *v2.Section) string {
 	switch section.Offer {
 	case "":
 		return ""
@@ -198,7 +198,7 @@ func sortedTreeNames(library *v2.Library) []string {
 	return names
 }
 
-// runV2SourceShow prints one section or tree in full: identity, offer,
+// runV2SourceShow prints one section or tree in full: identity, curation,
 // effective tags, tldr, source file, and the first lines of its body.
 func runV2SourceShow(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("source show", flag.ContinueOnError)
@@ -244,8 +244,8 @@ func runV2SourceShow(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("source %q has no section or tree %q; use `mogent source list %s`", alias, path, alias)
 	}
 	out.printf("%s:%s\nTitle:  %s\n", alias, path, section.Title)
-	if label := offerLabel(section); label != "" {
-		out.printf("Offer:  %s\n", label)
+	if label := curateLabel(section); label != "" {
+		out.printf("Curate: %s\n", label)
 		if section.Offer == v2.OfferChoose {
 			for _, child := range section.Children {
 				out.printf("        %s = %t\n", child.Name, section.Defaults[child.Name])
@@ -254,7 +254,7 @@ func runV2SourceShow(args []string, stdout, stderr io.Writer) error {
 	}
 	if parentPath := filepath.ToSlash(filepath.Dir(path)); parentPath != "." {
 		if parent := library.ByPath[parentPath]; parent != nil && parent.Offer != "" {
-			row := "Parent: " + parentPath + " offers " + parent.Offer
+			row := "Parent: " + parentPath + " curates as " + parent.Offer
 			if parent.Offer == v2.OfferChoose {
 				row += fmt.Sprintf(", default %t", parent.Defaults[section.Name])
 			}

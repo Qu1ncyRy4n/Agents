@@ -2,7 +2,7 @@
 
 DR-ID: DR-nalan
 Date: 2026-10-05
-State: open; `offer` is in use provisionally
+State: accepted for v2; `curate` is in use
 Asked by: Quincy Ryan
 
 ## Question
@@ -10,7 +10,7 @@ Asked by: Quincy Ryan
 What should the v2 library sidecar call the attribute that states how
 strongly the library stands behind a branch's direct children when a consumer
 selects the branch broadly? The attribute currently reads
-`offer = "foundation" | "choose" | "optional" | "opt_in"` in
+`curate = "foundation" | "choose" | "optional" | "opt_in"` in
 `library.mogent.hcl`, with `defaults` and `default` beside it.
 
 The name must survive in three places at once: the sidecar a library author
@@ -22,7 +22,8 @@ block, which was rejected as abstract and unreadable in error messages.
 
 | Key | Read aloud | Assessment |
 |---|---|---|
-| `offer` | "library offers constraints as foundation" | Library-side voice. Matches Promise Theory: a `+` promise is an offer; the consumer's `select` is the `-` promise; the library never imposes. Keeps the building-metaphor values. Provisional choice. |
+| `curate` | "curate this branch as foundation" | Library-side guidance that explains how the consumer should handle the branch's direct children. Chosen for v2. The existing values remain readable. |
+| `offer` | "library offers constraints as foundation" | Historical provisional choice. It reads more abstractly in authoring and diagnostics than `curate`. |
 | `choice` | "your choice here is required" | Consumer-side voice. Equally explicit, arguably clearer at a glance. Requires renaming values to `none`, `required`, `optional`, `opt_in` because `choice = "choose"` is redundant. Loses the metaphor and the PT word. The serious alternative. |
 | `policy` | "policy is baseline" | Generic abstract noun. Best of the earlier round, still the complaint that started this. |
 | `intent` / `use_intent` | "intent is foundation" | Vague; says nothing about children. Hyphen illegal in unquoted HCL names. |
@@ -33,29 +34,21 @@ block, which was rejected as abstract and unreadable in error messages.
 | `placement` | "placement is foundation" | Says where, not how strongly; collides with manifest placement flags. |
 | `purpose` | "purpose is choose" | Vague and nonsensical with half the values. |
 
-## Reasoning Behind The Provisional Choice
+## Decision
 
-- The sidecar is the library's file and should speak in the library's voice.
-  `offer` does; `choice` makes the library narrate the consumer's situation.
-- Promise Theory gives one correct word for a `+` promise, and the
-  architecture already is that model: offer on one side, select on the other,
-  `force_exclude` with `reason` as an on-record refusal of a strong offer.
-- The values carry most of the meaning in diagnostics. `foundation` is
-  self-explanatory ("you do not remove a foundation without a reason");
-  `choose` says exactly what the consumer must do; `optional` and `opt_in`
-  are ordinary English. These values survive under `offer` and not under
-  `choice`.
-- Explicitness, the owner's stated priority, is nearly equal between `offer`
-  and `choice`. The tie breaks on voice and on keeping the values.
+- Use `curate` now. It describes practical authoring intent without implying
+  the library imposes a contract on the consumer.
+- Keep `foundation`, `choose`, `optional`, and `opt_in`; they carry the
+  behavioral meaning and require no semantic migration.
+- A later naming change needs a new decision and explicit migration rather
+  than accepting two sidecar grammars indefinitely.
 
 ## What Finalizing Requires
 
-Pick `offer` or `choice`. If `choice`, rename the values as above. Either way
-the change is one commit touching: the `Offer*` constants and the HCL struct
-tag in `v2/library.go`, the `offerLabel` and `Offer:` lines in
-`internal/cli/v2_source.go`, `v2/offer_test.go`, `docs/proposals/MOGENT-HCL-V2-SPEC.md`,
-`README.md`, and the QMR `library.mogent.hcl`. Record the decision as a DI
-in `TODO/TODO.md` and set this DR's state to resolved.
+The v2 cutover changes the HCL struct tag in `v2/library.go`, CLI labels,
+tests, specification, README, demos, and the QMR sidecar. Legacy `offer` is
+rejected with a direct migration message. An explicit sidecar migration command
+remains future work.
 
-Related open question in the spec: whether `offer` becomes required on every
+Related open question in the spec: whether `curate` becomes required on every
 branch section rather than inherited from the parent's broad selection.

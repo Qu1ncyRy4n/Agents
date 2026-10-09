@@ -116,6 +116,7 @@ type sectionBlock struct {
 	Source   *string                `hcl:"source,optional"`
 	TLDR     *string                `hcl:"tldr,optional"`
 	Tags     []string               `hcl:"tags,optional"`
+	Curate   *string                `hcl:"curate,optional"`
 	Offer    *string                `hcl:"offer,optional"`
 	Defaults map[string]bool        `hcl:"defaults,optional"`
 	Default  *bool                  `hcl:"default,optional"`
@@ -272,7 +273,7 @@ func loadSection(root string, library *Library, parent string, raw sectionBlock)
 		}
 	}
 	if len(raw.Legacy) > 0 {
-		return nil, fmt.Errorf("section %q uses the removed inclusion block; set offer = \"foundation|choose|optional|opt_in\" on the section, with defaults or default beside it", path)
+		return nil, fmt.Errorf("section %q uses the removed inclusion block; set curate = \"foundation|choose|optional|opt_in\" on the section, with defaults or default beside it", path)
 	}
 	if err := validateOffer(path, raw, section); err != nil {
 		return nil, err
@@ -295,46 +296,49 @@ func loadSection(root string, library *Library, parent string, raw sectionBlock)
 }
 
 func validateOffer(path string, raw sectionBlock, section *Section) error {
-	if raw.Offer == nil {
+	if raw.Offer != nil {
+		return fmt.Errorf("section %q uses removed offer; rename it to curate", path)
+	}
+	if raw.Curate == nil {
 		if len(raw.Defaults) != 0 || raw.Default != nil {
-			return fmt.Errorf("section %q declares defaults or default without offer", path)
+			return fmt.Errorf("section %q declares defaults or default without curate", path)
 		}
 		return nil
 	}
-	offer := *raw.Offer
+	offer := *raw.Curate
 	switch offer {
 	case OfferFoundation, OfferChoose, OfferOptional, OfferOptIn:
 	default:
-		return fmt.Errorf("section %q has unknown offer %q; use foundation, choose, optional, or opt_in", path, offer)
+		return fmt.Errorf("section %q has unknown curate value %q; use foundation, choose, optional, or opt_in", path, offer)
 	}
 	if len(raw.Children) == 0 {
-		return fmt.Errorf("section %q offer requires child sections", path)
+		return fmt.Errorf("section %q curate requires child sections", path)
 	}
 	section.Offer = offer
 	section.Defaults = raw.Defaults
 	section.Default = raw.Default
 	if offer == OfferChoose {
 		if raw.Default != nil {
-			return fmt.Errorf("section %q choose offer takes defaults, not default", path)
+			return fmt.Errorf("section %q choose curate takes defaults, not default", path)
 		}
 		if len(raw.Defaults) != len(raw.Children) {
-			return fmt.Errorf("section %q choose offer requires defaults for every direct child", path)
+			return fmt.Errorf("section %q choose curate requires defaults for every direct child", path)
 		}
 		for _, child := range raw.Children {
 			if _, found := raw.Defaults[child.Name]; !found {
-				return fmt.Errorf("section %q choose offer has no default for child %q", path, child.Name)
+				return fmt.Errorf("section %q choose curate has no default for child %q", path, child.Name)
 			}
 		}
 		return nil
 	}
 	if len(raw.Defaults) != 0 {
-		return fmt.Errorf("section %q only a choose offer may declare defaults", path)
+		return fmt.Errorf("section %q only a choose curate may declare defaults", path)
 	}
 	if offer == OfferOptional && raw.Default == nil {
-		return fmt.Errorf("section %q optional offer requires default", path)
+		return fmt.Errorf("section %q optional curate requires default", path)
 	}
 	if offer != OfferOptional && raw.Default != nil {
-		return fmt.Errorf("section %q only an optional offer may declare default", path)
+		return fmt.Errorf("section %q only an optional curate may declare default", path)
 	}
 	return nil
 }
