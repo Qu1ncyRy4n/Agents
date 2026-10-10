@@ -25,6 +25,7 @@ type record struct {
 	Kind   string            `json:"kind"`
 	SHA256 string            `json:"sha256,omitempty"`
 	Files  map[string]string `json:"files,omitempty"`
+	Layout *Layout           `json:"layout,omitempty"`
 }
 
 // OutputState describes the relationship between an output file and mogent's
@@ -138,6 +139,17 @@ func Write(statePath, outputPath, output string) error {
 // WriteDirectory records one generated directory while preserving records for
 // every other output. Callers provide hashes for paths relative to outputPath.
 func WriteDirectory(statePath, outputPath string, files map[string]string) error {
+	return writeDirectoryRecord(statePath, outputPath, files, nil)
+}
+
+// WriteDirectoryLayout additionally records file permissions and directory
+// topology for complete typed artifact manifests. Legacy directory state stays
+// readable and retains its original byte-only drift contract.
+func WriteDirectoryLayout(statePath, outputPath string, files map[string]string, layout Layout) error {
+	return writeDirectoryRecord(statePath, outputPath, files, &layout)
+}
+
+func writeDirectoryRecord(statePath, outputPath string, files map[string]string, layout *Layout) error {
 	previous, err := readState(statePath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -165,7 +177,7 @@ func WriteDirectory(statePath, outputPath string, files map[string]string) error
 	for path, digest := range files {
 		copy[path] = digest
 	}
-	outputs[key] = record{Kind: "directory", Files: copy}
+	outputs[key] = record{Kind: "directory", Files: copy, Layout: cloneLayout(layout)}
 	return writeOutputs(statePath, outputs)
 }
 
@@ -249,6 +261,15 @@ func InspectDirectory(outputPath, statePath string) (OutputState, error) {
 	}
 	for path, digest := range files {
 		if record.Files[path] != digest {
+			return OutputModified, nil
+		}
+	}
+	if record.Layout != nil {
+		layout, err := InspectLayout(outputPath)
+		if err != nil {
+			return "", err
+		}
+		if !equalModes(layout.Files, record.Layout.Files) || !equalModes(layout.Directories, record.Layout.Directories) {
 			return OutputModified, nil
 		}
 	}

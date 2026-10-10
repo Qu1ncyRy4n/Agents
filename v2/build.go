@@ -217,7 +217,13 @@ func Apply(config *Config, force bool) (*Result, error) {
 		}
 	}
 	for _, tree := range result.Trees {
-		if err := state.WriteDirectory(result.statePath, tree.Absolute, tree.hashes); err != nil {
+		var stateErr error
+		if tree.Manifest != nil {
+			stateErr = state.WriteDirectoryLayout(result.statePath, tree.Absolute, tree.hashes, manifestLayout(tree.Manifest))
+		} else {
+			stateErr = state.WriteDirectory(result.statePath, tree.Absolute, tree.hashes)
+		}
+		if err := stateErr; err != nil {
 			return result, snapshot.restore(err)
 		}
 	}
@@ -316,6 +322,7 @@ func Update(config *Config, alias string, accept bool) ([]UpdateResult, error) {
 						compareHashes(&change, currentTrees[output.Name], nextTrees[output.Name])
 						if change.Manifest != nil {
 							change.Documents = compareDocuments(output.Name, relative, current.Manifests[output.Name].Files, change.Manifest.Files)
+							compareLayout(&change, manifestLayout(current.Manifests[output.Name]), manifestLayout(change.Manifest))
 						}
 						update.Trees = append(update.Trees, change)
 					}

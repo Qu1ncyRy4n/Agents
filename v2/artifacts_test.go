@@ -301,7 +301,7 @@ func TestArtifactUpdatePreviewsMemberChangesAndOnlyMovesPins(t *testing.T) {
 		t.Fatalf("updates=%#v", updates)
 	}
 	tree := updates[0].Trees[0]
-	if strings.Join(tree.Added, " ") != ".agents/skills/review/new.txt" || strings.Join(tree.Removed, " ") != ".agents/skills/review/scripts/check.sh" || len(tree.Changed) != 2 {
+	if strings.Join(tree.Added, " ") != ".agents/skills/review/new.txt" || strings.Join(tree.Removed, " ") != ".agents/skills/review/scripts/ .agents/skills/review/scripts/check.sh" || len(tree.Changed) != 2 {
 		t.Fatalf("tree=%#v", tree)
 	}
 	if len(tree.Documents) != 1 || !strings.Contains(tree.Documents[0].Diff, "+Updated procedure.") {
@@ -332,5 +332,42 @@ func TestArtifactUpdatePreviewsMemberChangesAndOnlyMovesPins(t *testing.T) {
 	guide, err = os.ReadFile(filepath.Join(root, "agent-export/AGENTS.md"))
 	if err != nil || !strings.Contains(string(guide), "Updated procedure") {
 		t.Fatalf("accepted apply=%q %v", guide, err)
+	}
+}
+
+func TestTypedArtifactsTrackPermissionsAndEmptyDirectories(t *testing.T) {
+	config, root := artifactFixture(t)
+	if _, err := Apply(config, false); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(root, "agent-export")
+	script := filepath.Join(target, ".agents/skills/review/scripts/check.sh")
+	if err := os.Chmod(script, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(config, false); err == nil || !strings.Contains(err.Error(), "direct edits") {
+		t.Fatalf("chmod drift=%v", err)
+	}
+	if _, err := Apply(config, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(target, "untracked-empty"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(config, false); err == nil || !strings.Contains(err.Error(), "direct edits") {
+		t.Fatalf("empty directory drift=%v", err)
+	}
+	if _, err := Apply(config, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(root, "library/payloads/review/scripts/check.sh"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	result, err := PlanConfig(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Trees[0].Status != FileChanged || !containsPath(result.Trees[0].Changed, ".agents/skills/review/scripts/check.sh") {
+		t.Fatalf("source mode preview=%#v", result.Trees[0])
 	}
 }

@@ -103,6 +103,13 @@ func planArtifacts(result *Result, root string) error {
 				return err
 			}
 			change.Manifest = manifest
+			if change.Status != FileNew {
+				layout, err := state.InspectLayout(change.Absolute)
+				if err != nil {
+					return err
+				}
+				compareLayout(&change, layout, manifestLayout(manifest))
+			}
 			before := make(map[string]content.Payload)
 			for member, payload := range manifest.Files {
 				if !payload.Rendered {
@@ -122,6 +129,53 @@ func planArtifacts(result *Result, root string) error {
 		}
 	}
 	return nil
+}
+
+func manifestLayout(manifest *content.Manifest) state.Layout {
+	layout := state.Layout{Files: make(map[string]uint32, len(manifest.Files)), Directories: make(map[string]uint32, len(manifest.Directories))}
+	for name, payload := range manifest.Files {
+		layout.Files[name] = uint32(payload.Mode.Perm())
+	}
+	for name, mode := range manifest.Directories {
+		layout.Directories[name] = uint32(mode.Perm())
+	}
+	return layout
+}
+
+func compareLayout(change *TreeChange, before, after state.Layout) {
+	for name, mode := range after.Files {
+		if previous, exists := before.Files[name]; exists && previous != mode && !containsPath(change.Changed, name) && !containsPath(change.Added, name) {
+			change.Changed = append(change.Changed, name)
+		}
+	}
+	for name, mode := range after.Directories {
+		previous, exists := before.Directories[name]
+		if !exists {
+			change.Added = append(change.Added, name+"/")
+		} else if previous != mode {
+			change.Changed = append(change.Changed, name+"/")
+		}
+	}
+	for name := range before.Directories {
+		if _, exists := after.Directories[name]; !exists {
+			change.Removed = append(change.Removed, name+"/")
+		}
+	}
+	sort.Strings(change.Added)
+	sort.Strings(change.Changed)
+	sort.Strings(change.Removed)
+	if len(change.Added)+len(change.Changed)+len(change.Removed) > 0 {
+		change.Status = FileChanged
+	}
+}
+
+func containsPath(paths []string, wanted string) bool {
+	for _, value := range paths {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
 }
 
 func compareDocuments(output, root string, before, after map[string]content.Payload) []FileChange {
