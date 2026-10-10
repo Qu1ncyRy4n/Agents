@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -190,7 +191,8 @@ func localGitInfo(path string) (string, bool, bool) {
 }
 
 // SetCommits returns configPath's bytes with commit set on each named source
-// block. Every other byte of the file, including comments, is preserved.
+// block. Other bytes, including comments, are preserved except for the newlines
+// needed to expand a single-line source into a valid multi-attribute block.
 func SetCommits(configPath string, commits map[string]string) ([]byte, error) {
 	contents, err := os.ReadFile(configPath)
 	if err != nil {
@@ -214,7 +216,26 @@ func SetCommits(configPath string, commits map[string]string) ([]byte, error) {
 		if block == nil {
 			return nil, fmt.Errorf("%s has no source %q to pin", configPath, alias)
 		}
+		body := block.Body()
+		newAttribute := body.GetAttribute("commit") == nil
+		tokens := body.BuildTokens(nil)
+		if !strings.Contains(string(tokens.Bytes()), "\n") && body.GetAttribute("commit") == nil {
+			body.Clear()
+			body.AppendUnstructuredTokens(hclwrite.Tokens{&hclwrite.Token{Type: hclsyntax.TokenNewline, Bytes: []byte("\n")}})
+			body.AppendUnstructuredTokens(tokens)
+			body.AppendNewline()
+		}
 		block.Body().SetAttributeValue("commit", cty.StringVal(commits[alias]))
+		if newAttribute {
+			for _, token := range body.GetAttribute("commit").BuildTokens(nil) {
+				switch token.Type {
+				case hclsyntax.TokenIdent:
+					token.SpacesBefore = 4
+				case hclsyntax.TokenEqual, hclsyntax.TokenOQuote:
+					token.SpacesBefore = 1
+				}
+			}
+		}
 	}
-	return file.Bytes(), nil
+	return file.BuildTokens(nil).Bytes(), nil
 }

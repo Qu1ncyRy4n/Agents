@@ -234,6 +234,42 @@ func TestUpdateRefusesUnpinnedSource(t *testing.T) {
 	}
 }
 
+func TestSetCommitsExpandsSingleLineSourcesWithoutChangingOtherBlocks(t *testing.T) {
+	root := t.TempDir()
+	configPath := filepath.Join(root, ConfigFile)
+	suffix := `# keep this output comment
+outputs {
+  output "agents" {
+    path = "AGENTS.md"
+    kind = "markdown"
+    source "shared" {
+      from = "shared:agents"
+      select = { all = true }
+    }
+  }
+}
+`
+	writeLibraryFile(t, root, ConfigFile, "# keep header\nmogent { format = 2 }\nsources {\n source \"shared\" { git = \"https://example.com/library.git\" } # keep source comment\n}\n"+suffix)
+	pin := strings.Repeat("a", 40)
+	updated, err := SetCommits(configPath, map[string]string{"shared": pin})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(updated), "# keep header\n") || !strings.HasSuffix(string(updated), suffix) || !strings.Contains(string(updated), "# keep source comment") {
+		t.Fatalf("comments changed:\n%s", updated)
+	}
+	if err := os.WriteFile(configPath, updated, 0600); err != nil {
+		t.Fatal(err)
+	}
+	config, err := Load(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.Sources["shared"].Commit != pin {
+		t.Fatalf("pin=%q", config.Sources["shared"].Commit)
+	}
+}
+
 func TestLocalSourceInsideGitWorkTreeReportsHead(t *testing.T) {
 	library := newUpstream(t)
 	head := gitRun(t, library, "rev-parse", "--short", "HEAD")
