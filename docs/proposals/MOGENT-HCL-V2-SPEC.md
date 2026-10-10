@@ -5,6 +5,14 @@ Status: active design specification for the v2 configuration model. Revised
 `mogent.lock` file, `inclusion` block, and `build --dry-run` command. Current
 implementation status is tracked in `TODO/TODO-pupab-hcl-v2-rollout.md`.
 
+Approved next design direction (2026-10-09):
+[DR-juvih / DI-juvih](../../DR/DR-juvih-typed-content-composition.md) records typed
+physical nodes with optional heading views, explicit copy/render operations,
+mixed artifacts, and explicit collision replacement. Its HCL grammar is not yet
+specified or implemented. The configuration grammar below remains the current
+v2 contract; follow-up work is tracked in
+[TODO-tugur](../../TODO/TODO-tugur-v2-composition-followup.md).
+
 V1 (`agents.yaml`, `mogent.lock.yaml`, `mogent build`) is unchanged by this
 document. A repository uses one format at a time. V1-to-V2 migration is a later
 command, not an implicit parser fallback.

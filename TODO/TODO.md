@@ -47,6 +47,15 @@ Canonical repository tracking:
 
 ## Decision Intent Log
 
+ID: DI-juvih
+Date: 2026-10-09
+Status: active
+Author: Quincy Ryan (owner direction recorded from this conversation)
+Decision: Adopt typed physical directory/file inventory with optional document heading views and separate role/bundle annotations. Start with intact copying and explicit rendering, permit mixed artifacts under one final managed manifest, and require explicit replacement for destination collisions rather than automatic later-wins.
+Intent: Give skills, instructions, guides, research, and opaque native files one explainable composition model without losing file identity, frontmatter, bundle integrity, or document structure.
+Constraints: Heading extraction does not edit installed skills. TOML/YAML/JSON/JSONC imports remain complete opaque files. Source exclusions retain their current filtering meaning. Scope and runtime loading are explicit; vendor adapters, automatic global/cascade integration, and editable heading derivatives are backlogged. Exact grammar, heading-parser contract, replacement/exclusion syntax, migration, and delivery sequencing remain open.
+Affects: DR/DR-juvih-typed-content-composition.md, docs/thought-experiments/TE-gunak-typed-agent-content-composition.md, TODO/TODO-tugur-v2-composition-followup.md, future v2 content inventory/planner/render/copy/state implementations
+
 ID: DI-hozaz
 Date: 2026-09-04 12:57:01
 Status: active
