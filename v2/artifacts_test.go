@@ -254,3 +254,77 @@ func TestLoadRejectsOverlappingArtifactOutputs(t *testing.T) {
 		t.Fatalf("overlap=%v", err)
 	}
 }
+
+func TestArtifactUpdatePreviewsMemberChangesAndOnlyMovesPins(t *testing.T) {
+	config, root := artifactFixture(t)
+	upstream := filepath.Join(root, "library")
+	gitRun(t, upstream, "init", "--quiet")
+	gitRun(t, upstream, "add", ".")
+	gitRun(t, upstream, "commit", "--quiet", "-m", "Initial typed library")
+	data, err := os.ReadFile(config.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	remote := strings.Replace(string(data), `local = "library"`, `git = "file://`+upstream+`"`, 1)
+	writeLibraryFile(t, root, ConfigFile, remote)
+	config, err = Load(config.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(config, false); err != nil {
+		t.Fatal(err)
+	}
+	config, err = Load(config.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldPin := config.Sources["shared"].Commit
+	oldState, err := os.ReadFile(filepath.Join(root, ".mogent/state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeLibraryFile(t, upstream, "payloads/review/SKILL.md", "---\nname: review\ndescription: Review a change.\n---\n# Review\n## Procedure\nUpdated procedure.\n")
+	writeLibraryFile(t, upstream, "payloads/review/new.txt", "new supporting resource\n")
+	if err := os.Remove(filepath.Join(upstream, "payloads/review/scripts/check.sh")); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, upstream, "add", ".")
+	gitRun(t, upstream, "commit", "--quiet", "-m", "Revise bundle")
+	updates, err := Update(config, "shared", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updates) != 1 || len(updates[0].Trees) != 1 {
+		t.Fatalf("updates=%#v", updates)
+	}
+	tree := updates[0].Trees[0]
+	if strings.Join(tree.Added, " ") != ".agents/skills/review/new.txt" || strings.Join(tree.Removed, " ") != ".agents/skills/review/scripts/check.sh" || len(tree.Changed) != 2 {
+		t.Fatalf("tree=%#v", tree)
+	}
+	previewed, err := Load(config.Path)
+	if err != nil || previewed.Sources["shared"].Commit != oldPin {
+		t.Fatalf("preview moved pin: %v", err)
+	}
+	if _, err := Update(config, "shared", true); err != nil {
+		t.Fatal(err)
+	}
+	guide, err := os.ReadFile(filepath.Join(root, "agent-export/AGENTS.md"))
+	if err != nil || strings.Contains(string(guide), "Updated") {
+		t.Fatalf("update wrote output: %q %v", guide, err)
+	}
+	state, err := os.ReadFile(filepath.Join(root, ".mogent/state.json"))
+	if err != nil || string(state) != string(oldState) {
+		t.Fatalf("update wrote state: %v", err)
+	}
+	accepted, err := Load(config.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Apply(accepted, false); err != nil {
+		t.Fatal(err)
+	}
+	guide, err = os.ReadFile(filepath.Join(root, "agent-export/AGENTS.md"))
+	if err != nil || !strings.Contains(string(guide), "Updated procedure") {
+		t.Fatalf("accepted apply=%q %v", guide, err)
+	}
+}

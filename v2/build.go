@@ -231,6 +231,7 @@ type UpdateResult struct {
 	NewCommit   string
 	Changes     []FileChange
 	Diagnostics []Diagnostic
+	Trees       []TreeChange
 }
 
 // Changed reports whether the ref now resolves to a different commit.
@@ -269,6 +270,10 @@ func Update(config *Config, alias string, accept bool) ([]UpdateResult, error) {
 	if current.HasErrors() {
 		return nil, fmt.Errorf("current configuration has plan errors; fix them before update")
 	}
+	currentTrees, err := directoryOutputHashes(current)
+	if err != nil {
+		return nil, err
+	}
 	base := filepath.Dir(config.Path)
 	results := make([]UpdateResult, 0, len(aliases))
 	pins := make(map[string]string)
@@ -300,7 +305,19 @@ func Update(config *Config, alias string, accept bool) ([]UpdateResult, error) {
 		}
 		update.Diagnostics = next.Plan.Diagnostics
 		if !next.HasErrors() {
+			nextTrees, err := directoryOutputHashes(next)
+			if err != nil {
+				return results, err
+			}
 			for _, output := range current.Plan.Outputs {
+				if output.Kind != "markdown" {
+					for _, relative := range output.Paths {
+						change := TreeChange{Output: output.Name, Path: relative, Status: FileUnchanged, hashes: nextTrees[output.Name], Manifest: next.Manifests[output.Name]}
+						compareHashes(&change, currentTrees[output.Name], nextTrees[output.Name])
+						update.Trees = append(update.Trees, change)
+					}
+					continue
+				}
 				before, after := current.Rendered[output.Name], next.Rendered[output.Name]
 				for _, relative := range output.Paths {
 					change := FileChange{Output: output.Name, Path: relative, Status: FileUnchanged, Content: after}

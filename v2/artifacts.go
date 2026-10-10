@@ -2,6 +2,7 @@ package v2
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -103,4 +104,37 @@ func planArtifacts(result *Result, root string) error {
 		}
 	}
 	return nil
+}
+
+// Update compares expected old/new source manifests, not a potentially edited
+// working output. This covers both typed artifacts and legacy raw tree outputs.
+func directoryOutputHashes(result *Result) (map[string]map[string]string, error) {
+	outputs := make(map[string]map[string]string)
+	for _, output := range result.Plan.Outputs {
+		if manifest := result.Manifests[output.Name]; manifest != nil {
+			outputs[output.Name] = manifestHashes(manifest)
+			continue
+		}
+		if output.Kind != "tree" {
+			continue
+		}
+		source := output.Sources[0]
+		library := result.Libraries[source.Name]
+		tree := library.Trees[source.TreeRoot]
+		directory := filepath.Join(library.Root, filepath.FromSlash(tree.Root))
+		if err := verifySourceTree(directory); err != nil {
+			return nil, err
+		}
+		for _, excluded := range source.Exclude {
+			if _, err := os.Lstat(filepath.Join(directory, filepath.FromSlash(excluded))); err != nil {
+				return nil, fmt.Errorf("excluded path %q in source %q: %w", excluded, source.Name, err)
+			}
+		}
+		hashes, err := state.DirectoryHashes(directory)
+		if err != nil {
+			return nil, err
+		}
+		outputs[output.Name] = filterTreeHashes(hashes, source.Exclude)
+	}
+	return outputs, nil
 }

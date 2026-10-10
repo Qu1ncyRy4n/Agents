@@ -91,6 +91,29 @@ func inspectTree(result *Result, outputName, relative, absolute, source string, 
 	if err != nil {
 		return change, fmt.Errorf("output %q: %w", relative, err)
 	}
+	compareHashes(&change, existing, hashes)
+	treeState, err := state.InspectDirectory(absolute, result.statePath)
+	if err != nil {
+		return change, err
+	}
+	switch treeState {
+	case state.OutputModified:
+		result.Plan.Diagnostics = append(result.Plan.Diagnostics, Diagnostic{
+			Severity: SeverityWarning,
+			Code:     "MOGENT208",
+			Message:  fmt.Sprintf("tree output %q was edited after the last apply; apply requires --force", relative),
+		})
+	case state.OutputUntracked:
+		result.Plan.Diagnostics = append(result.Plan.Diagnostics, Diagnostic{
+			Severity: SeverityWarning,
+			Code:     "MOGENT208",
+			Message:  fmt.Sprintf("tree output %q exists but is not managed by Mogent; apply requires --force", relative),
+		})
+	}
+	return change, nil
+}
+
+func compareHashes(change *TreeChange, existing, hashes map[string]string) {
 	for path, digest := range hashes {
 		previous, found := existing[path]
 		switch {
@@ -112,25 +135,6 @@ func inspectTree(result *Result, outputName, relative, absolute, source string, 
 	if len(change.Added)+len(change.Changed)+len(change.Removed) == 0 {
 		change.Status = FileUnchanged
 	}
-	treeState, err := state.InspectDirectory(absolute, result.statePath)
-	if err != nil {
-		return change, err
-	}
-	switch treeState {
-	case state.OutputModified:
-		result.Plan.Diagnostics = append(result.Plan.Diagnostics, Diagnostic{
-			Severity: SeverityWarning,
-			Code:     "MOGENT208",
-			Message:  fmt.Sprintf("tree output %q was edited after the last apply; apply requires --force", relative),
-		})
-	case state.OutputUntracked:
-		result.Plan.Diagnostics = append(result.Plan.Diagnostics, Diagnostic{
-			Severity: SeverityWarning,
-			Code:     "MOGENT208",
-			Message:  fmt.Sprintf("tree output %q exists but is not managed by Mogent; apply requires --force", relative),
-		})
-	}
-	return change, nil
 }
 
 func checkTreeOverwrite(change TreeChange, statePath string, force bool) error {
@@ -156,7 +160,7 @@ type treeBackup struct {
 	backup string
 }
 
-// stageTree replaces target with a fresh copy of source. The previous target,
+// stageOutputTree installs a captured manifest or a legacy source copy. The previous target,
 // when present, is moved aside and returned so a failed transaction can put it
 // back; the caller removes it after the transaction commits.
 func stageOutputTree(change TreeChange) (treeBackup, error) {
