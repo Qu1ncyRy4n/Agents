@@ -61,6 +61,11 @@ func Compile(config *Config, libraries map[string]*Library) *Plan {
 	plan := &Plan{}
 	for _, output := range config.Outputs {
 		plannedOutput := PlannedOutput{Name: output.Name, Paths: append([]string(nil), output.Paths...), Kind: output.Kind}
+		if output.Kind == "dir-tree" {
+			compileArtifactOutput(plan, &plannedOutput, output, libraries)
+			plan.Outputs = append(plan.Outputs, plannedOutput)
+			continue
+		}
 		if output.Kind == "tree" && len(output.Sources) != 1 {
 			plan.Diagnostics = append(plan.Diagnostics, Diagnostic{
 				Severity: SeverityError,

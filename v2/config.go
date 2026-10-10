@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Qu1ncyRy4n/Agents/content"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsimple"
 )
@@ -43,12 +44,18 @@ type Output struct {
 }
 
 type OutputSource struct {
-	Name    string
-	From    string
-	Select  hcl.Expression
-	TagsAll []string
-	TagsAny []string
-	Exclude []string
+	Name      string
+	From      string
+	Select    hcl.Expression
+	TagsAll   []string
+	TagsAny   []string
+	Exclude   []string
+	Node      string
+	Operation string
+	Into      string
+	Heading   []string
+	Replace   bool
+	Append    bool
 }
 
 type fileConfig struct {
@@ -87,12 +94,18 @@ type outputBlock struct {
 }
 
 type outputSourceBlock struct {
-	Name    string         `hcl:"name,label"`
-	From    string         `hcl:"from"`
-	Select  hcl.Expression `hcl:"select,optional"`
-	TagsAll []string       `hcl:"tags_all,optional"`
-	TagsAny []string       `hcl:"tags_any,optional"`
-	Exclude []string       `hcl:"exclude,optional"`
+	Name      string         `hcl:"name,label"`
+	From      string         `hcl:"from"`
+	Select    hcl.Expression `hcl:"select,optional"`
+	TagsAll   []string       `hcl:"tags_all,optional"`
+	TagsAny   []string       `hcl:"tags_any,optional"`
+	Exclude   []string       `hcl:"exclude,optional"`
+	Node      *string        `hcl:"node,optional"`
+	Operation *string        `hcl:"operation,optional"`
+	Into      *string        `hcl:"into,optional"`
+	Heading   []string       `hcl:"heading,optional"`
+	Replace   *bool          `hcl:"replace,optional"`
+	Append    *bool          `hcl:"append,optional"`
 }
 
 // Load reads and validates one v2 user-side configuration.
@@ -140,6 +153,14 @@ func Load(path string) (*Config, error) {
 		for _, outputPath := range output.Paths {
 			if existing, duplicate := outputPaths[outputPath]; duplicate {
 				return nil, fmt.Errorf("output path %q is declared by both %q and %q", outputPath, existing, output.Name)
+			}
+			if outputPath == "." || outputPath == filepath.Base(config.Path) || outputPath == ".mogent" || strings.HasPrefix(outputPath, ".mogent/") {
+				return nil, fmt.Errorf("output path %q overlaps configuration or workspace state", outputPath)
+			}
+			for earlier, name := range outputPaths {
+				if strings.HasPrefix(earlier, outputPath+"/") || strings.HasPrefix(outputPath, earlier+"/") {
+					return nil, fmt.Errorf("output paths %q (%s) and %q (%s) overlap", earlier, name, outputPath, output.Name)
+				}
 			}
 			outputPaths[outputPath] = output.Name
 		}
@@ -244,12 +265,12 @@ func normalizeOutput(block outputBlock, sources map[string]Source) (Output, erro
 	if block.Path != nil && len(block.Paths) > 0 {
 		return Output{}, fmt.Errorf("path and paths cannot be combined")
 	}
-	if output.Kind != "markdown" && output.Kind != "tree" {
-		return Output{}, fmt.Errorf("kind must be markdown or tree")
+	if output.Kind != "markdown" && output.Kind != "tree" && output.Kind != "dir-tree" {
+		return Output{}, fmt.Errorf("kind must be markdown, tree, or dir-tree")
 	}
 	seenPaths := make(map[string]bool)
 	for index, path := range output.Paths {
-		if output.Kind == "tree" && len(path) > 1 && strings.HasSuffix(path, "/") {
+		if (output.Kind == "tree" || output.Kind == "dir-tree") && len(path) > 1 && strings.HasSuffix(path, "/") {
 			path = strings.TrimSuffix(path, "/")
 			output.Paths[index] = path
 		}
@@ -265,13 +286,21 @@ func normalizeOutput(block outputBlock, sources map[string]Source) (Output, erro
 		return Output{}, fmt.Errorf("declare at least one source block")
 	}
 	for _, blockSource := range block.Sources {
+		// gohcl represents an absent optional expression as a static null
+		// expression, rather than a nil interface.
+		if blockSource.Select != nil {
+			value, diagnostics := blockSource.Select.Value(nil)
+			if !diagnostics.HasErrors() && value.IsNull() {
+				blockSource.Select = nil
+			}
+		}
 		if _, found := sources[blockSource.Name]; !found {
 			return Output{}, fmt.Errorf("source block %q is not declared in sources", blockSource.Name)
 		}
 		if !strings.HasPrefix(blockSource.From, blockSource.Name+":") {
 			return Output{}, fmt.Errorf("from %q must begin with %q", blockSource.From, blockSource.Name+":")
 		}
-		if blockSource.Select == nil {
+		if blockSource.Select == nil && output.Kind != "dir-tree" {
 			return Output{}, fmt.Errorf("source block %q requires select", blockSource.Name)
 		}
 		for _, tag := range append(append([]string(nil), blockSource.TagsAll...), blockSource.TagsAny...) {
@@ -279,7 +308,7 @@ func normalizeOutput(block outputBlock, sources map[string]Source) (Output, erro
 				return Output{}, err
 			}
 		}
-		if output.Kind != "tree" && len(blockSource.Exclude) > 0 {
+		if output.Kind != "tree" && output.Kind != "dir-tree" && len(blockSource.Exclude) > 0 {
 			return Output{}, fmt.Errorf("source block %q: exclude is valid only for tree outputs", blockSource.Name)
 		}
 		seenExcludes := make(map[string]bool, len(blockSource.Exclude))
@@ -292,7 +321,67 @@ func normalizeOutput(block outputBlock, sources map[string]Source) (Output, erro
 			}
 			seenExcludes[excluded] = true
 		}
-		output.Sources = append(output.Sources, OutputSource{Name: blockSource.Name, From: blockSource.From, Select: blockSource.Select, TagsAll: blockSource.TagsAll, TagsAny: blockSource.TagsAny, Exclude: append([]string(nil), blockSource.Exclude...)})
+		source := OutputSource{Name: blockSource.Name, From: blockSource.From, Select: blockSource.Select, TagsAll: blockSource.TagsAll, TagsAny: blockSource.TagsAny, Exclude: append([]string(nil), blockSource.Exclude...)}
+		if output.Kind == "dir-tree" {
+			if blockSource.Operation == nil || blockSource.Into == nil {
+				return Output{}, fmt.Errorf("source %q requires operation and into", blockSource.Name)
+			}
+			source.Operation, source.Into = *blockSource.Operation, *blockSource.Into
+			if source.Operation != "copy" && source.Operation != "render-markdown" {
+				return Output{}, fmt.Errorf("operation must be copy or render-markdown")
+			}
+			if err := content.ValidatePath(source.Into, true); err != nil {
+				return Output{}, err
+			}
+			if blockSource.Node != nil {
+				source.Node = *blockSource.Node
+				if err := content.ValidatePath(source.Node, true); err != nil {
+					return Output{}, err
+				}
+			}
+			if blockSource.Replace != nil {
+				source.Replace = *blockSource.Replace
+			}
+			if blockSource.Append != nil {
+				source.Append = *blockSource.Append
+			}
+			source.Heading = append([]string(nil), blockSource.Heading...)
+			if source.Replace && source.Append {
+				return Output{}, fmt.Errorf("replace and append cannot be combined")
+			}
+			if source.Node != "" && source.Select != nil {
+				return Output{}, fmt.Errorf("node and authored select cannot be combined")
+			}
+			if source.Operation == "copy" {
+				if source.Select != nil || len(source.Heading) > 0 || source.Append {
+					return Output{}, fmt.Errorf("copy uses node, not select, heading, or append")
+				}
+				if source.Node == "" {
+					source.Node = "."
+				}
+			} else {
+				if source.Node == "" && source.Select == nil {
+					return Output{}, fmt.Errorf("render-markdown requires node or authored select")
+				}
+				if source.Into == "." || len(source.Exclude) > 0 {
+					return Output{}, fmt.Errorf("render-markdown requires a file destination and cannot exclude physical paths")
+				}
+			}
+			if source.Select != nil && len(source.Heading) > 0 {
+				return Output{}, fmt.Errorf("heading applies only to a physical file node")
+			}
+			if len(source.TagsAll)+len(source.TagsAny) > 0 && source.Select == nil {
+				return Output{}, fmt.Errorf("tag queries require authored select")
+			}
+			for _, title := range source.Heading {
+				if strings.TrimSpace(title) == "" {
+					return Output{}, fmt.Errorf("heading titles must not be empty")
+				}
+			}
+		} else if blockSource.Node != nil || blockSource.Operation != nil || blockSource.Into != nil || len(blockSource.Heading) > 0 || blockSource.Replace != nil || blockSource.Append != nil {
+			return Output{}, fmt.Errorf("typed contribution attributes require kind = dir-tree")
+		}
+		output.Sources = append(output.Sources, source)
 	}
 	return output, nil
 }

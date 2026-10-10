@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/Qu1ncyRy4n/Agents/content"
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsimple"
 )
 
 const LibraryFile = "library.mogent.hcl"
@@ -23,6 +23,7 @@ type Library struct {
 	Trees        map[string]Tree
 	Sections     []*Section
 	ByPath       map[string]*Section
+	Contents     map[string]*content.Inventory
 }
 
 // Tree declares one raw server-side directory root eligible for a tree output.
@@ -133,36 +134,46 @@ type legacyInclusionBlock struct {
 // LoadLibrary reads and validates library.mogent.hcl from root.
 func LoadLibrary(root string) (*Library, error) {
 	path := filepath.Join(root, LibraryFile)
-	var raw libraryFile
-	if err := hclsimple.DecodeFile(path, nil, &raw); err != nil {
+	raw, named, err := decodeLibrary(path)
+	if err != nil {
 		return nil, err
 	}
 	if len(raw.Library) != 1 || raw.Library[0].Format != 2 {
 		return nil, fmt.Errorf("%s: require exactly one library block with format = 2", path)
 	}
-	if len(raw.Content) != 1 {
+	if len(raw.Content) > 1 || (len(raw.Content) == 0 && len(named) == 0) {
 		return nil, fmt.Errorf("%s: require exactly one content block", path)
 	}
-	if len(raw.Sections) != 1 {
+	if len(raw.Content) == 1 && len(raw.Sections) != 1 {
 		return nil, fmt.Errorf("%s: require exactly one sections block", path)
 	}
-	if raw.Content[0].MarkdownRoot == "" {
+	if len(raw.Content) == 0 && len(raw.Sections) > 0 {
+		return nil, fmt.Errorf("%s: sections require an authored content block", path)
+	}
+	authored := contentBlock{}
+	if len(raw.Content) == 1 {
+		authored = raw.Content[0]
+	}
+	if len(raw.Content) == 1 && authored.MarkdownRoot == "" {
 		return nil, fmt.Errorf("%s: markdown_root must not be empty", path)
 	}
-	if err := validateRelativePath(raw.Content[0].MarkdownRoot, "markdown_root"); err != nil {
-		return nil, err
+	if len(raw.Content) == 1 {
+		if err := validateRelativePath(authored.MarkdownRoot, "markdown_root"); err != nil {
+			return nil, err
+		}
 	}
 	library := &Library{
 		Path:         path,
 		Root:         filepath.Clean(root),
 		ID:           raw.Library[0].ID,
 		Name:         raw.Library[0].Name,
-		MarkdownRoot: raw.Content[0].MarkdownRoot,
+		MarkdownRoot: authored.MarkdownRoot,
 		ByPath:       make(map[string]*Section),
 		Trees:        make(map[string]Tree),
+		Contents:     make(map[string]*content.Inventory),
 	}
-	if raw.Content[0].TreeRoot != nil {
-		library.TreeRoot = *raw.Content[0].TreeRoot
+	if authored.TreeRoot != nil {
+		library.TreeRoot = *authored.TreeRoot
 		if err := validateRelativePath(library.TreeRoot, "tree_root"); err != nil {
 			return nil, err
 		}
@@ -170,15 +181,29 @@ func LoadLibrary(root string) (*Library, error) {
 	if library.ID == "" || library.Name == "" {
 		return nil, fmt.Errorf("%s: library id and name must not be empty", path)
 	}
-	if len(raw.Sections[0].Sections) == 0 {
+	if len(raw.Sections) == 1 && len(raw.Sections[0].Sections) == 0 {
 		return nil, fmt.Errorf("%s: sections block must declare at least one section", path)
 	}
-	for _, rawSection := range raw.Sections[0].Sections {
+	var sections []sectionBlock
+	if len(raw.Sections) == 1 {
+		sections = raw.Sections[0].Sections
+	}
+	for _, rawSection := range sections {
 		section, err := loadSection(root, library, "", rawSection)
 		if err != nil {
 			return nil, err
 		}
 		library.Sections = append(library.Sections, section)
+	}
+	for _, declaration := range named {
+		if declaration.Name == library.MarkdownRoot || library.Contents[declaration.Name] != nil {
+			return nil, fmt.Errorf("duplicate content root %q", declaration.Name)
+		}
+		inventory, err := loadContentDirectory(root, declaration.Directory)
+		if err != nil {
+			return nil, fmt.Errorf("content %q: %w", declaration.Name, err)
+		}
+		library.Contents[declaration.Name] = inventory
 	}
 	if len(raw.Trees) > 1 {
 		return nil, fmt.Errorf("%s: require at most one trees block", path)

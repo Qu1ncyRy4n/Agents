@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/Qu1ncyRy4n/Agents/content"
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/state"
 	"github.com/Qu1ncyRy4n/Agents/textdiff"
@@ -42,6 +43,7 @@ type Result struct {
 	Changes   []FileChange
 	Trees     []TreeChange
 	Pins      map[string]string
+	Manifests map[string]*content.Manifest
 	statePath string
 }
 
@@ -77,6 +79,9 @@ func PlanConfig(config *Config) (*Result, error) {
 			}
 			result.Changes = append(result.Changes, change)
 		}
+	}
+	if err := planArtifacts(result, root); err != nil {
+		return result, err
 	}
 	if err := planTrees(result, root); err != nil {
 		return result, err
@@ -115,6 +120,11 @@ func render(config *Config) (*Result, error) {
 		return result, err
 	}
 	result.Rendered = rendered
+	manifests, err := composeArtifacts(config, result)
+	if err != nil {
+		return result, err
+	}
+	result.Manifests = manifests
 	return result, nil
 }
 
@@ -195,7 +205,7 @@ func Apply(config *Config, force bool) (*Result, error) {
 		}
 	}
 	for _, tree := range result.Trees {
-		backup, err := stageTree(tree.Source, tree.Absolute, tree.Exclude)
+		backup, err := stageOutputTree(tree)
 		if err != nil {
 			return result, snapshot.restore(err)
 		}

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Qu1ncyRy4n/Agents/content"
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/state"
 )
@@ -25,6 +26,7 @@ type TreeChange struct {
 	Changed  []string
 	Removed  []string
 	Exclude  []string
+	Manifest *content.Manifest
 	hashes   map[string]string
 }
 
@@ -157,7 +159,8 @@ type treeBackup struct {
 // stageTree replaces target with a fresh copy of source. The previous target,
 // when present, is moved aside and returned so a failed transaction can put it
 // back; the caller removes it after the transaction commits.
-func stageTree(source, target string, excludes []string) (treeBackup, error) {
+func stageOutputTree(change TreeChange) (treeBackup, error) {
+	target := change.Absolute
 	backup := treeBackup{target: target}
 	parent := filepath.Dir(target)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
@@ -167,7 +170,13 @@ func stageTree(source, target string, excludes []string) (treeBackup, error) {
 	if err != nil {
 		return backup, fmt.Errorf("create tree staging directory: %w", err)
 	}
-	if err := copyTree(source, staging, excludes); err != nil {
+	var materializeErr error
+	if change.Manifest != nil {
+		materializeErr = change.Manifest.Materialize(staging)
+	} else {
+		materializeErr = copyTree(change.Source, staging, change.Exclude)
+	}
+	if err := materializeErr; err != nil {
 		_ = os.RemoveAll(staging)
 		return backup, err
 	}
