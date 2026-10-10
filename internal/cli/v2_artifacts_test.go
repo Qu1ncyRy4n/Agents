@@ -252,3 +252,32 @@ func TestTypedCLIUpdateShowsDirectoryAndRenderedChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestTypedCLIReportsModeAndDirectoryDrift(t *testing.T) {
+	root, config := writeArtifactCLI(t, "")
+	var out, errOut bytes.Buffer
+	if err := cli.Run([]string{"apply", "--config", config}, &out, &errOut); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(root, "agent-export")
+	if err := os.Chmod(filepath.Join(target, ".agents/skills/review/scripts/check.sh"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(target, "untracked-empty"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	errOut.Reset()
+	if err := cli.Run([]string{"plan", "--config", config}, &out, &errOut); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "~ .agents/skills/review/scripts/check.sh") || !strings.Contains(out.String(), "- untracked-empty/") || !strings.Contains(errOut.String(), "MOGENT208") {
+		t.Fatalf("drift plan=%s\n%s", out.String(), errOut.String())
+	}
+	if err := cli.Run([]string{"apply", "--config", config}, &out, &errOut); err == nil {
+		t.Fatal("metadata drift silently overwritten")
+	}
+	if err := cli.Run([]string{"apply", "--config", config, "--force"}, &out, &errOut); err != nil {
+		t.Fatal(err)
+	}
+}
