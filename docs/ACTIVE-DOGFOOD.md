@@ -7,6 +7,11 @@ Use this file to track working repositories where Mogent is actually being
 used. `testing-ground/` remains a disposable smoke-test collection for now; it
 is not evidence that a workflow is pleasant or useful in a real repository.
 
+Planned guided campaign:
+[2026-10-09-191238-mogent-multirepo-deploy](dogfood/2026-10-09-191238-mogent-multirepo-deploy.md).
+Inventory existing projects, choose modules/skills with the owner, author each
+consumer's config, and record prediction-versus-result and actual agent-use findings.
+
 Do not record credentials, private source content, or sensitive absolute paths.
 A local-only path may be described with a stable nickname when the repository
 itself is private.

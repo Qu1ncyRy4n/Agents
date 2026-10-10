@@ -180,6 +180,12 @@ may still be imported/copied opaquely; adapter development and conversion wait.
 
 ## Verification Gates
 
+- [ ] **V2C-29 Run the guided multi-repo deployment campaign.** Follow
+  [2026-10-09-191238-mogent-multirepo-deploy](../docs/dogfood/2026-10-09-191238-mogent-multirepo-deploy.md):
+  inventory agreed existing projects, choose existing guidance/skills, author
+  per-project configs, and walk through plan/apply and real agent use with the
+  owner. Capture configuration intuition and repeated friction before expanding
+  the public grammar.
 - [ ] `tools/check` passes on macOS and Linux. macOS passed for this delivery;
   Linux execution remains a CI follow-up.
 - [x] `tools/v2-stories` runs against the sibling QMR library discovered from
