@@ -5,12 +5,14 @@ Status: active design specification for the v2 configuration model. Revised
 `mogent.lock` file, `inclusion` block, and `build --dry-run` command. Current
 implementation status is tracked in `TODO/TODO-pupab-hcl-v2-rollout.md`.
 
-Approved next design direction (2026-10-09):
+Typed-content design and first delivery (2026-10-09):
 [DR-juvih / DI-juvih](../../DR/DR-juvih-typed-content-composition.md) records typed
 physical nodes with optional heading views, explicit copy/render operations,
-mixed artifacts, and explicit collision replacement. Its HCL grammar is not yet
-specified or implemented. The configuration grammar below remains the current
-v2 contract; follow-up work is tracked in
+mixed artifacts, and explicit collision replacement. The owner-approved additive
+grammar is implemented and specified in [Typed Content Composition](../TYPED-CONTENT.md):
+named `content` directory roots, `kind = "dir-tree"`, and source `node`, `operation`,
+`into`, `heading`, `replace`, and `append`. The earlier grammar below remains
+supported; generalized selectors and further adapters are tracked in
 [TODO-tugur](../../TODO/TODO-tugur-v2-composition-followup.md).
 
 V1 (`agents.yaml`, `mogent.lock.yaml`, `mogent build`) is unchanged by this
@@ -23,6 +25,10 @@ V2 lets a consuming repository select reusable library content without
 recreating the library's hierarchy. A user starts from boilerplate, inspects
 available content, makes small selection changes, previews the complete result
 as a diff, and applies only after every required choice is resolved.
+
+The `content` API now provides the shared physical inventory/document-view model;
+typed directory outputs can combine intact copies and generated Markdown under
+one final manifest. Current `sections` remain the authored-guidance adapter.
 
 The terms *library side* and *consumer side* name the two roles. They do not
 require a network service: a library may be a local directory or a Git

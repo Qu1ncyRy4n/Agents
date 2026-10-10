@@ -35,6 +35,15 @@ acceptance scenarios against the sibling QMR library. Open owner decisions:
 whether `curate` becomes required
 on every branch.
 
+Typed composition is now delivered under DR-juvih / DI-juvih-first-slice:
+named physical roots, optional parsed heading views, mixed `dir-tree` copy/render
+outputs, explicit replacement/append, complete bundle copying, directory-update
+previews, and byte/mode/directory drift protection. Core APIs/unit tests precede
+CLI usage tests in the atomic commit sequence. See [TYPED-CONTENT.md](TYPED-CONTENT.md)
+and the runnable `testing-ground/typed-content-demo/` fixture. Generalized selectors,
+annotations, scoped earlier-layer deletion, global/vendor adapters, and editable
+heading derivatives remain follow-up work.
+
 CDINT source review remains paused pending Steve curation. For a request such
 as "I'm Steve, I'm here to do the content curation that Quincy requested.
 Please guide me through it.", read the [Steve library curation

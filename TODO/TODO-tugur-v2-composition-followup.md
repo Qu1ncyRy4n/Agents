@@ -9,6 +9,12 @@ reopen the completed plan/apply, Git-pinning, or basic tree-output work.
 
 ## Current Direction
 
+- The owner-approved first delivery is implemented and documented in
+  [Typed Content Composition](../docs/TYPED-CONTENT.md): named physical roots,
+  optional parsed heading views, mixed copy/render outputs, explicit replacement
+  and append, complete bundle copying, state-backed transactions, and directory
+  update previews. Existing selectors/defaults and old output kinds remain valid.
+  DI-juvih-first-slice records the approved additive grammar and API-first workflow.
 - Keep `exclude` as the consumer-facing operation for suppressing a path from
   a lower tree layer. Do not expose the implementation term `whiteout` in HCL.
 - Use `curate` as the v2 library attribute. Keep its broader terminology review
@@ -93,12 +99,12 @@ reopen the completed plan/apply, Git-pinning, or basic tree-output work.
   Headings do not own arbitrary files and directories do not inherit hidden format
   rules. Exact grammar and adapter sequencing remain V2C-21 work, not completed
   implementation or approval of example spellings.
-- [ ] **V2C-19 Define opaque imports and bundle policies.** Use TE-gunak
-  DF-4/DF-5 to distinguish complete-file copying (including frontmatter and
-  TOML/YAML/JSON/JSONC) from authored-fragment rendering. Defer semantic config
-  merges. Explicit replacement is the accepted collision policy; specify bundle
-  selection/version/replacement and dependency rules before implementation;
-  report stale-member removals and complete contribution provenance in plan.
+- [x] **V2C-19 Deliver first opaque-import and bundle policies.** Complete
+  file/bundle copying preserves bytes and frontmatter; partial skill installs and
+  exclusions are rejected. Explicit replacement removes stale members, and plan
+  reports operation/source/replacement history. Parsed views render derivatives
+  and check explicit local-link dependencies. Richer annotations/derivatives and
+  semantic configuration merging remain deferred.
 - [ ] **V2C-20 Define context identity and tool export projections.** Use
   TE-gunak DF-6/DF-7 to retain global/project/nested/worktree origins, applicability,
   explicit build order, and receiving-host discovery as distinct concepts.
@@ -106,11 +112,12 @@ reopen the completed plan/apply, Git-pinning, or basic tree-output work.
   documented skill/instruction paths, qualify vendor-native targets by version,
   and keep the broader `.agents` protocol an optional proposal projection;
   arbitrary `.agents` storage does not imply standard configuration support.
-- [ ] **V2C-21 Carry typed composition decisions into specification and gates.**
-  Extend V2C-11/V2C-13 and implementation planning from accepted DR-juvih with one
-  mixed final manifest, copy/render applicability, explicit scope projection,
-  and directory/bundle update review. Turn TE-gunak's mixed export and tabletop
-  failure cases into focused verification once semantics are decided.
+- [x] **V2C-21 Specify and verify the first typed-composition delivery.**
+  DR-juvih, DI-juvih-first-slice, and docs/TYPED-CONTENT.md distinguish delivered
+  grammar from future proposals. Unit/usage cases cover mixed manifests,
+  copy/render applicability, bundle replacement, explicit provenance, rollback,
+  byte/mode/directory drift, heading ambiguity, and directory-update previews.
+  Global/tool scope projections and generalized migration remain backlogged.
 - [x] **V2C-22 Execute typed-content TE with skill heading subtrees.** Recorded
   in TE-gunak's 2026-10-09 refinement (R1..R12). These are reasoning cases;
   no proposed grammar or imported-heading implementation was executed.
@@ -135,10 +142,11 @@ reopen the completed plan/apply, Git-pinning, or basic tree-output work.
 - [ ] **V2C-14 Implement the finalized selection and defaults grammar.** Make
   loading, planning, diagnostics, source browsing, init templates, and tests
   agree. Reject only grammar that the migration command can safely rewrite.
-- [ ] **V2C-15 Implement finalized tree overlays.** Support multiple ordered
-  tree sources and mount paths; report every shadowed, excluded, added, changed,
-  and removed path in `plan`; materialize the complete result transactionally;
-  retain managed-state hashes for the final tree.
+- [x] **V2C-15 Deliver ordered typed directory composition.** `dir-tree`
+  outputs accept multiple explicit contributions and `into` paths, disjoint
+  directory union, requested subtree replacement, and explicit rendered append.
+  Plan shows member and generated-document changes plus provenance; captured
+  manifests stage transactionally and track complete bytes/modes/directory layout.
 - [ ] **V2C-16 Extend safe tree exclusions to overlays.** Single-source
   exclusions are implemented relative to the declared source tree: exact files
   and recursive directories are filtered from the managed output. Mount-relative
@@ -172,10 +180,11 @@ may still be imported/copied opaquely; adapter development and conversion wait.
 
 ## Verification Gates
 
-- [ ] `tools/check` passes on macOS and Linux.
-- [ ] `tools/v2-stories` runs against the sibling QMR library discovered from
+- [ ] `tools/check` passes on macOS and Linux. macOS passed for this delivery;
+  Linux execution remains a CI follow-up.
+- [x] `tools/v2-stories` runs against the sibling QMR library discovered from
   the repository layout.
-- [ ] New focused tests cover every finalized grammar rule, diagnostic, tree
-  conflict, exclusion, state/drift case, and transaction rollback.
-- [ ] A temporary consumer can `plan`, review an exact tree/output diff, and
+- [x] Focused API and CLI usage tests cover the first-delivery grammar,
+  collision/exclusion behavior, parsed headings, metadata drift, and rollback.
+- [x] A temporary consumer can `plan`, review an exact tree/output diff, and
   `apply` without unmanaged files or direct edits being overwritten.

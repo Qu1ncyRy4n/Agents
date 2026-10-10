@@ -12,6 +12,11 @@ Grammar, parsed-heading contract, and delivery sequencing remain open. The body
 below preserves the pre-decision analysis; the owner approval is recorded in the
 final dated refinement.
 
+First-delivery update: additive grammar, parsed heading views, core APIs and CLI
+usage are implemented under DI-juvih-first-slice. See
+[Typed Content Composition](../TYPED-CONTENT.md) for the current contract;
+the earlier open questions below remain the historical design analysis.
+
 ## Question and baseline
 
 Can Mogent serve instructions, skills, research/docs/guides, arbitrary `.agents`
@@ -541,3 +546,29 @@ DF-R1's model choice and DF-R2's collision default are settled at that level.
 DF-R1's adapter delivery order, DF-R2's exact granularity/syntax, DF-R3's grammar,
 and DF-R4's exclusion-scope syntax still need specification. The approval does
 not adopt the illustrative HCL or claim current imported-heading support.
+
+### 2026-10-09 — First delivery: approved additive grammar and API-first implementation
+
+The owner subsequently requested implementation with atomic commits, following
+API/unit tests before CLI/usage tests, and explicitly approved the proposed
+first-delivery interface. DI-juvih-first-slice in TODO/TODO.md records that answer.
+
+Delivered: named physical `content` directory roots, output `dir-tree`, explicit
+`node`/`operation`/`into`, optional `heading` title arrays, whole-subtree `replace`,
+and rendered `append`. Existing authored `select` objects and legacy output kinds
+remain supported. Goldmark-backed heading views preserve physical payload identity;
+copying stays opaque and complete, while rendering creates a separate derivative.
+Captured manifests stage under one output owner; permissions and empty directories
+are state tracked alongside bytes. Plans show operations, source context,
+replacement history, member changes, and generated Markdown diffs. Update previews
+compare old/new directory manifests and still write only pins on acceptance.
+
+Core unit tests preceded CLI usage tests. The first-delivery cases cover intact
+skills, extracted subtrees, ambiguity/fenced/quoted/Setext handling, opaque configs,
+explicit replacements, link dependencies, source filtering, drift, rollback, and
+update review. The runnable typed demo and exact grammar are in docs/TYPED-CONTENT.md.
+
+Generalized nested selectors and typed sidecar declarations, custom annotations,
+scoped earlier-layer removal, stable authored heading IDs, editing derivatives,
+vendor adapters, and global installation remain follow-up items. No retrospective
+approval of the earlier illustrative grammar is implied.

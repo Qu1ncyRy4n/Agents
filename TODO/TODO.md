@@ -47,6 +47,15 @@ Canonical repository tracking:
 
 ## Decision Intent Log
 
+ID: DI-juvih-first-slice
+Date: 2026-10-09
+Status: active; implemented
+Author: Quincy Ryan (first-delivery grammar approved during implementation)
+Decision: Approve additive named `content` directory roots, output `kind = "dir-tree"`, and explicit source contributions using `node`, `operation`, `into`, `heading`, and `replace`; retain existing object selections for authored guidance. Rendered append is explicit. Deliver core APIs/unit tests before CLI/usage tests with atomic commits.
+Intent: Make typed mixed composition runnable without prematurely redesigning every selector or rewriting existing configurations.
+Constraints: Existing HCL/YAML flows remain supported. Heading addresses are exact parsed title arrays with ambiguity errors. Bundle installation stays complete; extracted links require explicit dependencies. Opaque configuration files are copied whole. Generalized selectors, role annotations, scoped earlier-layer deletion, vendor/global adapters, and editable heading derivatives remain follow-up work.
+Affects: content/, v2/, state/, internal/cli/, docs/TYPED-CONTENT.md, testing-ground/typed-content-demo/
+
 ID: DI-juvih
 Date: 2026-10-09
 Status: active

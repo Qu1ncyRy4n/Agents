@@ -2,7 +2,7 @@
 
 DR-ID: DR-juvih
 Date: 2026-10-09
-State: accepted design direction; grammar and delivery sequencing remain open
+State: accepted design direction and implemented first-delivery grammar
 Decision intent: DI-juvih in `TODO/TODO.md`
 Owner: Quincy Ryan
 Basis: TE-gunak, including its twelve-case tabletop execution and subsequent
@@ -16,9 +16,9 @@ intact payload copying and explicit rendering. Require explicit replacement for
 destination collisions rather than treating source order as implicit permission
 to overwrite content.
 
-This is the approved next design direction, not a claim that the current HCL
-parser or build engine implements it. Candidate names and HCL examples in the
-TEs remain illustrative until the grammar is specified.
+The first delivery is now implemented under the owner-approved additive grammar
+in [Typed Content Composition](../docs/TYPED-CONTENT.md). Earlier TE examples
+remain analysis; only the documented delivered grammar is accepted by the parser.
 
 ## Content Model
 
@@ -60,10 +60,10 @@ Three different requests have different meanings:
    retaining metadata, remaining content, dependencies, and provenance. This
    editing operation is backlogged, not an implicit side effect of selection.
 
-Parsed imported-heading support is part of the intended model, but its parser,
-addressing contract, and delivery order relative to the existing authored-fragment
-adapter remain open. Until that adapter exists, installed skills remain intact
-copies and their headings are not selectable by current Mogent.
+Parsed imported-heading views now use Goldmark, with exact title-component arrays
+and ambiguity diagnostics. Existing authored-fragment selections remain available.
+Installed skills stay intact while selected heading views can generate separate
+Markdown. Editable heading derivatives remain backlogged.
 
 ## Composition And Ownership
 
@@ -109,18 +109,29 @@ hook/settings registration, automatic global installation/cascade projections,
 and editable heading derivatives. Complete native files can still be explicitly
 copied; backlogging a semantic adapter does not prohibit raw file import.
 
-## Still Open Before Implementation
+## Remaining Broader Design Work
 
-1. Root/node names and HCL grammar: `content`, `node`, typed blocks, and output
-   `dir-tree` remain candidates, not accepted spellings.
-2. Parsed heading addresses, ambiguity handling, dependencies, and delivery order.
-3. Precise directory union, file/subtree replacement, and explicit replacement
-   syntax under the accepted collision policy.
+1. Generalized nested selectors, typed sidecar declarations, and role/bundle annotations.
+2. Stable authored heading IDs and richer dependency/relocation policies beyond
+   the delivered exact title arrays and explicit local-link dependency checks.
+3. Explicit derivative bundle/heading editing beyond whole-subtree replacement.
 4. Scope syntax for source filters versus earlier-contribution exclusions.
-5. Migration, acceptance fixtures, and the staged implementation sequence.
+5. A migration command for any future grammar replacement. This delivery is
+   additive and requires no automatic rewrite of existing configurations.
 
 These detailed specifications refine the accepted model; they do not reopen
 automatic later-wins as the default or reintroduce semantic config merging.
+
+## First-Delivery Approval And Verification
+
+The owner approved `content "physical" { directory = "payloads" }`, directory
+output `dir-tree`, and explicit source contributions with `node`, `operation`,
+`into`, `heading`, and `replace`. Rendered append is explicit via `append`.
+The implementation followed core API/unit tests before CLI/usage tests and atomic
+commits. Verified cases cover intact bundles, optional heading views, opaque files,
+explicit replacement, mixed staging/rollback, drift including modes/empty
+directories, source-update previews, and source/heading discovery. Public details
+and a runnable fixture are in `docs/TYPED-CONTENT.md`.
 
 ## References
 

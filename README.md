@@ -193,6 +193,13 @@ or `accept_defaults`), `optional` (library default applies), `opt_in`
 exclusion, unpinned source, and hand-edited output with a stable `MOGENT`
 code. `tools/v2-stories` runs the spec's acceptance scenarios end to end.
 
+Typed packages use `kind = "dir-tree"` with explicit copy/render contributions.
+Named physical roots can preserve complete skill bundles and configuration files,
+while optional heading views supply generated Markdown in the same managed output.
+Collisions require explicit replacement; plan reports operations and provenance.
+See [Typed Content Composition](docs/TYPED-CONTENT.md) for the grammar, API, and
+the runnable `testing-ground/typed-content-demo/` workflow.
+
 ## Manifest
 
 New manifests use output-scoped selectors, so every target is independent:
