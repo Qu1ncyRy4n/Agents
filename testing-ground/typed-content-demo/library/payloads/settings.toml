@@ -1,0 +1,3 @@
+# Opaque payload: Mogent copies this file without interpreting its keys.
+[demo]
+enabled = true
