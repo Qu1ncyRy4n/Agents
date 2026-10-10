@@ -3,11 +3,14 @@ package v2
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/content"
 	"github.com/Qu1ncyRy4n/Agents/state"
+	"github.com/Qu1ncyRy4n/Agents/textdiff"
 )
 
 func compileArtifactOutput(plan *Plan, planned *PlannedOutput, output Output, libraries map[string]*Library) {
@@ -100,10 +103,53 @@ func planArtifacts(result *Result, root string) error {
 				return err
 			}
 			change.Manifest = manifest
+			before := make(map[string]content.Payload)
+			for member, payload := range manifest.Files {
+				if !payload.Rendered {
+					continue
+				}
+				bytes, err := os.ReadFile(filepath.Join(change.Absolute, filepath.FromSlash(member)))
+				if os.IsNotExist(err) {
+					continue
+				}
+				if err != nil {
+					return err
+				}
+				before[member] = content.Payload{Bytes: bytes}
+			}
+			change.Documents = compareDocuments(output.Name, relative, before, manifest.Files)
 			result.Trees = append(result.Trees, change)
 		}
 	}
 	return nil
+}
+
+func compareDocuments(output, root string, before, after map[string]content.Payload) []FileChange {
+	var names []string
+	for name, payload := range after {
+		if payload.Rendered {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	var changes []FileChange
+	for _, name := range names {
+		previous, exists := before[name]
+		content := string(after[name].Bytes)
+		relative := path.Join(root, name)
+		change := FileChange{Output: output, Path: relative, Content: content, Status: FileUnchanged}
+		oldLabel := "a/" + relative
+		if !exists {
+			change.Status = FileNew
+			oldLabel = "/dev/null"
+		}
+		change.Diff = textdiff.Unified(string(previous.Bytes), content, oldLabel, "b/"+relative)
+		if exists && change.Diff != "" {
+			change.Status = FileChanged
+		}
+		changes = append(changes, change)
+	}
+	return changes
 }
 
 // Update compares expected old/new source manifests, not a potentially edited

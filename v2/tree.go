@@ -17,17 +17,18 @@ import (
 // the selected library directory. Added, Changed, and Removed list files
 // relative to the output path.
 type TreeChange struct {
-	Output   string
-	Path     string
-	Absolute string
-	Source   string
-	Status   FileStatus
-	Added    []string
-	Changed  []string
-	Removed  []string
-	Exclude  []string
-	Manifest *content.Manifest
-	hashes   map[string]string
+	Output    string
+	Path      string
+	Absolute  string
+	Source    string
+	Status    FileStatus
+	Added     []string
+	Changed   []string
+	Removed   []string
+	Exclude   []string
+	Manifest  *content.Manifest
+	Documents []FileChange
+	hashes    map[string]string
 }
 
 // FileCount reports how many files the copied tree contains.

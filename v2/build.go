@@ -314,6 +314,9 @@ func Update(config *Config, alias string, accept bool) ([]UpdateResult, error) {
 					for _, relative := range output.Paths {
 						change := TreeChange{Output: output.Name, Path: relative, Status: FileUnchanged, hashes: nextTrees[output.Name], Manifest: next.Manifests[output.Name]}
 						compareHashes(&change, currentTrees[output.Name], nextTrees[output.Name])
+						if change.Manifest != nil {
+							change.Documents = compareDocuments(output.Name, relative, current.Manifests[output.Name].Files, change.Manifest.Files)
+						}
 						update.Trees = append(update.Trees, change)
 					}
 					continue

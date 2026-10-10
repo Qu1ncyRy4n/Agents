@@ -72,6 +72,9 @@ func TestArtifactAPIPlansAndAppliesMixedOutput(t *testing.T) {
 	if result.HasErrors() || len(result.Trees) != 1 || result.Trees[0].FileCount() != 4 {
 		t.Fatalf("plan=%#v", result)
 	}
+	if len(result.Trees[0].Documents) != 1 || !strings.Contains(result.Trees[0].Documents[0].Diff, "+# Procedure") {
+		t.Fatalf("document preview=%#v", result.Trees[0].Documents)
+	}
 	if _, err := os.Stat(filepath.Join(root, "agent-export")); !os.IsNotExist(err) {
 		t.Fatalf("plan wrote output: %v", err)
 	}
@@ -300,6 +303,9 @@ func TestArtifactUpdatePreviewsMemberChangesAndOnlyMovesPins(t *testing.T) {
 	tree := updates[0].Trees[0]
 	if strings.Join(tree.Added, " ") != ".agents/skills/review/new.txt" || strings.Join(tree.Removed, " ") != ".agents/skills/review/scripts/check.sh" || len(tree.Changed) != 2 {
 		t.Fatalf("tree=%#v", tree)
+	}
+	if len(tree.Documents) != 1 || !strings.Contains(tree.Documents[0].Diff, "+Updated procedure.") {
+		t.Fatalf("updated document diff=%#v", tree.Documents)
 	}
 	previewed, err := Load(config.Path)
 	if err != nil || previewed.Sources["shared"].Commit != oldPin {
