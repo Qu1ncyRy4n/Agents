@@ -52,6 +52,8 @@ func composeArtifacts(config *Config, result *Result) (map[string]*content.Manif
 			resolved := result.Sources[source.Name]
 			if resolved.Commit != "" {
 				contribution.Origin += "@" + resolved.Commit
+			} else {
+				contribution.Origin += " (local " + resolved.Root + ")"
 			}
 			if len(source.Heading) > 0 {
 				contribution.Origin += " heading " + strings.Join(source.Heading, " / ")

@@ -39,6 +39,14 @@ func TestComposeMixedPayloadsPreservesSkillAndOpaqueBytes(t *testing.T) {
 	if string(m.Files["config/tool.toml"].Bytes) != "# keep comment\n[x]\ny = 2\n" {
 		t.Fatal("opaque configuration changed")
 	}
+	for _, event := range m.Events {
+		if event.Path == "AGENTS.md" && event.Operation != content.RenderMarkdown {
+			t.Fatalf("render provenance=%#v", event)
+		}
+		if event.Path == "config/tool.toml" && event.Operation != content.Copy {
+			t.Fatalf("copy provenance=%#v", event)
+		}
+	}
 }
 
 func TestBundleReplacementRemovesStaleMembersAndReportsHistory(t *testing.T) {

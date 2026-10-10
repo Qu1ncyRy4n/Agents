@@ -42,10 +42,11 @@ type Payload struct {
 
 // Event retains contribution history, including equal-byte replacements.
 type Event struct {
-	Action   string
-	Path     string
-	Origin   string
-	Previous string
+	Action    string
+	Path      string
+	Origin    string
+	Previous  string
+	Operation Operation
 }
 
 // Manifest is the complete materialized result in memory. Copy operations
@@ -103,7 +104,7 @@ func (m *Manifest) contribute(c Contribution) error {
 		}
 	}
 	if c.Replace {
-		m.remove(c.Into, c.Origin)
+		m.remove(c.Into, c.Origin, c.Operation)
 	}
 	protected := make(map[string]string, len(m.Bundles))
 	for boundary, origin := range m.Bundles {
@@ -134,7 +135,7 @@ func (m *Manifest) contribute(c Contribution) error {
 			if c.Inventory.Nodes[path.Join(c.Node, excluded)] == nil {
 				return fmt.Errorf("excluded path %q does not exist under node %q", excluded, c.Node)
 			}
-			m.Events = append(m.Events, Event{Action: "exclude-source", Path: path.Join(c.Into, excluded), Origin: c.Origin})
+			m.Events = append(m.Events, Event{Action: "exclude-source", Path: path.Join(c.Into, excluded), Origin: c.Origin, Operation: c.Operation})
 		}
 		for _, p := range c.Inventory.Paths() {
 			if !within(p, c.Node) {
@@ -256,15 +257,19 @@ func (m *Manifest) put(destination string, payload Payload, appendText bool) err
 		joined := strings.TrimRight(string(previous.Bytes), "\r\n") + "\n\n" + string(payload.Bytes)
 		payload.Bytes = []byte(joined)
 		payload.References = append(append([]string(nil), previous.References...), payload.References...)
-		m.Events = append(m.Events, Event{Action: "append", Path: destination, Origin: payload.Origin, Previous: previous.Origin})
+		m.Events = append(m.Events, Event{Action: "append", Path: destination, Origin: payload.Origin, Previous: previous.Origin, Operation: RenderMarkdown})
 	} else {
-		m.Events = append(m.Events, Event{Action: "add", Path: destination, Origin: payload.Origin})
+		operation := Copy
+		if payload.Rendered {
+			operation = RenderMarkdown
+		}
+		m.Events = append(m.Events, Event{Action: "add", Path: destination, Origin: payload.Origin, Operation: operation})
 	}
 	m.Files[destination] = payload
 	return nil
 }
 
-func (m *Manifest) remove(destination, origin string) {
+func (m *Manifest) remove(destination, origin string, operation Operation) {
 	paths := make([]string, 0, len(m.Files))
 	for p := range m.Files {
 		paths = append(paths, p)
@@ -273,7 +278,7 @@ func (m *Manifest) remove(destination, origin string) {
 	for _, p := range paths {
 		payload := m.Files[p]
 		if within(p, destination) {
-			m.Events = append(m.Events, Event{Action: "replace-remove", Path: p, Origin: origin, Previous: payload.Origin})
+			m.Events = append(m.Events, Event{Action: "replace-remove", Path: p, Origin: origin, Previous: payload.Origin, Operation: operation})
 			delete(m.Files, p)
 		}
 	}
