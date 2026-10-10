@@ -26,7 +26,7 @@ func commands() []commandDefinition {
 		{name: "status", usage: "status [--manifest agents.yaml]", run: runStatus},
 		{name: "drift", usage: "drift [--manifest agents.yaml] [--diff]", run: runDrift},
 		{name: "coverage", usage: "coverage [source] [--manifest agents.yaml]", run: runCoverage},
-		{name: "source", usage: "source <add|list|show|pin|update> ... | source list [alias] [--config mogent.hcl] [--tldr] [--tags] | source show alias:path [--config mogent.hcl] [--lines n]", run: runSource},
+		{name: "source", usage: "source <add|list|show|pin|update> ... | source list [alias] [--config mogent.hcl] [--tldr] [--tags] | source show alias:path [--config mogent.hcl] [--lines n] [--headings]", run: runSource},
 		{name: "add", usage: "add <ref> [--under path [--first|--last] | --before path | --after path | --append]", run: runAdd},
 		{name: "localize", usage: "localize <manifest-heading-path> [--from source-ref]", run: runLocalize},
 		{name: "complete", usage: "complete <kind> [--manifest agents.yaml]", run: runComplete},

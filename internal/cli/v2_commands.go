@@ -28,8 +28,10 @@ func runPlan(args []string, stdout, stderr io.Writer) error {
 	}
 	result, err := v2.PlanConfig(config)
 	if result != nil {
-		if writeErr := writePlanChanges(stdout, result); writeErr != nil {
-			return writeErr
+		if err == nil {
+			if writeErr := writePlanChanges(stdout, result); writeErr != nil {
+				return writeErr
+			}
 		}
 		if writeErr := writePlanDiagnostics(stderr, result.Plan); writeErr != nil {
 			return writeErr
@@ -145,12 +147,17 @@ func writeUpdate(stdout, stderr io.Writer, update v2.UpdateResult, accepted bool
 			}
 		}
 	}
+	for _, tree := range update.Trees {
+		if err := writeTreePreview(stdout, tree); err != nil {
+			return err
+		}
+	}
 	for _, diagnostic := range update.Diagnostics {
 		if _, err := fmt.Fprintln(stderr, diagnostic.String()); err != nil {
 			return err
 		}
 	}
-	if accepted && len(update.Changes) > 0 {
+	if accepted && len(update.Changes)+len(update.Trees) > 0 {
 		_, err := fmt.Fprintf(stdout, "Pinned %s to %s in %s\n", update.Alias, update.NewCommit, configPath)
 		return err
 	}
@@ -186,13 +193,8 @@ func writePlanChanges(stdout io.Writer, result *v2.Result) error {
 	}
 	for _, tree := range result.Trees {
 		counts[tree.Status]++
-		if _, err := fmt.Fprintf(stdout, "%s/: %s (%d files)\n", tree.Path, tree.Status, tree.FileCount()); err != nil {
-			return fmt.Errorf("write plan change: %w", err)
-		}
-		for _, line := range treeLines(tree) {
-			if _, err := fmt.Fprintln(stdout, line); err != nil {
-				return fmt.Errorf("write plan change: %w", err)
-			}
+		if err := writeTreePreview(stdout, tree); err != nil {
+			return err
 		}
 	}
 	if result.HasErrors() {
@@ -200,6 +202,36 @@ func writePlanChanges(stdout io.Writer, result *v2.Result) error {
 	}
 	if _, err := fmt.Fprintf(stdout, "Plan: %d to add, %d to change, %d unchanged\n", counts[v2.FileNew], counts[v2.FileChanged], counts[v2.FileUnchanged]); err != nil {
 		return fmt.Errorf("write plan summary: %w", err)
+	}
+	return nil
+}
+
+func writeTreePreview(stdout io.Writer, tree v2.TreeChange) error {
+	if _, err := fmt.Fprintf(stdout, "%s/: %s (%d files)\n", tree.Path, tree.Status, tree.FileCount()); err != nil {
+		return err
+	}
+	for _, line := range treeLines(tree) {
+		if _, err := fmt.Fprintln(stdout, line); err != nil {
+			return err
+		}
+	}
+	for _, document := range tree.Documents {
+		if document.Diff != "" {
+			if _, err := fmt.Fprint(stdout, document.Diff); err != nil {
+				return err
+			}
+		}
+	}
+	if tree.Manifest != nil {
+		for _, event := range tree.Manifest.Events {
+			line := fmt.Sprintf("  %s %s <- %s", event.Action, event.Path, event.Origin)
+			if event.Previous != "" {
+				line += " (previous: " + event.Previous + ")"
+			}
+			if _, err := fmt.Fprintln(stdout, line); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

@@ -118,7 +118,9 @@ func runV2SourceList(args []string, stdout, stderr io.Writer) error {
 		}
 		library := libraries[alias]
 		out.printf("%s: %s (%s)\n", alias, library.Name, describeSource(config.Sources[alias], sources[alias]))
-		out.printf("%s:%s\n", alias, library.MarkdownRoot)
+		if library.MarkdownRoot != "" {
+			out.printf("%s:%s\n", alias, library.MarkdownRoot)
+		}
 		for _, section := range library.Sections {
 			writeSectionRows(out, section, nil, 1, *showTLDR, *showTags)
 		}
@@ -132,6 +134,26 @@ func runV2SourceList(args []string, stdout, stderr io.Writer) error {
 				}
 				if *showTLDR && entry.TLDR != "" {
 					row += "  - " + entry.TLDR
+				}
+				out.line(row)
+			}
+		}
+		contentNames := make([]string, 0, len(library.Contents))
+		for name := range library.Contents {
+			contentNames = append(contentNames, name)
+		}
+		sort.Strings(contentNames)
+		for _, name := range contentNames {
+			inventory := library.Contents[name]
+			out.printf("%s:%s  (content, dir)\n", alias, name)
+			for _, relative := range inventory.Paths() {
+				if relative == "." {
+					continue
+				}
+				node := inventory.Nodes[relative]
+				row := fmt.Sprintf("  %s [%s]", relative, node.Kind)
+				if node.Role != "" {
+					row += " (" + node.Role + ")"
 				}
 				out.line(row)
 			}
@@ -205,7 +227,8 @@ func runV2SourceShow(args []string, stdout, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	configPath := flags.String("config", v2.ConfigFile, "path to v2 HCL configuration")
 	lines := flags.Int("lines", 12, "number of body lines to show; 0 shows the whole body")
-	args = reorderArgs(args, map[string]bool{"-config": true, "--config": true, "-lines": true, "--lines": true})
+	headings := flags.Bool("headings", false, "show a physical Markdown file's heading addresses")
+	args = reorderArgs(args, map[string]bool{"-config": true, "--config": true, "-lines": true, "--lines": true, "-headings": false, "--headings": false})
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
@@ -225,6 +248,12 @@ func runV2SourceShow(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("source %q is not declared in %s", alias, *configPath)
 	}
 	out := newPrinter(stdout)
+	if handled, err := writeTypedSource(out, library, alias, path, *headings, *lines); handled {
+		return err
+	}
+	if *headings {
+		return fmt.Errorf("--headings requires a named-content Markdown file reference")
+	}
 	if tree, ok := library.Trees[path]; ok {
 		out.printf("%s:%s\nKind:   tree\nRoot:   %s\n", alias, path, filepath.Join(library.Root, filepath.FromSlash(tree.Root)))
 		for _, entry := range tree.Entries {
