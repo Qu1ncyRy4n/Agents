@@ -136,7 +136,7 @@ func ValidatePath(value string, allowRoot bool) error {
 	if value == "." && allowRoot {
 		return nil
 	}
-	if value == "" || value == "." || value == ".." || strings.HasPrefix(value, "/") || strings.Contains(value, "\\") || strings.HasPrefix(value, "../") || path.Clean(value) != value || strings.Contains(value, "/../") {
+	if value == "" || value == "." || value == ".." || filepath.IsAbs(value) || strings.ContainsRune(value, 0) || strings.HasPrefix(value, "/") || strings.Contains(value, "\\") || strings.HasPrefix(value, "../") || path.Clean(value) != value || strings.Contains(value, "/../") {
 		return fmt.Errorf("%q must be a safe relative slash path", value)
 	}
 	return nil

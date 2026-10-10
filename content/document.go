@@ -75,7 +75,7 @@ func ParseDocument(source []byte) (*Document, error) {
 		last := h.Lines().At(h.Lines().Len() - 1)
 		end := lineEnd(body, last.Stop)
 		// Setext heading segments contain the text but not the underline.
-		if !strings.HasPrefix(strings.TrimLeft(line(body, start), " "), "#") && end < len(body) {
+		if !isATX(line(body, start)) && end < len(body) {
 			end = lineEnd(body, end)
 		}
 		heading := &Heading{Kind: HeadingKind, Title: strings.TrimSpace(string(h.Text(body))), Level: h.Level, Start: doc.bodyStart + start, End: len(doc.Source), HeaderEnd: doc.bodyStart + end}
@@ -188,6 +188,15 @@ func (d *Document) Render(titles []string, level int) (Rendered, error) {
 func line(source []byte, start int) string {
 	end := lineEnd(source, start)
 	return strings.TrimSuffix(string(source[start:end]), "\n")
+}
+
+func isATX(value string) bool {
+	value = strings.TrimLeft(value, " ")
+	count := 0
+	for count < len(value) && value[count] == '#' {
+		count++
+	}
+	return count >= 1 && count <= 6 && (count == len(value) || value[count] == ' ' || value[count] == '\t' || value[count] == '\r')
 }
 
 func lineEnd(source []byte, start int) int {

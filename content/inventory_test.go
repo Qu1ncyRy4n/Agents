@@ -116,3 +116,17 @@ func TestDocumentReferencesAndValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSetextTitleBeginningWithHashIsNotAnATXHeading(t *testing.T) {
+	doc, err := content.ParseDocument([]byte("#literal\n========\n\nBody.\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := doc.Render([]string{"#literal"}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(rendered.Bytes) != "# #literal\n\nBody.\n" {
+		t.Fatalf("Setext derivative=%q", rendered.Bytes)
+	}
+}
