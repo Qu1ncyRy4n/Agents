@@ -109,7 +109,7 @@ func TestTypedCLIPlanApplyAndDriftWorkflow(t *testing.T) {
 	if err := cli.Run([]string{"plan", "--config", config}, &out, &errOut); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"agent-export/: new (4 files)", "+# Procedure", "add AGENTS.md <- shared:physical/review/SKILL.md", "Plan: 1 to add"} {
+	for _, want := range []string{"agent-export/: new (4 files)", "+# Procedure", "add AGENTS.md <- shared:physical/review/SKILL.md", "[render-markdown]", "[copy]", "(local " + filepath.Join(root, "library") + ")", "Plan: 1 to add"} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("missing %q:\n%s", want, out.String())
 		}

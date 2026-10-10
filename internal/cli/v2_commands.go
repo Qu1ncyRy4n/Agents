@@ -225,6 +225,9 @@ func writeTreePreview(stdout io.Writer, tree v2.TreeChange) error {
 	if tree.Manifest != nil {
 		for _, event := range tree.Manifest.Events {
 			line := fmt.Sprintf("  %s %s <- %s", event.Action, event.Path, event.Origin)
+			if event.Operation != "" {
+				line += " [" + string(event.Operation) + "]"
+			}
 			if event.Previous != "" {
 				line += " (previous: " + event.Previous + ")"
 			}
