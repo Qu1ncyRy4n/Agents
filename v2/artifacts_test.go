@@ -371,3 +371,16 @@ func TestTypedArtifactsTrackPermissionsAndEmptyDirectories(t *testing.T) {
 		t.Fatalf("source mode preview=%#v", result.Trees[0])
 	}
 }
+
+func TestNamedContentRootCannotAliasLegacyTree(t *testing.T) {
+	_, root := artifactFixture(t)
+	file := filepath.Join(root, "library", LibraryFile)
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeLibraryFile(t, root, "library/"+LibraryFile, string(data)+"trees {\n tree \"physical\" { root = \"payloads\" }\n}\n")
+	if _, err := LoadLibrary(filepath.Join(root, "library")); err == nil || !strings.Contains(err.Error(), "duplicates a named content root") {
+		t.Fatalf("root collision=%v", err)
+	}
+}

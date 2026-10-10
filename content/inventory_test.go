@@ -130,3 +130,20 @@ func TestSetextTitleBeginningWithHashIsNotAnATXHeading(t *testing.T) {
 		t.Fatalf("Setext derivative=%q", rendered.Bytes)
 	}
 }
+
+func TestDocumentViewPreservesQuotedHeadingsWithoutPromotingThem(t *testing.T) {
+	doc, err := content.ParseDocument([]byte("# Guide\n\n> # Quoted\n> Keep this quote.\n\n## Procedure\nInspect.\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Headings) != 1 || len(doc.Headings[0].Children) != 1 || doc.Headings[0].Children[0].Title != "Procedure" {
+		t.Fatalf("outline=%#v", doc.Headings)
+	}
+	rendered, err := doc.Render([]string{"Guide"}, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(rendered.Bytes), "> # Quoted\n> Keep this quote.") || !strings.Contains(string(rendered.Bytes), "### Procedure") {
+		t.Fatalf("quote was rewritten=%q", rendered.Bytes)
+	}
+}

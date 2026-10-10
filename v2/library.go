@@ -210,6 +210,9 @@ func LoadLibrary(root string) (*Library, error) {
 	}
 	if len(raw.Trees) == 1 {
 		for _, rawTree := range raw.Trees[0].Trees {
+			if library.Contents[rawTree.Name] != nil {
+				return nil, fmt.Errorf("tree %q duplicates a named content root", rawTree.Name)
+			}
 			if rawTree.Name == "" || rawTree.Root == "" {
 				return nil, fmt.Errorf("%s: tree name and root must not be empty", path)
 			}

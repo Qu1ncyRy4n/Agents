@@ -65,7 +65,9 @@ func ParseDocument(source []byte) (*Document, error) {
 	var stack []*Heading
 	err := ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		h, ok := node.(*ast.Heading)
-		if !entering || !ok {
+		// Headings embedded in quotations/lists belong to those containers,
+		// not the file's document outline. Keep their source text intact.
+		if !entering || !ok || h.Parent() != root {
 			return ast.WalkContinue, nil
 		}
 		start := h.Lines().At(0).Start
