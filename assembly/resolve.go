@@ -340,11 +340,16 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 		var kept []*Node
 		var decisions []Decision
 		for _, node := range nodes {
-			if excluded[node.Path] || excluded[strings.TrimPrefix(node.Path, root.Path+"/")] {
-				if node.Curate == Foundation && strings.TrimSpace(exclusionReasons[node.Path]) == "" && strings.TrimSpace(exclusionReasons[strings.TrimPrefix(node.Path, root.Path+"/")]) == "" {
+			relative := strings.TrimPrefix(node.Path, root.Path+"/")
+			if excluded[node.Path] || excluded[relative] {
+				reason := exclusionReasons[node.Path]
+				if reason == "" {
+					reason = exclusionReasons[relative]
+				}
+				if root.Curate == Foundation && strings.TrimSpace(reason) == "" {
 					result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("foundation %s:%s requires a reason to exclude", alias, node.Path)))
 				}
-				decisions = append(decisions, Decision{Path: alias + ":" + node.Path, Action: "exclude", Reason: exclusionReasons[node.Path], Range: entry.Range})
+				decisions = append(decisions, Decision{Path: alias + ":" + node.Path, Action: "exclude", Reason: reason, Range: entry.Range})
 				continue
 			}
 			if node.ReasonRequired {
@@ -391,6 +396,27 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 		}
 		selected, filtered := filter(selected)
 		return selected, append(decisions, filtered...)
+	}
+	if entry.Selection == nil && root.Curate == Foundation {
+		candidates := root.Children
+		if len(candidates) == 0 {
+			candidates = []*Node{root}
+		}
+		selected, decisions := filter(candidates)
+		return selected, decisions
+	}
+	if entry.Selection == nil && root.Curate == Optional {
+		var selected []*Node
+		for _, child := range root.Children {
+			if child.Default != nil && *child.Default {
+				selected = append(selected, child)
+			}
+		}
+		selected, decisions := filter(selected)
+		return selected, decisions
+	}
+	if entry.Selection == nil && root.Curate == OptIn {
+		return nil, nil
 	}
 	if entry.Selection != nil {
 		selected := make([]*Node, 0, len(entry.Selection.Items))

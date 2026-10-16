@@ -221,6 +221,27 @@ md-section "base" {curate="foundation"}
 	}
 }
 
+func TestResolvePlanAppliesBroadCuration(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "team/mogent.lib", `library {format=1;name="Team"}
+md-section "foundation" {curate="foundation";md-section "a" {source="a.md"};md-section "b" {source="b.md"}}
+md-section "optional" {curate="optional";md-section "yes" {source="yes.md";default=true};md-section "no" {source="no.md";default=false}}
+md-section "optin" {curate="opt_in";md-section "only" {source="only.md"}}
+`)
+	for _, name := range []string{"a", "b", "yes", "no", "only"} {
+		write(t, root, "team/"+name+".md", "# "+name+"\n")
+	}
+	plan := parse(t, filepath.Join(root, "mogent.plan"), `plan {format=1};source "team" {local="team"};include "team:foundation";include "team:optional";include "team:optin"`)
+	result, _, err := assembly.ResolvePlan(plan, filepath.Join(root, "mogent.plan"))
+	if err != nil || result.HasErrors() || len(result.Contributions) != 3 {
+		t.Fatalf("result=%#v diagnostics=%#v err=%v", result.Contributions, result.Diagnostics, err)
+	}
+	got := []string{result.Contributions[0].Node.Path, result.Contributions[1].Node.Path, result.Contributions[2].Node.Path}
+	if strings.Join(got, ",") != "foundation/a,foundation/b,optional/yes" {
+		t.Fatalf("selected=%v", got)
+	}
+}
+
 func TestResolvePlanValidatesFinalRelationships(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "team/mogent.lib", `library {format=1;name="Team"}
