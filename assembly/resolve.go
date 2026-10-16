@@ -366,9 +366,28 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 	}
 	if len(tagsAll) > 0 || len(tagsAny) > 0 {
 		var selected []*Node
+		seen := make(map[string]bool)
 		for _, child := range root.Children {
 			if matchesTags(child, tagsAll, tagsAny) {
 				selected = append(selected, child)
+				seen[child.Path] = true
+			}
+		}
+		if entry.Selection != nil {
+			for _, value := range entry.Selection.Items {
+				name, err := value.ResolveString(nil)
+				if err != nil {
+					result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, err.Error()))
+					continue
+				}
+				child := childByPath(root, name)
+				if child == nil {
+					result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("%s:%s has no child %q", alias, root.Path, name)))
+					continue
+				}
+				if !seen[child.Path] {
+					selected, seen[child.Path] = append(selected, child), true
+				}
 			}
 		}
 		if len(selected) == 0 {

@@ -197,6 +197,23 @@ include "team:skills" {tags_all=["lang"];exclude=["review"]}
 	}
 }
 
+func TestResolvePlanUnionsTagsAndExplicitChildren(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	plan := parse(t, filepath.Join(root, "mogent.plan"), `plan {format=1}
+source "team" {local="team"}
+include "team:skills" ["deployment"] {tags_all=["lang"]}
+`)
+	result, _, err := assembly.ResolvePlan(plan, filepath.Join(root, "mogent.plan"))
+	if err != nil || result.HasErrors() || len(result.Contributions) != 3 {
+		t.Fatalf("result=%#v diagnostics=%#v err=%v", result.Contributions, result.Diagnostics, err)
+	}
+	got := []string{result.Contributions[0].Node.Path, result.Contributions[1].Node.Path, result.Contributions[2].Node.Path}
+	if strings.Join(got, ",") != "skills/review,skills/testing,skills/deployment" {
+		t.Fatalf("selected=%v", got)
+	}
+}
+
 func TestResolvePlanRequiresReasonForExperimentalAndFoundationExclusion(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "team/mogent.lib", `library {format=1;name="Team"}
