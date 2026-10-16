@@ -186,6 +186,13 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	if flags.NArg() > 1 || *sourceView && *buildView {
 		return fmt.Errorf("show accepts at most one node and only one of --source or --build")
 	}
+	requested := ""
+	if flags.NArg() == 1 {
+		requested = flags.Arg(0)
+		if _, _, found := strings.Cut(requested, ":"); !found {
+			return fmt.Errorf("show node must be alias:path")
+		}
+	}
 	file, err := assembly.LoadFile(*path)
 	if err != nil {
 		return err
@@ -196,6 +203,11 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	}
 	if *issues {
 		writeAssemblyDiagnostics(stdout, result)
+		for _, node := range result.Nodes {
+			if node.Status != assembly.Selected && (requested == "" || requested == node.Source+":"+node.Path) {
+				_, _ = fmt.Fprintf(stdout, "%s:%s [%s] %s\n", node.Source, node.Path, node.Status, node.Reason)
+			}
+		}
 		if result.HasErrors() {
 			return fmt.Errorf("show found errors")
 		}
@@ -233,8 +245,20 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 		} else {
 			name = "inline"
 		}
+		if requested != "" && name != requested {
+			continue
+		}
 		if _, err := fmt.Fprintf(stdout, "%s -> %s\n", name, contribution.Into); err != nil {
 			return err
+		}
+	}
+	if requested != "" {
+		for _, node := range result.Nodes {
+			if requested == node.Source+":"+node.Path && node.Status != assembly.Selected {
+				if _, err := fmt.Fprintf(stdout, "%s [%s] %s\n", requested, node.Status, node.Reason); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	writeAssemblyDiagnostics(stdout, result)

@@ -306,6 +306,7 @@ func resolveInclude(result *Result, sources map[string]Source, bindings map[stri
 		}
 		merged := append(append([]Decision(nil), inherited...), decisions...)
 		result.Contributions = append(result.Contributions, Contribution{Source: alias, Node: selectedNode, Into: into, Replace: replace, Values: values, Range: entry.Range, Decision: merged})
+		result.Nodes = append(result.Nodes, ResultNode{Source: alias, Path: selectedNode.Path, Status: Selected, Destination: into, Range: entry.Range})
 	}
 }
 
@@ -356,6 +357,7 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 				reason, _, _ := stringField(entry, "reason", nil)
 				if strings.TrimSpace(reason) == "" {
 					result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("%s:%s requires a nonblank reason", alias, node.Path)))
+					result.Nodes = append(result.Nodes, ResultNode{Source: alias, Path: node.Path, Status: Invalid, Reason: "missing required inclusion reason", Range: entry.Range})
 					continue
 				}
 				decisions = append(decisions, Decision{Path: alias + ":" + node.Path, Action: "include", Reason: reason, Range: entry.Range})
@@ -399,6 +401,7 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 	if root.Curate == Choose && entry.Selection == nil {
 		if accept, _ := boolField(entry, "accept_defaults"); !accept {
 			result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("UNDECIDED: %s:%s requires explicit choices or accept_defaults", alias, root.Path)))
+			result.Nodes = append(result.Nodes, ResultNode{Source: alias, Path: root.Path, Status: Undecided, Reason: "requires explicit choices or accept_defaults", Range: entry.Range})
 			return nil, nil
 		}
 		var selected []*Node
@@ -406,6 +409,7 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 		for _, child := range root.Children {
 			if child.Default == nil {
 				result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("UNDECIDED: %s:%s has no default", alias, child.Path)))
+				result.Nodes = append(result.Nodes, ResultNode{Source: alias, Path: child.Path, Status: Undecided, Reason: "choose child has no default", Range: entry.Range})
 				continue
 			}
 			if *child.Default {

@@ -137,9 +137,30 @@ type Contribution struct {
 	Range    syntax.Range
 }
 
+type ResultStatus string
+
+const (
+	Selected  ResultStatus = "selected"
+	Excluded  ResultStatus = "excluded"
+	Undecided ResultStatus = "undecided"
+	Invalid   ResultStatus = "invalid"
+)
+
+// ResultNode preserves the selection outcome independently of composition, so
+// callers can inspect partial plans without treating an error as a nil result.
+type ResultNode struct {
+	Source      string
+	Path        string
+	Status      ResultStatus
+	Reason      string
+	Destination string
+	Range       syntax.Range
+}
+
 type Result struct {
 	Contributions []Contribution
 	Diagnostics   []Diagnostic
+	Nodes         []ResultNode
 }
 
 func (r *Result) HasErrors() bool {

@@ -182,6 +182,14 @@ include "team:skills" ["missing"]
 	if !undecided || !missing {
 		t.Fatalf("diagnostics=%#v", result.Diagnostics)
 	}
+	foundUndecided, foundSelected := false, false
+	for _, node := range result.Nodes {
+		foundUndecided = foundUndecided || node.Status == assembly.Undecided && node.Path == "skills"
+		foundSelected = foundSelected || node.Status == assembly.Selected && node.Path == "guidance/workflow"
+	}
+	if !foundUndecided || !foundSelected {
+		t.Fatalf("result nodes=%#v", result.Nodes)
+	}
 }
 
 func TestResolvePlanFiltersTagsAndScopedExclusions(t *testing.T) {
