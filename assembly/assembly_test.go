@@ -388,6 +388,15 @@ include "team:recommended"
 	if err := assembly.CheckWorkspace(root, manifest); err == nil || !strings.Contains(err.Error(), "unexpected") {
 		t.Fatalf("check error=%v", err)
 	}
+	if err := os.Remove(filepath.Join(root, ".agents/skills/review/extra.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(root, "AGENTS.md"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := assembly.CheckWorkspace(root, manifest); err == nil || !strings.Contains(err.Error(), "mode") {
+		t.Fatalf("mode check error=%v", err)
+	}
 }
 
 func TestRecordedBuildRejectsChangedLocalNode(t *testing.T) {

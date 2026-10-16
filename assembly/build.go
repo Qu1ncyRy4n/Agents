@@ -312,12 +312,33 @@ func CheckWorkspace(workspace string, manifest *content.Manifest) error {
 		return fmt.Errorf("nil output manifest")
 	}
 	for name, payload := range manifest.Files {
-		contents, err := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(name)))
+		path := filepath.Join(workspace, filepath.FromSlash(name))
+		info, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("managed output %q: %w", name, err)
+		}
+		if info.Mode().Perm() != payload.Mode.Perm() {
+			return fmt.Errorf("managed output %q has mode %04o, expected %04o", name, info.Mode().Perm(), payload.Mode.Perm())
+		}
+		contents, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("managed output %q: %w", name, err)
 		}
 		if hashBytes(contents) != hashBytes(payload.Bytes) {
 			return fmt.Errorf("managed output %q differs from expected content", name)
+		}
+	}
+	for name, mode := range manifest.Directories {
+		path := filepath.Join(workspace, filepath.FromSlash(name))
+		info, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("managed directory %q: %w", name, err)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("managed directory %q is not a directory", name)
+		}
+		if info.Mode().Perm() != mode.Perm() {
+			return fmt.Errorf("managed directory %q has mode %04o, expected %04o", name, info.Mode().Perm(), mode.Perm())
 		}
 	}
 	root := filepath.Join(workspace, ".agents", "skills")
