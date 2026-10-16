@@ -3,6 +3,7 @@ package assembly
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -35,22 +36,42 @@ func ResolvePlan(file *syntax.File, filename string) (*Result, map[string]Source
 			if err != nil {
 				return nil, nil, err
 			}
-			local, found, err := stringField(entry, "local", bindings)
+			local, localFound, err := stringField(entry, "local", bindings)
 			if err != nil {
 				return nil, nil, err
 			}
-			if !found {
-				return nil, nil, fmt.Errorf("source %q currently requires local; git resolution is not wired into the new resolver", alias)
+			git, gitFound, err := stringField(entry, "git", bindings)
+			if err != nil {
+				return nil, nil, err
 			}
-			if filepath.IsAbs(local) {
-				return nil, nil, fmt.Errorf("source %q local path must be relative", alias)
+			if localFound == gitFound {
+				return nil, nil, fmt.Errorf("source %q requires exactly one of local or git", alias)
 			}
-			libraryRoot := filepath.Join(root, filepath.FromSlash(local))
+			ref, _, err := stringField(entry, "ref", bindings)
+			if err != nil {
+				return nil, nil, err
+			}
+			commit, _, err := stringField(entry, "commit", bindings)
+			if err != nil {
+				return nil, nil, err
+			}
+			var libraryRoot string
+			if localFound {
+				if filepath.IsAbs(local) {
+					return nil, nil, fmt.Errorf("source %q local path must be relative", alias)
+				}
+				libraryRoot = filepath.Join(root, filepath.FromSlash(local))
+			} else {
+				libraryRoot, commit, err = resolveGitSource(root, alias, git, ref, commit)
+				if err != nil {
+					return nil, nil, fmt.Errorf("source %q: %w", alias, err)
+				}
+			}
 			library, err := LoadLibrary(libraryRoot)
 			if err != nil {
 				return nil, nil, fmt.Errorf("source %q: %w", alias, err)
 			}
-			sources[alias] = Source{Alias: alias, Root: libraryRoot, Lib: library}
+			sources[alias] = Source{Alias: alias, Root: libraryRoot, Local: local, Git: git, Ref: ref, Commit: commit, Lib: library}
 		}
 	}
 	r := &Result{}
@@ -64,6 +85,58 @@ func ResolvePlan(file *syntax.File, filename string) (*Result, map[string]Source
 		validateRecordedInputs(r, file)
 	}
 	return r, sources, nil
+}
+
+func resolveGitSource(workspace, alias, url, ref, commit string) (string, string, error) {
+	if ref == "" {
+		ref = "HEAD"
+	}
+	if commit == "" {
+		output, err := exec.Command("git", "ls-remote", url, ref).Output()
+		if err != nil {
+			return "", "", fmt.Errorf("resolve git ref %q: %w", ref, err)
+		}
+		fields := strings.Fields(string(output))
+		if len(fields) == 0 || len(fields[0]) != 40 {
+			return "", "", fmt.Errorf("git ref %q did not resolve to a full commit", ref)
+		}
+		commit = fields[0]
+	}
+	for _, r := range commit {
+		if !strings.ContainsRune("0123456789abcdef", r) {
+			return "", "", fmt.Errorf("commit %q must be lowercase full SHA-1", commit)
+		}
+	}
+	if len(commit) != 40 {
+		return "", "", fmt.Errorf("commit %q must be a full SHA-1", commit)
+	}
+	root := filepath.Join(workspace, ".mogent", "sources", alias, commit)
+	if _, err := os.Stat(root); err == nil {
+		return root, commit, nil
+	} else if !os.IsNotExist(err) {
+		return "", "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(root), 0755); err != nil {
+		return "", "", err
+	}
+	temporary, err := os.MkdirTemp(filepath.Dir(root), ".git-source-")
+	if err != nil {
+		return "", "", err
+	}
+	defer func() { _ = os.RemoveAll(temporary) }()
+	if output, err := exec.Command("git", "clone", "--no-checkout", "--quiet", url, temporary).CombinedOutput(); err != nil {
+		return "", "", fmt.Errorf("clone source: %s: %w", strings.TrimSpace(string(output)), err)
+	}
+	if output, err := exec.Command("git", "-C", temporary, "checkout", "--quiet", "--detach", commit).CombinedOutput(); err != nil {
+		return "", "", fmt.Errorf("checkout %s: %s: %w", commit, strings.TrimSpace(string(output)), err)
+	}
+	if err := os.RemoveAll(filepath.Join(temporary, ".git")); err != nil {
+		return "", "", err
+	}
+	if err := os.Rename(temporary, root); err != nil {
+		return "", "", err
+	}
+	return root, commit, nil
 }
 
 func validateRecordedInputs(result *Result, file *syntax.File) {

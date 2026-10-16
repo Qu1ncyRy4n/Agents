@@ -2,6 +2,7 @@ package assembly_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,6 +20,15 @@ func write(t *testing.T, root, name, body string) {
 	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func git(t *testing.T, directory string, args ...string) string {
+	t.Helper()
+	output, err := exec.Command("git", append([]string{"-C", directory}, args...)...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %s: %v", args, output, err)
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func librarySource() string {
@@ -341,6 +351,35 @@ include "team:recommended"
 	}
 	if !found {
 		t.Fatalf("diagnostics=%#v", result.Diagnostics)
+	}
+}
+
+func TestSequencePinsGitSource(t *testing.T) {
+	root := t.TempDir()
+	lib := fixtureLibrary(t, root)
+	git(t, lib, "init", "-q")
+	git(t, lib, "config", "user.email", "test@example.com")
+	git(t, lib, "config", "user.name", "Test")
+	git(t, lib, "add", ".")
+	git(t, lib, "commit", "-qm", "library")
+	commit := git(t, lib, "rev-parse", "HEAD")
+	planPath := filepath.Join(root, "mogent.plan")
+	plan := parse(t, planPath, `plan {format=1}
+let repo_name="Example"
+source "team" {git="file://`+lib+`";ref="HEAD"}
+include "team:recommended"
+`)
+	build, _, err := assembly.Sequence(plan, planPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(build), `commit = "`+commit+`"`) {
+		t.Fatalf("build missing pin:\n%s", build)
+	}
+	parsed := parse(t, filepath.Join(root, "mogent.build"), string(build))
+	result, _, err := assembly.ResolvePlan(parsed, filepath.Join(root, "mogent.build"))
+	if err != nil || result.HasErrors() {
+		t.Fatalf("result=%#v err=%v", result, err)
 	}
 }
 

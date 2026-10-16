@@ -77,9 +77,13 @@ type Library struct {
 }
 
 type Source struct {
-	Alias string
-	Root  string
-	Lib   *Library
+	Alias  string
+	Root   string
+	Local  string
+	Git    string
+	Ref    string
+	Commit string
+	Lib    *Library
 }
 
 type Severity string

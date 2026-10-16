@@ -22,7 +22,7 @@ func Sequence(plan *syntax.File, planPath string) ([]byte, *Result, error) {
 	if plan.Kind != syntax.Plan {
 		return nil, nil, fmt.Errorf("sequence requires a plan")
 	}
-	result, _, err := ResolvePlan(plan, planPath)
+	result, sources, err := ResolvePlan(plan, planPath)
 	if err != nil || result.HasErrors() {
 		return nil, result, err
 	}
@@ -36,7 +36,11 @@ func Sequence(plan *syntax.File, planPath string) ([]byte, *Result, error) {
 	))}}
 	for _, entry := range plan.Entries[1:] {
 		if entry.Kind == syntax.Block && entry.Name == "source" {
-			build.Entries = append(build.Entries, cloneEntry(entry))
+			alias, err := entry.Label.ResolveString(nil)
+			if err != nil {
+				return nil, result, err
+			}
+			build.Entries = append(build.Entries, resolvedSourceEntry(entry, sources[alias]))
 		}
 	}
 	for _, contribution := range result.Contributions {
@@ -54,6 +58,24 @@ func Sequence(plan *syntax.File, planPath string) ([]byte, *Result, error) {
 	digest := hashBytes(formatted)
 	formatted = []byte(strings.Replace(string(formatted), checksumPlaceholder, digest, 1))
 	return formatted, result, nil
+}
+
+func resolvedSourceEntry(entry *syntax.Entry, source Source) *syntax.Entry {
+	copy := cloneEntry(entry)
+	if source.Git == "" {
+		return copy
+	}
+	found := false
+	for _, child := range copy.Body {
+		if child.Kind == syntax.Field && child.Name == "commit" {
+			child.Value = str(source.Commit)
+			found = true
+		}
+	}
+	if !found {
+		copy.Body = append(copy.Body, fieldStringEntry("commit", source.Commit, false))
+	}
+	return copy
 }
 
 func buildContribution(c Contribution) *syntax.Entry {
