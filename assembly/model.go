@@ -6,7 +6,6 @@ package assembly
 import (
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/content"
@@ -196,10 +195,4 @@ func safePath(root, value string) (string, error) {
 	}
 	path := filepath.Join(root, filepath.FromSlash(value))
 	return path, nil
-}
-
-func orderedChildren(nodes []*Node) []*Node {
-	result := append([]*Node(nil), nodes...)
-	sort.SliceStable(result, func(i, j int) bool { return result[i].Name < result[j].Name })
-	return result
 }

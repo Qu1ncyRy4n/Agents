@@ -1,6 +1,6 @@
 # Configuration Redesign: First Implementation Slice
 
-Status: **syntax API implemented and API-tested; catalog/resolver and CLI pending**.
+Status: **core local/Git plan-build workflow implemented and verified; advanced curation/format slices pending**.
 
 - [Spec](../docs/proposals/MOGENT-FIRST-SLICE-SPEC.md)
 - [Acceptance cases](../docs/proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md)
@@ -72,7 +72,7 @@ different syntax under a misleading format name.
 
 ### S2 — Catalog, Decisions, And Partial Inspection
 
-- [ ] Load new library declarations and physical inventories into a shared catalog with
+- [x] Load new library declarations and physical inventories into a shared catalog with
   qualified identities, order, metadata, bundles, and operation capabilities.
 - [ ] Resolve exact/child/tag selections, scoped exclusions, curation/defaults,
   reasons, destinations, and requirements on the final set. Keep omissions and
@@ -80,50 +80,55 @@ different syntax under a misleading format name.
 - [ ] Produce a structured partial result for errors with node/range attachment,
   UNDECIDED and unplaced nodes. No materialization is possible with blockers.
 - [ ] Preserve library/local/effective values and per-decision reasons for text/TUI.
-- [ ] Verify A04-A06 and B01-B12 at API level and through new library parsing;
+- [x] Verify A04-A06, B01-B02/B09-B12 at API level and through new library parsing;
   track syntax-loader coverage independently from hand-built catalog tests.
 - [ ] Verify L01-L13 for typed library parsing, private/whitelisted variable inputs,
   presets, content roles, unresolved defaults, and retained old-config isolation.
 
 ### S3 — Sequence Serialization And Integrity
 
-- [ ] Resolve/capture pins, local node contents and complete metadata/recipe inputs.
+- [x] Resolve/capture local node contents and Git pins into generated build inputs.
   Reuse existing source retrieval; avoid implicit remote pin advancement.
-- [ ] Emit deterministic canonical include steps, resolved text/destinations,
+- [x] Emit deterministic canonical include steps, resolved text/destinations,
   management roots and decision provenance. No alias/control query remains unresolved.
-- [ ] Detect generated-file modifications from portable records; authored files
+- [x] Detect generated-file modifications from portable records; authored files
   are never overwritten. Unknown provenance is a blocker, not permission to guess.
-- [ ] Implement source/plan freshness comparison and direct-build authority rules.
+- [x] Implement source/plan freshness comparison and direct-build authority rules
+  for local selected-node hashes and generated checksums. Full remote update UI remains CLI work.
 - [ ] Verify A07/A10/A11 and C01-C07/C13, including moving checkout, missing state, and
   dirty/untracked bundle members. Do not use random IDs/times to identify steps.
 
 ### S4 — Assemble Through Existing Core And Transaction
 
-- [ ] Lower physical inputs to existing copy contributions and logical/text inputs
+- [x] Lower physical inputs to existing copy contributions and logical/text inputs
   to rendered contributions, using explicit internal append where appropriate.
   Do not expose these engine switches as normal user syntax.
-- [ ] Compose one virtual manifest without managing the whole workspace. Partition
+- [x] Compose one virtual manifest without managing the whole workspace. Partition
   it into non-overlapping output owners such as root AGENTS.md and `.agents/skills`.
-- [ ] Preserve complete bundle replacement/removals and immutable captured payloads.
+- [x] Preserve complete bundle replacement/removals and immutable captured payloads.
   No symlinks, source escapes, script execution, or semantic config merges.
-- [ ] Stage/install outputs + generated build + state with rollback; preserve
+- [ ] Stage/install outputs + generated build + state with complete rollback; preserve
   authored sources, localized sources, and files outside managed roots.
-- [ ] Verify A08-A12 and C08-C12, failure injection at each write/install boundary,
+- [x] Verify A08-A12 and selected C08-C12 behavior: output ownership, preserved
+  unrelated `.agents` members, changed-node detection, source safety, and captured compose payloads.
+  Add failure injection/complete state rollback before calling S4 fully complete.
   existing state drift behavior, modes, empty directories, and document dependencies.
 
 ### S5 — CLI Workflow, Text Inspection, And Localization
 
-- [ ] Introduce `--file`, `sequence`, default sequence-if-needed `build`, and
-  source/build/result `show` views after shared APIs exist.
+- [x] Introduce `--file`, `sequence`, and `build --file` sequencing when the
+  named file is a plan, plus basic source/build/result text views after shared APIs exist.
+- [ ] Add no-argument workspace discovery/default build authority rules from spec section 8.
 - [ ] Add result-default tree, node explanation, issue filter, and generated-build
   freshness messages. A partial view remains available even when build would fail.
-- [ ] Implement normal initialization/source/config editing and shared localized
+- [x] Implement `edit include --localize` with dry-run and shared localized
   include operation with dry-run; source/config/provenance authoring is transactional.
 - [ ] Support proposed local source-update preview/accept for explicit input-hash
   refresh in authored builds; ordinary build never edits authored input records.
-- [ ] Add `build --check` from the same resolver/result inspector; do not implement
+- [x] Add `build --check` from the same resolver/result inspector; do not implement
   a separate CI-specific checker. CI wrapper/skill remains a later TODO.
-- [ ] Verify D01-D05/E03 and the pilot CLI journey. Help explains plan -> sequence
+- [x] Verify D01-D03 and E03-style local workflow/CLI behavior. Add provenance
+  baseline persistence, source-update accept and full help before claiming D04-D05/full CLI journey.
   -> build, direct builds, editing versus installation, and recovery from blockers.
 
 ### S6 — Library Coverage, Recipes, Compact Output, And Cutover

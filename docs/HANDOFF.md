@@ -33,11 +33,14 @@ Parse, source-located ordered AST/comments, explicit string substitution, and
 deterministic formatting/alias expansion. External-package API tests pass.
 `nix develop -c tools/check` passes, including full tests/vet/deadcode/errcheck.
 
-**Next: S2 typed catalog/resolver API and its tests**, with source-range authoring
-edits still tracked under S1. New syntax is not wired into CLI execution. Expected
-CLI behavior is documented before wiring and can be encoded in tests first.
-Unused/undefined source bindings, curation/type applicability, integrity records,
-and assembly execution are not delivered by syntax parsing alone.
+The catalog/resolver, generated builds, local/Git source pinning, assembly, basic
+CLI (`sequence`, `show`, `build --file`, `edit include --localize`) and focused
+behavior tests are now delivered. `build --check` compares managed local outputs.
+
+**Next: finish S2/S4/S5 gaps**: scoped exclusions/tags/relationships/full curation,
+complete output/state rollback, source-update acceptance/provenance baseline records,
+no-argument build discovery, and richer result inspection/help. Do not describe the current CLI as a replacement
+for legacy default commands until the cutover slice verifies those workflows.
 
 1. [First-slice spec](proposals/MOGENT-FIRST-SLICE-SPEC.md): accepted direction plus
    a clearly marked proposed-engineering-detail table.

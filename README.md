@@ -37,8 +37,8 @@ the earliest introducing commit. A dash means no delivery date is asserted.
 | Member/rendered-document update diffs and operation provenance | Typed HCL v2 | 2026-10-09 | Preserve reasons, omissions, replacements, origin context |
 | Byte, permission, and empty-directory drift protection | Typed HCL v2 | 2026-10-09 | Preserve |
 | Interactive manifest navigator | YAML v1 TUI | — | Typed-result/decision viewer is proposed, not delivered |
-| Small-language syntax API | Public `syntax` parser/formatter and API tests; not CLI/runtime support | Current redesign slice | `mogent.lib` / plan / build syntax, literals, source ranges, comments, alias expansion |
-| Directly authored assembly file and intent-to-build compilation | Syntax API delivered; resolution/execution pending | — | Approved first-slice contract; staged implementation |
+| Small-language syntax API | Public `syntax` parser/formatter, typed `mogent.lib` catalog, and API tests | Current redesign slice | Source ranges, comments, literals, aliases, logical/physical nodes |
+| Directly authored assembly file and intent-to-build compilation | Local/Git sequencing, checksummed builds, assembly, localize CLI | Current redesign slice | Advanced curation, full rollback/state, cutover still pending |
 | Includable recipes, curated cross-branch presets, build-to-plan suggestions | Not implemented as proposed | — | Distinguish from existing branch selection/init templates |
 | Lower-layer deletion, editable heading derivatives, semantic JSON/TOML merges | Not implemented | — | Separate design work; whole-file copying already works |
 | DotAgents workspace layout/format compatibility | Opaque files can be copied; protocol conformance not established | — | Candidate 1.0 scope; compare native harness support first |
