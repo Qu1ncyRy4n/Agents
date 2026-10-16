@@ -185,18 +185,31 @@ func writeDirectoryRecord(statePath, outputPath string, files map[string]string,
 // the portable version-three shape but decode also accepts legacy absolute-path
 // state shapes.
 func WriteAll(statePath string, files map[string]string, directories map[string]map[string]string) error {
+	contents, err := BuildAll(statePath, files, directories)
+	if err != nil {
+		return err
+	}
+	if err := renderfs.WriteAtomicallyMode(statePath, contents, 0o600); err != nil {
+		return fmt.Errorf("write generated-output state: %w", err)
+	}
+	return nil
+}
+
+// BuildAll serializes portable generated-output state without writing it. This
+// lets callers include state in a larger filesystem transaction.
+func BuildAll(statePath string, files map[string]string, directories map[string]map[string]string) ([]byte, error) {
 	outputs := make(map[string]record, len(files)+len(directories))
 	for path, content := range files {
 		key, err := outputKey(statePath, path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		outputs[key] = record{Kind: "file", SHA256: Hash([]byte(content))}
 	}
 	for path, entries := range directories {
 		key, err := outputKey(statePath, path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		copy := make(map[string]string, len(entries))
 		for name, digest := range entries {
@@ -204,7 +217,11 @@ func WriteAll(statePath string, files map[string]string, directories map[string]
 		}
 		outputs[key] = record{Kind: "directory", Files: copy}
 	}
-	return writeOutputs(statePath, outputs)
+	contents, err := json.MarshalIndent(generated{Version: 3, Outputs: outputs}, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("encode generated-output state: %w", err)
+	}
+	return append(contents, '\n'), nil
 }
 
 func portableStateKey(statePath, path string) (string, error) {
