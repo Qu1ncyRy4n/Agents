@@ -20,6 +20,8 @@ func commands() []commandDefinition {
 		{name: "init", usage: "init [--template name] [--source alias=path] [--var name=value] | [--template minimal|qmr-core] --source alias=local-path|git-url [--config mogent.hcl]", run: runInit},
 		{name: "build", usage: "build [--manifest agents.yaml] [--dry-run] [--force] [--preserve-html-comments]", run: runBuild},
 		{name: "plan", usage: "plan [--config mogent.hcl]", run: runPlan},
+		{name: "sequence", usage: "sequence [--file mogent.plan]", run: runSequence},
+		{name: "show", usage: "show [--file mogent.plan|mogent.build] [--source] [--build] [--issues]", run: runShow},
 		{name: "apply", usage: "apply [--config mogent.hcl] [--force]", run: runApply},
 		{name: "update", usage: "update [alias] [--config mogent.hcl] [--accept]", run: runUpdate},
 		{name: "lib", usage: "lib <init|scan|check> ...", run: runLib},

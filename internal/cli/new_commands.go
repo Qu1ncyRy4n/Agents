@@ -1,0 +1,208 @@
+package cli
+
+import (
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/Qu1ncyRy4n/Agents/assembly"
+	"github.com/Qu1ncyRy4n/Agents/syntax"
+)
+
+func hasFlag(args []string, wanted string) bool {
+	for _, arg := range args {
+		if arg == wanted || strings.HasPrefix(arg, wanted+"=") {
+			return true
+		}
+	}
+	return false
+}
+
+func runSequence(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("sequence", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	path := flags.String("file", "mogent.plan", "plan file")
+	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("sequence accepts no positional arguments")
+	}
+	return sequenceFile(*path, stdout)
+}
+
+func sequenceFile(planPath string, stdout io.Writer) error {
+	plan, err := assembly.LoadFile(planPath)
+	if err != nil {
+		return err
+	}
+	contents, result, err := assembly.Sequence(plan, planPath)
+	if err != nil {
+		return err
+	}
+	if result.HasErrors() {
+		writeAssemblyDiagnostics(stderrDiscard{}, result)
+		return fmt.Errorf("sequence contains errors")
+	}
+	buildPath := filepath.Join(filepath.Dir(planPath), "mogent.build")
+	if existing, err := os.ReadFile(buildPath); err == nil {
+		if err := assembly.VerifyBuildChecksum(existing); err != nil {
+			return fmt.Errorf("refusing to replace %s: %w", buildPath, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.WriteFile(buildPath, contents, 0644); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(stdout, "Sequenced %s -> %s\n", planPath, buildPath)
+	return err
+}
+
+// stderrDiscard keeps API diagnostics out of successful command stdout while
+// callers that need rich display use show. CLI error messages still name blockers.
+type stderrDiscard struct{}
+
+func (stderrDiscard) Write([]byte) (int, error) { return 0, nil }
+
+func writeAssemblyDiagnostics(output io.Writer, result *assembly.Result) {
+	for _, diagnostic := range result.Diagnostics {
+		_, _ = fmt.Fprintln(output, diagnostic.String())
+	}
+}
+
+func runNewBuild(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("build", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	path := flags.String("file", "", "plan or build file")
+	check := flags.Bool("check", false, "verify without writing workspace outputs")
+	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-check": false, "--check": false})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || *path == "" {
+		return fmt.Errorf("new build requires --file mogent.plan or mogent.build")
+	}
+	file, err := assembly.LoadFile(*path)
+	if err != nil {
+		return err
+	}
+	buildPath := *path
+	if file.Kind == syntax.Plan {
+		if *check {
+			result, _, err := assembly.ResolvePlan(file, *path)
+			if err != nil {
+				return err
+			}
+			if result.HasErrors() {
+				writeAssemblyDiagnostics(stderr, result)
+				return fmt.Errorf("build check contains errors")
+			}
+			_, err = result.Compose()
+			return err
+		}
+		if err := sequenceFile(*path, stdout); err != nil {
+			return err
+		}
+		buildPath = filepath.Join(filepath.Dir(*path), "mogent.build")
+		file, err = assembly.LoadFile(buildPath)
+		if err != nil {
+			return err
+		}
+	}
+	if file.Kind != syntax.Build {
+		return fmt.Errorf("build file must contain a build header")
+	}
+	contents, err := os.ReadFile(buildPath)
+	if err != nil {
+		return err
+	}
+	if err := assembly.VerifyBuildChecksum(contents); err != nil {
+		return err
+	}
+	result, _, err := assembly.ResolvePlan(file, buildPath)
+	if err != nil {
+		return err
+	}
+	if result.HasErrors() {
+		writeAssemblyDiagnostics(stderr, result)
+		return fmt.Errorf("build contains errors")
+	}
+	manifest, err := result.Compose()
+	if err != nil {
+		return err
+	}
+	if *check {
+		_, err := fmt.Fprintln(stdout, "Build check passed")
+		return err
+	}
+	if err := assembly.Apply(filepath.Dir(buildPath), manifest); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(stdout, "Built %s\n", filepath.Dir(buildPath))
+	return err
+}
+
+func runShow(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("show", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	path := flags.String("file", "mogent.plan", "plan or build file")
+	sourceView := flags.Bool("source", false, "show source catalog")
+	buildView := flags.Bool("build", false, "show ordered contributions")
+	issues := flags.Bool("issues", false, "show only diagnostics")
+	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-source": false, "--source": false, "-build": false, "--build": false, "-issues": false, "--issues": false})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() > 1 || *sourceView && *buildView {
+		return fmt.Errorf("show accepts at most one node and only one of --source or --build")
+	}
+	file, err := assembly.LoadFile(*path)
+	if err != nil {
+		return err
+	}
+	result, sources, err := assembly.ResolvePlan(file, *path)
+	if err != nil {
+		return err
+	}
+	if *issues {
+		writeAssemblyDiagnostics(stdout, result)
+		if result.HasErrors() {
+			return fmt.Errorf("show found errors")
+		}
+		return nil
+	}
+	if *sourceView {
+		for alias, source := range sources {
+			if _, err := fmt.Fprintf(stdout, "%s: %s\n", alias, source.Lib.Name); err != nil {
+				return err
+			}
+			for path, node := range source.Lib.ByPath {
+				if _, err := fmt.Fprintf(stdout, "  %s [%s]\n", path, node.Type); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	for _, contribution := range result.Contributions {
+		name := contribution.Source
+		if contribution.Node != nil {
+			name += ":" + contribution.Node.Path
+		} else {
+			name = "inline"
+		}
+		if _, err := fmt.Fprintf(stdout, "%s -> %s\n", name, contribution.Into); err != nil {
+			return err
+		}
+	}
+	writeAssemblyDiagnostics(stdout, result)
+	if result.HasErrors() {
+		return fmt.Errorf("show found errors")
+	}
+	return nil
+}

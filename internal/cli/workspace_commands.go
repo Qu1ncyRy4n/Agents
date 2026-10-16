@@ -144,6 +144,9 @@ func runLocalize(args []string, stdout, stderr io.Writer) error {
 }
 
 func runBuild(args []string, stdout, stderr io.Writer) error {
+	if hasFlag(args, "--file") || hasFlag(args, "-file") {
+		return runNewBuild(args, stdout, stderr)
+	}
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")

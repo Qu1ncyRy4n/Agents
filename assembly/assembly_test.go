@@ -235,3 +235,76 @@ include "team:recommended"
 		t.Fatal("opted-out deployment included")
 	}
 }
+
+func TestSequenceProducesVerifiableBuildThatRecomposes(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	planPath := filepath.Join(root, "mogent.plan")
+	plan := parse(t, planPath, `plan {format=1}
+let repo_name="Example"
+source "team" {local="team"}
+include "team:recommended"
+`)
+	first, result, err := assembly.Sequence(plan, planPath)
+	if err != nil || result.HasErrors() {
+		t.Fatalf("sequence err=%v result=%#v", err, result)
+	}
+	second, _, err := assembly.Sequence(plan, planPath)
+	if err != nil || string(first) != string(second) {
+		t.Fatalf("sequence not deterministic: %v\n%s\n%s", err, first, second)
+	}
+	if err := assembly.VerifyBuildChecksum(first); err != nil {
+		t.Fatal(err)
+	}
+	if err := assembly.VerifyBuildChecksum([]byte(strings.Replace(string(first), `into = "AGENTS.md"`, `into = "AGENTS2.md"`, 1))); err == nil {
+		t.Fatal("edited generated build accepted")
+	}
+	build := parse(t, filepath.Join(root, "mogent.build"), string(first))
+	resolved, _, err := assembly.ResolvePlan(build, filepath.Join(root, "mogent.build"))
+	if err != nil || resolved.HasErrors() {
+		t.Fatalf("build resolve err=%v diagnostics=%#v", err, resolved.Diagnostics)
+	}
+	manifest, err := resolved.Compose()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(manifest.Files["AGENTS.md"].Bytes), "Project: Example") || manifest.Files[".agents/skills/review/SKILL.md"].Bytes == nil {
+		t.Fatalf("manifest=%#v", manifest.Files)
+	}
+}
+
+func TestApplyOwnsGuideAndSkillsButPreservesOtherAgentsFiles(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	planPath := filepath.Join(root, "mogent.plan")
+	plan := parse(t, planPath, `plan {format=1}
+let repo_name="Example"
+source "team" {local="team"}
+include "team:recommended"
+`)
+	result, _, err := assembly.ResolvePlan(plan, planPath)
+	if err != nil || result.HasErrors() {
+		t.Fatalf("resolve=%v diagnostics=%#v", err, result.Diagnostics)
+	}
+	manifest, err := result.Compose()
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, root, ".agents/settings.json", "{\"keep\":true}\n")
+	write(t, root, ".agents/skills/obsolete/SKILL.md", "obsolete\n")
+	if err := assembly.Apply(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if bytes, err := os.ReadFile(filepath.Join(root, "AGENTS.md")); err != nil || !strings.Contains(string(bytes), "Project: Example") {
+		t.Fatalf("agents=%q err=%v", bytes, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".agents/settings.json")); err != nil {
+		t.Fatalf("unrelated .agents file removed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".agents/skills/obsolete")); !os.IsNotExist(err) {
+		t.Fatalf("stale managed skill remains: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".agents/skills/review/scripts/check.sh")); err != nil {
+		t.Fatal(err)
+	}
+}
