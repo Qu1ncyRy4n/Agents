@@ -1,6 +1,8 @@
 # Configuration Redesign: First Implementation Slice
 
-Status: **core local/Git plan-build workflow implemented and verified; advanced curation/format slices pending**.
+Status: **core local/Git plan-build workflow implemented and verified; scoped selection,
+relationships, and mode/empty-directory drift checks are implemented. Advanced
+inspection, transaction/state, provenance-update, and recipe/compact-format slices remain.**
 
 - [Spec](../docs/proposals/MOGENT-FIRST-SLICE-SPEC.md)
 - [Acceptance cases](../docs/proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md)
@@ -77,6 +79,9 @@ different syntax under a misleading format name.
 - [ ] Resolve exact/child/tag selections, scoped exclusions, curation/defaults,
   reasons, destinations, and requirements on the final set. Keep omissions and
   superseded choices, not just selected leaves.
+  [partial: exact/tag selection, scoped exclusions, inclusion/foundation reasons,
+  and final requires/conflicts/at-most-one groups are implemented; optional/opt-in
+  broad-selection curation and retained omitted/superseded decisions are not.]
 - [ ] Produce a structured partial result for errors with node/range attachment,
   UNDECIDED and unplaced nodes. No materialization is possible with blockers.
 - [ ] Preserve library/local/effective values and per-decision reasons for text/TUI.
@@ -109,6 +114,9 @@ different syntax under a misleading format name.
   No symlinks, source escapes, script execution, or semantic config merges.
 - [ ] Stage/install outputs + generated build + state with complete rollback; preserve
   authored sources, localized sources, and files outside managed roots.
+  [blocked: current `assembly.Apply` has no state/config transaction abstraction;
+  wiring one requires an owner decision on state schema and which generated build
+  paths are transaction-owned. Do not invent a second state format.]
 - [x] Verify A08-A12 and selected C08-C12 behavior: output ownership, preserved
   unrelated `.agents` members, changed-node detection, source safety, and captured compose payloads.
   Add failure injection/complete state rollback before calling S4 fully complete.
@@ -126,6 +134,8 @@ different syntax under a misleading format name.
   include operation with dry-run; source/config/provenance authoring is transactional.
 - [ ] Support proposed local source-update preview/accept for explicit input-hash
   refresh in authored builds; ordinary build never edits authored input records.
+  [blocked: authored-build baseline/provenance persistence is not specified as a
+  durable record and cannot safely be inferred from a changed working tree.]
 - [x] Add `build --check` from the same resolver/result inspector; do not implement
   a separate CI-specific checker. CI wrapper/skill remains a later TODO.
 - [x] Verify D01-D03 and E03-style local workflow/CLI behavior. Add provenance
@@ -137,6 +147,8 @@ different syntax under a misleading format name.
 - [ ] Finish R2 new-library coverage and executable fixtures for all curation/tag/
   preset/relationship behavior promised by the redesigned surface.
 - [ ] Add scoped recipe inclusion and cycle diagnostics (D06-D08).
+  [blocked: `include-build` grammar and source/build namespace ownership are not
+  implemented in `syntax`; resolve the accepted serialization before adding it.]
 - [ ] Add compact serializer/alias output choices only after explicit form is
   correct; verify full semantic/ownership/provenance equivalence (E01/E02).
 - [ ] Retire obsolete CLI/config paths after replacement capability mapping and

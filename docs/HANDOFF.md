@@ -37,9 +37,11 @@ The catalog/resolver, generated builds, local/Git source pinning, assembly, basi
 CLI (`sequence`, `show`, `build --file`, `edit include --localize`) and focused
 behavior tests are now delivered. `build --check` compares managed local outputs.
 
-**Next: finish S2/S4/S5 gaps**: scoped exclusions/tags/relationships/full curation,
-complete output/state rollback, source-update acceptance/provenance baseline records,
-no-argument build discovery, and richer result inspection/help. Do not describe the current CLI as a replacement
+**Next: finish S2/S4/S5 gaps**: optional/opt-in broad curation and retained omission
+provenance, complete output/state rollback, source-update acceptance/provenance baseline
+records, and richer result inspection/help. Scoped tag selection, include-local
+exclusions, reason enforcement, final requires/conflicts/exclusive-group validation,
+and mode/empty-directory output drift checks are delivered. Do not describe the current CLI as a replacement
 for legacy default commands until the cutover slice verifies those workflows.
 
 Delivered no-argument behavior: when invoked without `--manifest`/`--file`,
