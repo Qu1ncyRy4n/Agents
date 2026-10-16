@@ -137,6 +137,9 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	if *check {
+		if err := assembly.CheckWorkspace(filepath.Dir(buildPath), manifest); err != nil {
+			return err
+		}
 		_, err := fmt.Fprintln(stdout, "Build check passed")
 		return err
 	}

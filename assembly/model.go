@@ -57,6 +57,7 @@ type Node struct {
 	Parent         *Node
 	Physical       *content.Inventory
 	PhysicalNode   string
+	Library        *Library
 	Range          syntax.Range
 }
 

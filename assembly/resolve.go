@@ -60,7 +60,65 @@ func ResolvePlan(file *syntax.File, filename string) (*Result, map[string]Source
 		}
 		resolveInclude(r, sources, bindings, entry, false, nil)
 	}
+	if file.Kind == syntax.Build {
+		validateRecordedInputs(r, file)
+	}
 	return r, sources, nil
+}
+
+func validateRecordedInputs(result *Result, file *syntax.File) {
+	expected := make(map[string]string)
+	for _, entry := range file.Entries {
+		if entry.Kind != syntax.Block || entry.Name != "resolved" {
+			continue
+		}
+		for _, child := range entry.Body {
+			if child.Name != "input" || child.Label == nil {
+				continue
+			}
+			name, err := child.Label.ResolveString(nil)
+			if err != nil {
+				continue
+			}
+			digest, found, err := stringField(child, "sha256", nil)
+			if err == nil && found {
+				expected[name] = digest
+			}
+		}
+	}
+	if len(expected) == 0 {
+		// Direct authored builds may use live local inputs. build --check can
+		// recommend recording hashes, but ordinary assembly stays available.
+		return
+	}
+	seen := make(map[string]bool)
+	for _, contribution := range result.Contributions {
+		if contribution.Node == nil {
+			continue
+		}
+		name := contribution.Source + ":" + contribution.Node.Path
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		want, found := expected[name]
+		if !found {
+			result.Diagnostics = append(result.Diagnostics, diagnostic(contribution.RangeEntry(), Error, fmt.Sprintf("build has no recorded hash for %s", name)))
+			continue
+		}
+		got, err := NodeHash(contribution.Node)
+		if err != nil {
+			result.Diagnostics = append(result.Diagnostics, diagnostic(contribution.RangeEntry(), Error, err.Error()))
+			continue
+		}
+		if want != got {
+			result.Diagnostics = append(result.Diagnostics, diagnostic(contribution.RangeEntry(), Error, fmt.Sprintf("recorded input %s changed", name)))
+		}
+	}
+}
+
+func (c Contribution) RangeEntry() *syntax.Entry {
+	return &syntax.Entry{Range: c.Range}
 }
 
 func resolveInclude(result *Result, sources map[string]Source, bindings map[string]string, entry *syntax.Entry, replace bool, inherited []Decision) {

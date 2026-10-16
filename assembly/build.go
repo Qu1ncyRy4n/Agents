@@ -3,6 +3,7 @@ package assembly
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,7 +22,7 @@ func Sequence(plan *syntax.File, planPath string) ([]byte, *Result, error) {
 	if plan.Kind != syntax.Plan {
 		return nil, nil, fmt.Errorf("sequence requires a plan")
 	}
-	result, sources, err := ResolvePlan(plan, planPath)
+	result, _, err := ResolvePlan(plan, planPath)
 	if err != nil || result.HasErrors() {
 		return nil, result, err
 	}
@@ -41,7 +42,11 @@ func Sequence(plan *syntax.File, planPath string) ([]byte, *Result, error) {
 	for _, contribution := range result.Contributions {
 		build.Entries = append(build.Entries, buildContribution(contribution))
 	}
-	build.Entries = append(build.Entries, resolvedEntry(result, sources))
+	resolved, err := resolvedEntry(result)
+	if err != nil {
+		return nil, result, err
+	}
+	build.Entries = append(build.Entries, resolved)
 	formatted, err := syntax.Format(build, syntax.FormatOptions{ExpandAliases: true})
 	if err != nil {
 		return nil, result, err
@@ -69,10 +74,23 @@ func buildContribution(c Contribution) *syntax.Entry {
 	return block("include", c.Source+":"+c.Node.Path, body)
 }
 
-func resolvedEntry(result *Result, sources map[string]Source) *syntax.Entry {
+func resolvedEntry(result *Result) (*syntax.Entry, error) {
 	entry := block("resolved", "", nil)
-	for _, alias := range sortedSources(sources) {
-		entry.Body = append(entry.Body, block("input", alias, fields(fieldStringEntry("local", sources[alias].Root, false))))
+	seen := make(map[string]bool)
+	for _, contribution := range result.Contributions {
+		if contribution.Node == nil {
+			continue
+		}
+		name := contribution.Source + ":" + contribution.Node.Path
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		digest, err := NodeHash(contribution.Node)
+		if err != nil {
+			return nil, err
+		}
+		entry.Body = append(entry.Body, block("input", name, fields(fieldStringEntry("sha256", digest, false))))
 	}
 	for _, c := range result.Contributions {
 		for _, d := range c.Decision {
@@ -85,7 +103,7 @@ func resolvedEntry(result *Result, sources map[string]Source) *syntax.Entry {
 	}
 	entry.Body = append(entry.Body, block("owner", "AGENTS.md", fields(fieldStringEntry("kind", "file", false))))
 	entry.Body = append(entry.Body, block("owner", ".agents/skills", fields(fieldStringEntry("kind", "directory", false))))
-	return entry
+	return entry, nil
 }
 
 func sortedValues(values map[string]string) []string {
@@ -101,17 +119,63 @@ func sortedValues(values map[string]string) []string {
 	return names
 }
 
-func sortedSources(sources map[string]Source) []string {
-	values := make(map[string]string, len(sources))
-	for alias := range sources {
-		values[alias] = alias
-	}
-	return sortedValues(values)
-}
-
 func hashBytes(value []byte) string {
 	sum := sha256.Sum256(value)
 	return hex.EncodeToString(sum[:])
+}
+
+// NodeHash describes exactly the selected payload. It is an integrity record,
+// not a content-addressed identity or a replacement for retaining source bytes.
+func NodeHash(node *Node) (string, error) {
+	if node == nil {
+		return "", fmt.Errorf("cannot hash nil node")
+	}
+	if node.Type == Section {
+		if node.Source == "" {
+			return hashBytes([]byte(node.Path)), nil
+		}
+		path, err := safePath(filepath.Dir(node.Range.Filename), node.Source)
+		if err != nil {
+			return "", err
+		}
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		return hashBytes(contents), nil
+	}
+	inventory, err := physicalInventory(node)
+	if err != nil {
+		return "", err
+	}
+	root := physicalPath(node)
+	type record struct {
+		Kind string `json:"kind"`
+		Path string `json:"path"`
+		Mode string `json:"mode"`
+		Hash string `json:"sha256"`
+	}
+	var records []record
+	for _, name := range inventory.Paths() {
+		if root != "." && name != root && !strings.HasPrefix(name, root+"/") {
+			continue
+		}
+		item := inventory.Nodes[name]
+		r := record{Kind: string(item.Kind), Path: name, Mode: fmt.Sprintf("%04o", item.Mode.Perm())}
+		if item.Kind == content.File {
+			contents, err := os.ReadFile(item.Source)
+			if err != nil {
+				return "", err
+			}
+			r.Hash = hashBytes(contents)
+		}
+		records = append(records, r)
+	}
+	encoded, err := json.Marshal(records)
+	if err != nil {
+		return "", err
+	}
+	return hashBytes(encoded), nil
 }
 
 func str(value string) *syntax.Value {
@@ -218,6 +282,48 @@ func Apply(workspace string, manifest *content.Manifest) error {
 		}
 	}
 	return replaceDirectory(filepath.Join(workspace, ".agents", "skills"), skills)
+}
+
+// CheckWorkspace verifies expected managed outputs without repairing them.
+func CheckWorkspace(workspace string, manifest *content.Manifest) error {
+	if manifest == nil {
+		return fmt.Errorf("nil output manifest")
+	}
+	for name, payload := range manifest.Files {
+		contents, err := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(name)))
+		if err != nil {
+			return fmt.Errorf("managed output %q: %w", name, err)
+		}
+		if hashBytes(contents) != hashBytes(payload.Bytes) {
+			return fmt.Errorf("managed output %q differs from expected content", name)
+		}
+	}
+	root := filepath.Join(workspace, ".agents", "skills")
+	expected := make(map[string]bool)
+	for name := range manifest.Files {
+		if strings.HasPrefix(name, ".agents/skills/") {
+			expected[strings.TrimPrefix(name, ".agents/skills/")] = true
+		}
+	}
+	if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if !expected[filepath.ToSlash(relative)] {
+			return fmt.Errorf("managed skills contains unexpected file %q", relative)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("managed skills tree: %w", err)
+	}
+	return nil
 }
 
 func replaceDirectory(destination string, manifest *content.Manifest) error {

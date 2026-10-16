@@ -98,7 +98,7 @@ func loadNode(l *Library, parent *Node, entry *syntax.Entry, prefix string) (*No
 	if _, duplicate := l.ByPath[nodePath]; duplicate {
 		return nil, fmt.Errorf("%s: duplicate node path %q", l.Path, nodePath)
 	}
-	n := &Node{Name: name, Path: nodePath, Type: typeValue, Parent: parent, Range: entry.Range}
+	n := &Node{Name: name, Path: nodePath, Type: typeValue, Parent: parent, Library: l, Range: entry.Range}
 	if n.Source, _, err = fieldString(entry, "source"); err != nil {
 		return nil, err
 	}

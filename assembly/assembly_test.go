@@ -307,4 +307,39 @@ include "team:recommended"
 	if _, err := os.Stat(filepath.Join(root, ".agents/skills/review/scripts/check.sh")); err != nil {
 		t.Fatal(err)
 	}
+	if err := assembly.CheckWorkspace(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+	write(t, root, ".agents/skills/review/extra.txt", "drift\n")
+	if err := assembly.CheckWorkspace(root, manifest); err == nil || !strings.Contains(err.Error(), "unexpected") {
+		t.Fatalf("check error=%v", err)
+	}
+}
+
+func TestRecordedBuildRejectsChangedLocalNode(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	planPath := filepath.Join(root, "mogent.plan")
+	plan := parse(t, planPath, `plan {format=1}
+let repo_name="Example"
+source "team" {local="team"}
+include "team:recommended"
+`)
+	buildBytes, _, err := assembly.Sequence(plan, planPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, root, "team/skills/review/scripts/check.sh", "changed\n")
+	build := parse(t, filepath.Join(root, "mogent.build"), string(buildBytes))
+	result, _, err := assembly.ResolvePlan(build, filepath.Join(root, "mogent.build"))
+	if err != nil || !result.HasErrors() {
+		t.Fatalf("result=%#v err=%v", result, err)
+	}
+	found := false
+	for _, diagnostic := range result.Diagnostics {
+		found = found || strings.Contains(diagnostic.Message, "changed")
+	}
+	if !found {
+		t.Fatalf("diagnostics=%#v", result.Diagnostics)
+	}
 }
