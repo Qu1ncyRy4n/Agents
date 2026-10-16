@@ -106,6 +106,9 @@ func TestLoadLibraryRejectsInvalidTypedDeclarations(t *testing.T) {
 		{"duplicate-preset", `library {format=1;name="x"}; node "a" {type="md-section"}; preset "a" {}`, "duplicate library:name"},
 		{"invalid-curate", `library {format=1;name="x"}; md-section "a" {curate="maybe"}`, "unknown curate"},
 		{"preset-mutates", `library {format=1;name="x"}; preset "a" {source "x" {local="."}}`, "unexpected"},
+		{"missing-relation", `library {format=1;name="x"}; md-section "a" {requires=["missing"]}`, "missing relationship target"},
+		{"requirement-cycle", `library {format=1;name="x"}; md-section "a" {requires=["b"]};md-section "b" {requires=["a"]}`, "requirement cycle"},
+		{"unknown-group", `library {format=1;name="x"}; md-section "a" {exclusive_group="missing"}`, "unknown exclusive group"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -116,6 +119,16 @@ func TestLoadLibraryRejectsInvalidTypedDeclarations(t *testing.T) {
 				t.Fatalf("error=%v want=%q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestLoadLibraryInheritsAncestorTags(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "mogent.lib", `library {format=1;name="x"};md-section "root" {tags=["topic"];md-section "child" {source="child.md";tags=["lang/go"]}}`)
+	write(t, root, "child.md", "# Child\n")
+	library, err := assembly.LoadLibrary(root)
+	if err != nil || strings.Join(library.ByPath["root/child"].Tags, ",") != "topic,lang/go" {
+		t.Fatalf("library=%#v err=%v", library, err)
 	}
 }
 

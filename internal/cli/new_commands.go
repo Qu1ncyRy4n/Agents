@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
@@ -201,11 +202,23 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 		return nil
 	}
 	if *sourceView {
-		for alias, source := range sources {
+		aliases := make([]string, 0, len(sources))
+		for alias := range sources {
+			aliases = append(aliases, alias)
+		}
+		sort.Strings(aliases)
+		for _, alias := range aliases {
+			source := sources[alias]
 			if _, err := fmt.Fprintf(stdout, "%s: %s\n", alias, source.Lib.Name); err != nil {
 				return err
 			}
-			for path, node := range source.Lib.ByPath {
+			paths := make([]string, 0, len(source.Lib.ByPath))
+			for path := range source.Lib.ByPath {
+				paths = append(paths, path)
+			}
+			sort.Strings(paths)
+			for _, path := range paths {
+				node := source.Lib.ByPath[path]
 				if _, err := fmt.Fprintf(stdout, "  %s [%s]\n", path, node.Type); err != nil {
 					return err
 				}

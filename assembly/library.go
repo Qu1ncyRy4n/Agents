@@ -69,6 +69,9 @@ func LoadLibrary(root string) (*Library, error) {
 			return nil, fmt.Errorf("%s: unsupported library declaration %q", l.Path, entry.Name)
 		}
 	}
+	if err := validateRelationshipsCatalog(l); err != nil {
+		return nil, err
+	}
 	return l, nil
 }
 
@@ -189,6 +192,9 @@ func loadNode(l *Library, parent *Node, entry *syntax.Entry, prefix string) (*No
 	if n.Tags, _, err = fieldStrings(entry, "tags"); err != nil {
 		return nil, err
 	}
+	if parent != nil {
+		n.Tags = appendUnique(parent.Tags, n.Tags)
+	}
 	if n.Variables, _, err = fieldStrings(entry, "vars"); err != nil {
 		return nil, err
 	}
@@ -223,6 +229,56 @@ func loadNode(l *Library, parent *Node, entry *syntax.Entry, prefix string) (*No
 		n.Children = append(n.Children, loaded)
 	}
 	return n, nil
+}
+
+func appendUnique(values ...[]string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, group := range values {
+		for _, value := range group {
+			if !seen[value] {
+				result, seen[value] = append(result, value), true
+			}
+		}
+	}
+	return result
+}
+
+func validateRelationshipsCatalog(l *Library) error {
+	for path, node := range l.ByPath {
+		for _, target := range append(append([]string(nil), node.Requires...), node.ConflictsWith...) {
+			if l.ByPath[target] == nil {
+				return fmt.Errorf("%s: node %q names missing relationship target %q", l.Path, path, target)
+			}
+		}
+		if node.ExclusiveGroup != "" && l.Groups[node.ExclusiveGroup].Name == "" {
+			return fmt.Errorf("%s: node %q names unknown exclusive group %q", l.Path, path, node.ExclusiveGroup)
+		}
+	}
+	visiting, visited := make(map[string]bool), make(map[string]bool)
+	var visit func(string) error
+	visit = func(path string) error {
+		if visiting[path] {
+			return fmt.Errorf("%s: hard requirement cycle includes %q", l.Path, path)
+		}
+		if visited[path] {
+			return nil
+		}
+		visiting[path] = true
+		for _, target := range l.ByPath[path].Requires {
+			if err := visit(target); err != nil {
+				return err
+			}
+		}
+		visiting[path], visited[path] = false, true
+		return nil
+	}
+	for path := range l.ByPath {
+		if err := visit(path); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func fieldCurate(e *syntax.Entry) (Curate, bool, error) {
