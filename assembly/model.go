@@ -73,6 +73,7 @@ type Library struct {
 	Nodes   []*Node
 	ByPath  map[string]*Node
 	Presets map[string]Preset
+	Recipes map[string]Preset
 	Groups  map[string]Group
 }
 

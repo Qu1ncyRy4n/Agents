@@ -38,7 +38,7 @@ func LoadLibrary(root string) (*Library, error) {
 		}
 		return nil, fmt.Errorf("library header requires a non-empty name")
 	}
-	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: name, ByPath: make(map[string]*Node), Presets: make(map[string]Preset), Groups: make(map[string]Group)}
+	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: name, ByPath: make(map[string]*Node), Presets: make(map[string]Preset), Recipes: make(map[string]Preset), Groups: make(map[string]Group)}
 	for _, entry := range f.Entries[1:] {
 		switch {
 		case isNodeEntry(entry):
@@ -56,6 +56,21 @@ func LoadLibrary(root string) (*Library, error) {
 				return nil, fmt.Errorf("%s: duplicate public library name %q", l.Path, preset.Name)
 			}
 			l.Presets[preset.Name] = preset
+		case entry.Name == "recipe":
+			recipe, err := loadPreset(l, entry)
+			if err != nil {
+				return nil, err
+			}
+			for _, member := range recipe.Entries {
+				label, _ := member.Label.ResolveString(nil)
+				if !strings.HasPrefix(label, "self:") {
+					return nil, fmt.Errorf("%s: recipe %q may include only self: references", l.Path, recipe.Name)
+				}
+			}
+			if _, duplicate := l.Recipes[recipe.Name]; duplicate || l.ByPath[recipe.Name] != nil || l.Presets[recipe.Name].Name != "" {
+				return nil, fmt.Errorf("%s: duplicate public library name %q", l.Path, recipe.Name)
+			}
+			l.Recipes[recipe.Name] = recipe
 		case entry.Name == "group":
 			group, err := loadGroup(entry)
 			if err != nil {
@@ -76,7 +91,7 @@ func LoadLibrary(root string) (*Library, error) {
 }
 
 func loadRawLibrary(root string) (*Library, error) {
-	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: filepath.Base(root), ByPath: make(map[string]*Node), Presets: make(map[string]Preset), Groups: make(map[string]Group)}
+	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: filepath.Base(root), ByPath: make(map[string]*Node), Presets: make(map[string]Preset), Recipes: make(map[string]Preset), Groups: make(map[string]Group)}
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil, err

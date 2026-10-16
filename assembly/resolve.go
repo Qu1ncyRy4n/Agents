@@ -79,7 +79,7 @@ func ResolvePlan(file *syntax.File, filename string) (*Result, map[string]Source
 		if entry.Kind != syntax.Block || entry.Name != "include" && entry.Name != "replace" {
 			continue
 		}
-		resolveInclude(r, sources, bindings, entry, false, nil)
+		resolveInclude(r, sources, bindings, entry, false, nil, nil)
 	}
 	if file.Kind == syntax.Build {
 		validateRecordedInputs(r, file)
@@ -236,7 +236,7 @@ func (c Contribution) RangeEntry() *syntax.Entry {
 	return &syntax.Entry{Range: c.Range}
 }
 
-func resolveInclude(result *Result, sources map[string]Source, bindings map[string]string, entry *syntax.Entry, replace bool, inherited []Decision) {
+func resolveInclude(result *Result, sources map[string]Source, bindings map[string]string, entry *syntax.Entry, replace bool, inherited []Decision, recipes map[string]bool) {
 	if entry.Name == "replace" {
 		replace = true
 	}
@@ -279,7 +279,24 @@ func resolveInclude(result *Result, sources map[string]Source, bindings map[stri
 	if preset, found := source.Lib.Presets[nodePath]; found {
 		for _, member := range preset.Entries {
 			copied := cloneInclude(member, alias)
-			resolveInclude(result, sources, bindings, copied, replace, append(inherited, Decision{Path: alias + ":" + nodePath, Action: "preset", Range: entry.Range}))
+			resolveInclude(result, sources, bindings, copied, replace, append(inherited, Decision{Path: alias + ":" + nodePath, Action: "preset", Range: entry.Range}), recipes)
+		}
+		return
+	}
+	if recipe, found := source.Lib.Recipes[nodePath]; found {
+		key := alias + ":" + nodePath
+		if recipes != nil && recipes[key] {
+			result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("recipe include cycle at %s", key)))
+			return
+		}
+		next := make(map[string]bool, len(recipes)+1)
+		for name, active := range recipes {
+			next[name] = active
+		}
+		next[key] = true
+		for _, member := range recipe.Entries {
+			copied := cloneInclude(member, alias)
+			resolveInclude(result, sources, bindings, copied, replace, append(inherited, Decision{Path: key, Action: "recipe", Range: entry.Range}), next)
 		}
 		return
 	}
