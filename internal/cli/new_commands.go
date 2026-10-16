@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
+	"github.com/Qu1ncyRy4n/Agents/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/syntax"
 )
 
@@ -20,6 +21,46 @@ func hasFlag(args []string, wanted string) bool {
 		}
 	}
 	return false
+}
+
+func runLocalSourceUpdate(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("source update local", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	path := flags.String("file", "mogent.build", "authored build file")
+	dryRun := flags.Bool("dry-run", false, "preview without writing")
+	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-dry-run": false, "--dry-run": false})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("source update local accepts no positional arguments")
+	}
+	file, err := assembly.LoadFile(*path)
+	if err != nil {
+		return err
+	}
+	updated, changes, err := assembly.RefreshLocalInputHashes(file, *path)
+	if err != nil {
+		return err
+	}
+	if len(changes) == 0 {
+		_, err = fmt.Fprintln(stdout, "Local source inputs are already current")
+		return err
+	}
+	for _, change := range changes {
+		if _, err := fmt.Fprintf(stdout, "%s\n  %s -> %s\n", change.Input, change.Old, change.New); err != nil {
+			return err
+		}
+	}
+	if *dryRun {
+		_, err = fmt.Fprintln(stdout, "Dry run: no files written")
+		return err
+	}
+	if err := renderfs.WriteAtomically(*path, updated); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(stdout, "Accepted local source updates. Next: run mogent sequence --file mogent.plan")
+	return err
 }
 
 func runSequence(args []string, stdout, stderr io.Writer) error {

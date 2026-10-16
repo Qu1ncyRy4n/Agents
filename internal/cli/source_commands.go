@@ -38,6 +38,9 @@ func runSource(args []string, stdout, stderr io.Writer) error {
 	case "pin":
 		return runSourcePin(args[1:], stdout, stderr)
 	case "update":
+		if len(args) > 1 && args[1] == "local" {
+			return runLocalSourceUpdate(args[2:], stdout, stderr)
+		}
 		return runSourceUpdate(args[1:], stdout, stderr)
 	default:
 		if suggestion := closestString(args[0], []string{"add", "list", "show", "pin", "update"}, 2); suggestion != "" {

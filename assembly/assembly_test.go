@@ -295,6 +295,33 @@ md-section "required" {source="required.md"}
 	}
 }
 
+func TestResolvePlanExpandsLibraryRecipeAndRejectsCycles(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "team/mogent.lib", `library {format=1;name="Team"}
+md-section "guide" {source="guide.md"}
+recipe "recommended" {include "self:guide"}
+recipe "cycle" {include "self:cycle"}
+`)
+	write(t, root, "team/guide.md", "# Guide\n")
+	for name, planText := range map[string]string{
+		"expand": `plan {format=1};source "team" {local="team"};include "team:recommended"`,
+		"cycle":  `plan {format=1};source "team" {local="team"};include "team:cycle"`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			result, _, err := assembly.ResolvePlan(parse(t, filepath.Join(root, "mogent.plan"), planText), filepath.Join(root, "mogent.plan"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if name == "expand" && (result.HasErrors() || len(result.Contributions) != 1) {
+				t.Fatalf("result=%#v", result)
+			}
+			if name == "cycle" && (!result.HasErrors() || !strings.Contains(result.Diagnostics[0].Message, "cycle")) {
+				t.Fatalf("diagnostics=%#v", result.Diagnostics)
+			}
+		})
+	}
+}
+
 func TestResolvePlanGuidanceValuesAreWhitelisted(t *testing.T) {
 	root := t.TempDir()
 	fixtureLibrary(t, root)
@@ -500,6 +527,27 @@ include "team:recommended"
 	}
 	if !found {
 		t.Fatalf("diagnostics=%#v", result.Diagnostics)
+	}
+}
+
+func TestRefreshLocalInputHashesEditsOnlyAuthoredHashes(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	planPath := filepath.Join(root, "mogent.build")
+	build := `build {format=1;origin="authored"}
+source "team" {local="team"}
+include "team:guidance/workflow" {values {repo_name="Example"}}
+resolved {input "team:guidance/workflow" {sha256="old"}}
+// retain
+`
+	file := parse(t, planPath, build)
+	updated, changes, err := assembly.RefreshLocalInputHashes(file, planPath)
+	if err != nil || len(changes) != 1 || changes[0].Old != "old" || strings.Contains(string(updated), `sha256="old"`) || !strings.Contains(string(updated), "// retain") {
+		t.Fatalf("updated=%q changes=%#v err=%v", updated, changes, err)
+	}
+	generated := parse(t, planPath, `build {format=1;origin="generated"}`)
+	if _, _, err := assembly.RefreshLocalInputHashes(generated, planPath); err == nil || !strings.Contains(err.Error(), "sequence") {
+		t.Fatalf("generated error=%v", err)
 	}
 }
 

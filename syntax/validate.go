@@ -64,7 +64,7 @@ func validate(f *File) error {
 		if err := validateBody(e); err != nil {
 			return err
 		}
-		if e.Name == "source" || isNode(e.Name) || e.Name == "preset" || e.Name == "group" {
+		if e.Name == "source" || isNode(e.Name) || e.Name == "preset" || e.Name == "recipe" || e.Name == "group" {
 			label, err := staticLabel(e)
 			if err != nil {
 				return err
@@ -84,7 +84,7 @@ func validate(f *File) error {
 
 func allowedRoot(kind FileKind, name string) bool {
 	if kind == Library {
-		return isNode(name) || name == "preset" || name == "group"
+		return isNode(name) || name == "preset" || name == "recipe" || name == "group"
 	}
 	return name == "source" || name == "include" || name == "replace" || name == "include-build" || name == "resolved"
 }
@@ -134,7 +134,7 @@ func allowedChild(parent, name string) bool {
 	switch parent {
 	case "include", "replace":
 		return name == "exclude" || name == "values"
-	case "preset":
+	case "preset", "recipe":
 		return name == "include" || name == "replace"
 	case "resolved":
 		return name == "input" || name == "decision" || name == "owner"
@@ -172,7 +172,7 @@ func validateBody(e *Entry) error {
 		if e.Label != nil && e.field("text") != nil {
 			return located(e, "include cannot combine a source reference and inline text")
 		}
-	} else if e.Name == "replace" || e.Name == "include-build" || e.Name == "exclude" || e.Name == "source" || e.Name == "preset" || e.Name == "group" || isNode(e.Name) || e.Name == "input" || e.Name == "decision" || e.Name == "owner" {
+	} else if e.Name == "replace" || e.Name == "include-build" || e.Name == "exclude" || e.Name == "source" || e.Name == "preset" || e.Name == "recipe" || e.Name == "group" || isNode(e.Name) || e.Name == "input" || e.Name == "decision" || e.Name == "owner" {
 		if e.Label == nil {
 			return located(e, fmt.Sprintf("%s requires a quoted name", e.Name))
 		}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/content"
@@ -271,6 +272,79 @@ func VerifyBuildChecksum(contents []byte) error {
 		return fmt.Errorf("generated build was edited after sequencing")
 	}
 	return nil
+}
+
+type SourceUpdate struct{ Input, Old, New string }
+
+// RefreshLocalInputHashes updates only resolved input hash value ranges in an
+// authored build. Generated builds must be regenerated from their plan instead.
+func RefreshLocalInputHashes(file *syntax.File, filename string) ([]byte, []SourceUpdate, error) {
+	if file.Kind != syntax.Build {
+		return nil, nil, fmt.Errorf("source update requires a build file")
+	}
+	origin, _, err := fieldString(file.Entries[0], "origin")
+	if err != nil {
+		return nil, nil, err
+	}
+	if origin != "authored" {
+		return nil, nil, fmt.Errorf("generated builds must be refreshed with sequence")
+	}
+	result, _, err := ResolvePlan(file, filename)
+	if err != nil {
+		return nil, nil, err
+	}
+	current := make(map[string]string)
+	for _, contribution := range result.Contributions {
+		if contribution.Node != nil {
+			digest, hashErr := NodeHash(contribution.Node)
+			if hashErr != nil {
+				return nil, nil, hashErr
+			}
+			current[contribution.Source+":"+contribution.Node.Path] = digest
+		}
+	}
+	type edit struct {
+		start, end int
+		value      string
+	}
+	var edits []edit
+	var changes []SourceUpdate
+	for _, entry := range file.Entries {
+		if entry.Kind != syntax.Block || entry.Name != "resolved" {
+			continue
+		}
+		for _, input := range entry.Body {
+			if input.Name != "input" || input.Label == nil {
+				continue
+			}
+			name, labelErr := input.Label.ResolveString(nil)
+			if labelErr != nil {
+				return nil, nil, labelErr
+			}
+			want, found := current[name]
+			if !found {
+				continue
+			}
+			value := field(input, "sha256")
+			if value == nil {
+				return nil, nil, fmt.Errorf("authored build has no hash for %s", name)
+			}
+			old, valueErr := value.ResolveString(nil)
+			if valueErr != nil {
+				return nil, nil, valueErr
+			}
+			if old != want {
+				edits = append(edits, edit{value.Range.Start.Offset, value.Range.End.Offset, fmt.Sprintf("%q", want)})
+				changes = append(changes, SourceUpdate{Input: name, Old: old, New: want})
+			}
+		}
+	}
+	sort.Slice(edits, func(i, j int) bool { return edits[i].start > edits[j].start })
+	updated := []byte(file.Original())
+	for _, change := range edits {
+		updated = append(append(updated[:change.start], []byte(change.value)...), updated[change.end:]...)
+	}
+	return updated, changes, nil
 }
 
 // Apply writes the generated root guide and skills subtree. It only owns the two
