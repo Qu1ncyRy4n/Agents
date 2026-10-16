@@ -171,6 +171,43 @@ include "team:skills" ["missing"]
 	}
 }
 
+func TestResolvePlanFiltersTagsAndScopedExclusions(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	plan := parse(t, filepath.Join(root, "mogent.plan"), `plan {format=1}
+source "team" {local="team"}
+include "team:skills" {tags_all=["lang"];exclude=["review"]}
+`)
+	result, _, err := assembly.ResolvePlan(plan, filepath.Join(root, "mogent.plan"))
+	if err != nil || result.HasErrors() || len(result.Contributions) != 1 || result.Contributions[0].Node.Path != "skills/testing" {
+		t.Fatalf("result=%#v diagnostics=%#v err=%v", result.Contributions, result.Diagnostics, err)
+	}
+}
+
+func TestResolvePlanRequiresReasonForExperimentalAndFoundationExclusion(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "team/mogent.lib", `library {format=1;name="Team"}
+md-section "guide" {source="guide.md";reason_required=true}
+md-section "base" {curate="foundation"}
+`)
+	write(t, root, "team/guide.md", "# guide\n")
+	for name, source := range map[string]string{
+		"missing-include-reason":   `plan {format=1};source "team" {local="team"};include "team:guide"`,
+		"missing-exclusion-reason": `plan {format=1};source "team" {local="team"};include "team:base" {exclude=["base"]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			result, _, err := assembly.ResolvePlan(parse(t, filepath.Join(root, "mogent.plan"), source), filepath.Join(root, "mogent.plan"))
+			if err != nil || !result.HasErrors() {
+				t.Fatalf("result=%#v err=%v", result, err)
+			}
+		})
+	}
+	result, _, err := assembly.ResolvePlan(parse(t, filepath.Join(root, "mogent.plan"), `plan {format=1};source "team" {local="team"};include "team:guide" {reason="needed"}`), filepath.Join(root, "mogent.plan"))
+	if err != nil || result.HasErrors() || len(result.Contributions) != 1 || result.Contributions[0].Decision[0].Reason != "needed" {
+		t.Fatalf("result=%#v err=%v", result, err)
+	}
+}
+
 func TestResolvePlanGuidanceValuesAreWhitelisted(t *testing.T) {
 	root := t.TempDir()
 	fixtureLibrary(t, root)

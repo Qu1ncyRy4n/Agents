@@ -279,6 +279,57 @@ func cloneInclude(e *syntax.Entry, alias string) *syntax.Entry {
 }
 
 func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) ([]*Node, []Decision) {
+	tagsAll, _, err := fieldStrings(entry, "tags_all")
+	if err != nil {
+		result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, err.Error()))
+		return nil, nil
+	}
+	tagsAny, _, err := fieldStrings(entry, "tags_any")
+	if err != nil {
+		result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, err.Error()))
+		return nil, nil
+	}
+	excluded, exclusionReasons, err := exclusions(entry)
+	if err != nil {
+		result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, err.Error()))
+		return nil, nil
+	}
+	filter := func(nodes []*Node) ([]*Node, []Decision) {
+		var kept []*Node
+		var decisions []Decision
+		for _, node := range nodes {
+			if excluded[node.Path] || excluded[strings.TrimPrefix(node.Path, root.Path+"/")] {
+				if node.Curate == Foundation && strings.TrimSpace(exclusionReasons[node.Path]) == "" && strings.TrimSpace(exclusionReasons[strings.TrimPrefix(node.Path, root.Path+"/")]) == "" {
+					result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("foundation %s:%s requires a reason to exclude", alias, node.Path)))
+				}
+				decisions = append(decisions, Decision{Path: alias + ":" + node.Path, Action: "exclude", Reason: exclusionReasons[node.Path], Range: entry.Range})
+				continue
+			}
+			if node.ReasonRequired {
+				reason, _, _ := stringField(entry, "reason", nil)
+				if strings.TrimSpace(reason) == "" {
+					result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("%s:%s requires a nonblank reason", alias, node.Path)))
+					continue
+				}
+				decisions = append(decisions, Decision{Path: alias + ":" + node.Path, Action: "include", Reason: reason, Range: entry.Range})
+			}
+			kept = append(kept, node)
+		}
+		return kept, decisions
+	}
+	if len(tagsAll) > 0 || len(tagsAny) > 0 {
+		var selected []*Node
+		for _, child := range root.Children {
+			if matchesTags(child, tagsAll, tagsAny) {
+				selected = append(selected, child)
+			}
+		}
+		if len(selected) == 0 {
+			result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Warning, fmt.Sprintf("tag query under %s:%s matched nothing", alias, root.Path)))
+		}
+		selected, decisions := filter(selected)
+		return selected, decisions
+	}
 	if root.Curate == Choose && entry.Selection == nil {
 		if accept, _ := boolField(entry, "accept_defaults"); !accept {
 			result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, fmt.Sprintf("UNDECIDED: %s:%s requires explicit choices or accept_defaults", alias, root.Path)))
@@ -296,7 +347,8 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 				decisions = append(decisions, Decision{Path: alias + ":" + child.Path, Action: "accepted-default", Range: entry.Range})
 			}
 		}
-		return selected, decisions
+		selected, filtered := filter(selected)
+		return selected, append(decisions, filtered...)
 	}
 	if entry.Selection != nil {
 		selected := make([]*Node, 0, len(entry.Selection.Items))
@@ -317,12 +369,69 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 				seen[child.Path] = true
 			}
 		}
-		return selected, nil
+		selected, decisions := filter(selected)
+		return selected, decisions
 	}
 	if root.Type == Section && root.Source == "" {
-		return sectionLeaves(root), nil
+		selected, decisions := filter(sectionLeaves(root))
+		return selected, decisions
 	}
-	return []*Node{root}, nil
+	selected, decisions := filter([]*Node{root})
+	return selected, decisions
+}
+
+func matchesTags(node *Node, all, any []string) bool {
+	matches := func(query string) bool {
+		for _, tag := range node.Tags {
+			if tag == query || strings.HasPrefix(tag, query+"/") {
+				return true
+			}
+		}
+		return false
+	}
+	for _, query := range all {
+		if !matches(query) {
+			return false
+		}
+	}
+	if len(any) == 0 {
+		return true
+	}
+	for _, query := range any {
+		if matches(query) {
+			return true
+		}
+	}
+	return false
+}
+
+func exclusions(entry *syntax.Entry) (map[string]bool, map[string]string, error) {
+	excluded := make(map[string]bool)
+	reasons := make(map[string]string)
+	values, found, err := fieldStrings(entry, "exclude")
+	if err != nil {
+		return nil, nil, err
+	}
+	if found {
+		for _, value := range values {
+			excluded[value] = true
+		}
+	}
+	for _, child := range entry.Body {
+		if child.Kind != syntax.Block || child.Name != "exclude" || child.Label == nil {
+			continue
+		}
+		name, err := child.Label.ResolveString(nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		reason, _, err := stringField(child, "reason", nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		excluded[name], reasons[name] = true, reason
+	}
+	return excluded, reasons, nil
 }
 
 func sectionLeaves(node *Node) []*Node {
