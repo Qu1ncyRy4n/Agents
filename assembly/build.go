@@ -275,6 +275,19 @@ func VerifyBuildChecksum(contents []byte) error {
 // Apply writes the generated root guide and skills subtree. It only owns the two
 // declared output roots and preserves unrelated .agents entries.
 func Apply(workspace string, manifest *content.Manifest) error {
+	return apply(workspace, manifest, nil)
+}
+
+// ApplyGenerated installs managed outputs and a newly sequenced build as one
+// recoverable swap. Callers must not use it for an authored build.
+func ApplyGenerated(workspace string, manifest *content.Manifest, build []byte) error {
+	if len(build) == 0 {
+		return fmt.Errorf("generated build is empty")
+	}
+	return apply(workspace, manifest, build)
+}
+
+func apply(workspace string, manifest *content.Manifest, build []byte) error {
 	if manifest == nil {
 		return fmt.Errorf("nil output manifest")
 	}
@@ -282,23 +295,8 @@ func Apply(workspace string, manifest *content.Manifest) error {
 	if !found {
 		return fmt.Errorf("manifest has no AGENTS.md")
 	}
-	guideStage, err := os.CreateTemp(workspace, ".mogent-stage-agents-")
+	guideStagePath, err := stageFile(workspace, ".mogent-stage-agents-", agents.Bytes, agents.Mode)
 	if err != nil {
-		return err
-	}
-	guideStagePath := guideStage.Name()
-	if _, err := guideStage.Write(agents.Bytes); err != nil {
-		_ = guideStage.Close()
-		_ = os.Remove(guideStagePath)
-		return err
-	}
-	if err := guideStage.Chmod(agents.Mode); err != nil {
-		_ = guideStage.Close()
-		_ = os.Remove(guideStagePath)
-		return err
-	}
-	if err := guideStage.Close(); err != nil {
-		_ = os.Remove(guideStagePath)
 		return err
 	}
 	defer func() { _ = os.Remove(guideStagePath) }()
@@ -324,10 +322,42 @@ func Apply(workspace string, manifest *content.Manifest) error {
 		return err
 	}
 	defer func() { _ = os.RemoveAll(skillsStage) }()
-	return swapManagedPaths([]managedSwap{
+	swaps := []managedSwap{
 		{stage: guideStagePath, destination: filepath.Join(workspace, "AGENTS.md")},
 		{stage: skillsStage, destination: filepath.Join(workspace, ".agents", "skills")},
-	})
+	}
+	if build != nil {
+		buildStage, err := stageFile(workspace, ".mogent-stage-build-", build, 0644)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = os.Remove(buildStage) }()
+		swaps = append(swaps, managedSwap{stage: buildStage, destination: filepath.Join(workspace, "mogent.build")})
+	}
+	return swapManagedPaths(swaps)
+}
+
+func stageFile(parent, prefix string, contents []byte, mode os.FileMode) (string, error) {
+	stage, err := os.CreateTemp(parent, prefix)
+	if err != nil {
+		return "", err
+	}
+	path := stage.Name()
+	if _, err := stage.Write(contents); err != nil {
+		_ = stage.Close()
+		_ = os.Remove(path)
+		return "", err
+	}
+	if err := stage.Chmod(mode); err != nil {
+		_ = stage.Close()
+		_ = os.Remove(path)
+		return "", err
+	}
+	if err := stage.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", err
+	}
+	return path, nil
 }
 
 // CheckWorkspace verifies expected managed outputs without repairing them.

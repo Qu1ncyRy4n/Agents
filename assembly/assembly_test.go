@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
+	"github.com/Qu1ncyRy4n/Agents/content"
 	"github.com/Qu1ncyRy4n/Agents/syntax"
 )
 
@@ -455,6 +456,22 @@ include "team:recommended"
 	}
 	if err := assembly.CheckWorkspace(root, manifest); err == nil || !strings.Contains(err.Error(), "mode") {
 		t.Fatalf("mode check error=%v", err)
+	}
+}
+
+func TestApplyGeneratedSwapsBuildWithManagedOutputs(t *testing.T) {
+	root := t.TempDir()
+	manifest := &content.Manifest{Files: map[string]content.Payload{"AGENTS.md": {Bytes: []byte("new\n"), Mode: 0644}}, Directories: map[string]os.FileMode{}, Bundles: map[string]string{}}
+	write(t, root, "AGENTS.md", "old\n")
+	write(t, root, "mogent.build", "old build\n")
+	if err := assembly.ApplyGenerated(root, manifest, []byte("new build\n")); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"AGENTS.md": "new\n", "mogent.build": "new build\n"} {
+		got, err := os.ReadFile(filepath.Join(root, name))
+		if err != nil || string(got) != want {
+			t.Fatalf("%s=%q err=%v", name, got, err)
+		}
 	}
 }
 

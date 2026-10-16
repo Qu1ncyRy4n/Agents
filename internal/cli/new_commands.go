@@ -37,32 +37,8 @@ func runSequence(args []string, stdout, stderr io.Writer) error {
 }
 
 func sequenceFile(planPath string, stdout io.Writer) error {
-	plan, err := assembly.LoadFile(planPath)
+	contents, buildPath, err := sequenceContents(planPath)
 	if err != nil {
-		return err
-	}
-	contents, result, err := assembly.Sequence(plan, planPath)
-	if err != nil {
-		return err
-	}
-	if result.HasErrors() {
-		writeAssemblyDiagnostics(stderrDiscard{}, result)
-		return fmt.Errorf("sequence contains errors")
-	}
-	buildPath := filepath.Join(filepath.Dir(planPath), "mogent.build")
-	if existing, err := os.ReadFile(buildPath); err == nil {
-		existingFile, parseErr := syntax.Parse(buildPath, existing)
-		if parseErr != nil {
-			return fmt.Errorf("refusing to replace unreadable %s: %w", buildPath, parseErr)
-		}
-		origin, found, originErr := buildOrigin(existingFile)
-		if originErr != nil || !found || origin == "authored" {
-			return fmt.Errorf("refusing to replace authored %s; select it explicitly with build --file", buildPath)
-		}
-		if err := assembly.VerifyBuildChecksum(existing); err != nil {
-			return fmt.Errorf("refusing to replace %s: %w", buildPath, err)
-		}
-	} else if !os.IsNotExist(err) {
 		return err
 	}
 	if err := os.WriteFile(buildPath, contents, 0644); err != nil {
@@ -70,6 +46,38 @@ func sequenceFile(planPath string, stdout io.Writer) error {
 	}
 	_, err = fmt.Fprintf(stdout, "Sequenced %s -> %s\n", planPath, buildPath)
 	return err
+}
+
+func sequenceContents(planPath string) ([]byte, string, error) {
+	plan, err := assembly.LoadFile(planPath)
+	if err != nil {
+		return nil, "", err
+	}
+	contents, result, err := assembly.Sequence(plan, planPath)
+	if err != nil {
+		return nil, "", err
+	}
+	if result.HasErrors() {
+		writeAssemblyDiagnostics(stderrDiscard{}, result)
+		return nil, "", fmt.Errorf("sequence contains errors")
+	}
+	buildPath := filepath.Join(filepath.Dir(planPath), "mogent.build")
+	if existing, err := os.ReadFile(buildPath); err == nil {
+		existingFile, parseErr := syntax.Parse(buildPath, existing)
+		if parseErr != nil {
+			return nil, "", fmt.Errorf("refusing to replace unreadable %s: %w", buildPath, parseErr)
+		}
+		origin, found, originErr := buildOrigin(existingFile)
+		if originErr != nil || !found || origin == "authored" {
+			return nil, "", fmt.Errorf("refusing to replace authored %s; select it explicitly with build --file", buildPath)
+		}
+		if err := assembly.VerifyBuildChecksum(existing); err != nil {
+			return nil, "", fmt.Errorf("refusing to replace %s: %w", buildPath, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return nil, "", err
+	}
+	return contents, buildPath, nil
 }
 
 func buildOrigin(file *syntax.File) (string, bool, error) {
@@ -114,6 +122,7 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	buildPath := *path
+	var generatedBuild []byte
 	if file.Kind == syntax.Plan {
 		if *check {
 			result, _, err := assembly.ResolvePlan(file, *path)
@@ -127,11 +136,11 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 			_, err = result.Compose()
 			return err
 		}
-		if err := sequenceFile(*path, stdout); err != nil {
+		generatedBuild, buildPath, err = sequenceContents(*path)
+		if err != nil {
 			return err
 		}
-		buildPath = filepath.Join(filepath.Dir(*path), "mogent.build")
-		file, err = assembly.LoadFile(buildPath)
+		file, err = syntax.Parse(buildPath, generatedBuild)
 		if err != nil {
 			return err
 		}
@@ -139,9 +148,12 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 	if file.Kind != syntax.Build {
 		return fmt.Errorf("build file must contain a build header")
 	}
-	contents, err := os.ReadFile(buildPath)
-	if err != nil {
-		return err
+	contents := generatedBuild
+	if contents == nil {
+		contents, err = os.ReadFile(buildPath)
+		if err != nil {
+			return err
+		}
 	}
 	if err := assembly.VerifyBuildChecksum(contents); err != nil {
 		return err
@@ -165,10 +177,15 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 		_, err := fmt.Fprintln(stdout, "Build check passed")
 		return err
 	}
-	if err := assembly.Apply(filepath.Dir(buildPath), manifest); err != nil {
+	workspace := filepath.Dir(buildPath)
+	if generatedBuild != nil {
+		if err := assembly.ApplyGenerated(workspace, manifest, generatedBuild); err != nil {
+			return err
+		}
+	} else if err := assembly.Apply(workspace, manifest); err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(stdout, "Built %s\n", filepath.Dir(buildPath))
+	_, err = fmt.Fprintf(stdout, "Built %s\n", workspace)
 	return err
 }
 
