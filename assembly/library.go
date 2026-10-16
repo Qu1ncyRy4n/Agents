@@ -18,6 +18,9 @@ func LoadLibrary(root string) (*Library, error) {
 		return nil, err
 	}
 	contents, err := os.ReadFile(filepath.Join(root, LibraryFile))
+	if os.IsNotExist(err) {
+		return loadRawLibrary(root)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +61,51 @@ func LoadLibrary(root string) (*Library, error) {
 			// resolved with the final effective selection in the next slice.
 		default:
 			return nil, fmt.Errorf("%s: unsupported library declaration %q", l.Path, entry.Name)
+		}
+	}
+	return l, nil
+}
+
+func loadRawLibrary(root string) (*Library, error) {
+	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: filepath.Base(root), ByPath: make(map[string]*Node), Presets: make(map[string]Preset)}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == ".git" || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		inventory, err := content.Discover(filepath.Join(root, entry.Name()))
+		if err != nil {
+			return nil, err
+		}
+		node := &Node{Name: entry.Name(), Path: entry.Name(), Type: Directory, Source: entry.Name(), Library: l, Physical: inventory}
+		l.ByPath[node.Path] = node
+		l.Nodes = append(l.Nodes, node)
+		for _, relative := range inventory.Paths() {
+			if relative == "." {
+				continue
+			}
+			parts := strings.Split(relative, "/")
+			parent := node
+			prefix := entry.Name()
+			for index, part := range parts {
+				prefix += "/" + part
+				if existing := l.ByPath[prefix]; existing != nil {
+					parent = existing
+					continue
+				}
+				kind := inventory.Nodes[strings.Join(parts[:index+1], "/")].Kind
+				childType := File
+				if kind == content.Directory {
+					childType = Directory
+				}
+				child := &Node{Name: part, Path: prefix, Type: childType, Parent: parent, Library: l, Physical: inventory}
+				parent.Children = append(parent.Children, child)
+				l.ByPath[prefix] = child
+				parent = child
+			}
 		}
 	}
 	return l, nil

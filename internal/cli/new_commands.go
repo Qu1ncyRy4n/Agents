@@ -209,3 +209,35 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	}
 	return nil
 }
+
+func runEdit(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 || args[0] != "include" {
+		return fmt.Errorf("edit requires include; use edit include alias:path --localize")
+	}
+	flags := flag.NewFlagSet("edit include", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	path := flags.String("file", "mogent.plan", "plan file")
+	localize := flags.Bool("localize", false, "create editable local source")
+	dryRun := flags.Bool("dry-run", false, "preview without writing")
+	args = reorderArgs(args[1:], map[string]bool{"-file": true, "--file": true, "-localize": false, "--localize": false, "-dry-run": false, "--dry-run": false})
+	if err := parseFlags(flags, args); err != nil {
+		return err
+	}
+	if flags.NArg() != 1 || !*localize {
+		return fmt.Errorf("edit include currently requires one reference and --localize")
+	}
+	plan, err := assembly.LoadFile(*path)
+	if err != nil {
+		return err
+	}
+	result, err := assembly.Localize(plan, *path, flags.Arg(0), *dryRun)
+	if err != nil {
+		return err
+	}
+	if *dryRun {
+		_, err = fmt.Fprintf(stdout, "Dry run: local source %s\n\n%s", result.LocalPath, result.Plan)
+		return err
+	}
+	_, err = fmt.Fprintf(stdout, "Localized %s as %s\n", result.SourceReference, result.LocalReference)
+	return err
+}

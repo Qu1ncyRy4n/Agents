@@ -109,3 +109,29 @@ include "team:skills"
 		t.Fatalf("show error=%v stdout=%q", err, stdout.String())
 	}
 }
+
+func TestNewEditIncludeLocalize(t *testing.T) {
+	root := newCLIFixture(t)
+	plan := filepath.Join(root, "mogent.plan")
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"edit", "include", "team:skills/review", "--localize", "--file", plan, "--dry-run"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "local:skills/review") {
+		t.Fatalf("dry run=%q", stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, ".mogent/local/skills/review")); !os.IsNotExist(err) {
+		t.Fatalf("dry-run wrote local source: %v", err)
+	}
+	stdout.Reset()
+	if err := Run([]string{"edit", "include", "team:skills/review", "--localize", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".mogent/local/skills/review/SKILL.md")); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(plan)
+	if err != nil || !strings.Contains(string(contents), `include "local:skills/review"`) {
+		t.Fatalf("plan=%q err=%v", contents, err)
+	}
+}

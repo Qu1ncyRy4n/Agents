@@ -343,3 +343,44 @@ include "team:recommended"
 		t.Fatalf("diagnostics=%#v", result.Diagnostics)
 	}
 }
+
+func TestLocalizeCopiesBundleAndAddsLocalReplacement(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	planPath := filepath.Join(root, "mogent.plan")
+	plan := parse(t, planPath, `plan {format=1}
+source "team" {local="team"}
+include "team:skills" {accept_defaults=true}
+`)
+	result, err := assembly.Localize(plan, planPath, "team:skills/review", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(result.LocalPath); !os.IsNotExist(err) {
+		t.Fatalf("dry-run created source: %v", err)
+	}
+	if !strings.Contains(string(result.Plan), `source "local"`) || !strings.Contains(string(result.Plan), `include "local:skills/review"`) {
+		t.Fatalf("plan=%s", result.Plan)
+	}
+	result, err = assembly.Localize(plan, planPath, "team:skills/review", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes, err := os.ReadFile(filepath.Join(result.LocalPath, "scripts/check.sh")); err != nil || string(bytes) != "#!/bin/sh\n" {
+		t.Fatalf("local bundle=%q err=%v", bytes, err)
+	}
+	updated, err := assembly.LoadFile(planPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolved, _, err := assembly.ResolvePlan(updated, planPath)
+	if err != nil || resolved.HasErrors() {
+		t.Fatalf("resolved=%#v err=%v", resolved, err)
+	}
+	if len(resolved.Contributions) != 3 || !resolved.Contributions[2].Replace || resolved.Contributions[2].Source != "local" {
+		t.Fatalf("contributions=%#v", resolved.Contributions)
+	}
+	if _, err := assembly.Localize(updated, planPath, "team:skills/review", false); err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("second localize error=%v", err)
+	}
+}
