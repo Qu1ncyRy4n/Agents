@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/content"
-	"github.com/Qu1ncyRy4n/Agents/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/syntax"
 )
 
@@ -283,9 +282,26 @@ func Apply(workspace string, manifest *content.Manifest) error {
 	if !found {
 		return fmt.Errorf("manifest has no AGENTS.md")
 	}
-	if err := renderfs.WriteAtomically(filepath.Join(workspace, "AGENTS.md"), agents.Bytes); err != nil {
+	guideStage, err := os.CreateTemp(workspace, ".mogent-stage-agents-")
+	if err != nil {
 		return err
 	}
+	guideStagePath := guideStage.Name()
+	if _, err := guideStage.Write(agents.Bytes); err != nil {
+		_ = guideStage.Close()
+		_ = os.Remove(guideStagePath)
+		return err
+	}
+	if err := guideStage.Chmod(agents.Mode); err != nil {
+		_ = guideStage.Close()
+		_ = os.Remove(guideStagePath)
+		return err
+	}
+	if err := guideStage.Close(); err != nil {
+		_ = os.Remove(guideStagePath)
+		return err
+	}
+	defer func() { _ = os.Remove(guideStagePath) }()
 	var skills = &content.Manifest{Files: make(map[string]content.Payload), Directories: map[string]os.FileMode{".": 0755}, Bundles: make(map[string]string)}
 	for name, payload := range manifest.Files {
 		if !strings.HasPrefix(name, ".agents/skills/") {
@@ -303,7 +319,15 @@ func Apply(workspace string, manifest *content.Manifest) error {
 			skills.Directories[relative] = mode
 		}
 	}
-	return replaceDirectory(filepath.Join(workspace, ".agents", "skills"), skills)
+	skillsStage, err := stageDirectory(filepath.Join(workspace, ".agents"), skills)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.RemoveAll(skillsStage) }()
+	return swapManagedPaths([]managedSwap{
+		{stage: guideStagePath, destination: filepath.Join(workspace, "AGENTS.md")},
+		{stage: skillsStage, destination: filepath.Join(workspace, ".agents", "skills")},
+	})
 }
 
 // CheckWorkspace verifies expected managed outputs without repairing them.
@@ -369,40 +393,59 @@ func CheckWorkspace(workspace string, manifest *content.Manifest) error {
 	return nil
 }
 
-func replaceDirectory(destination string, manifest *content.Manifest) error {
-	parent := filepath.Dir(destination)
+func stageDirectory(parent string, manifest *content.Manifest) (string, error) {
 	if err := os.MkdirAll(parent, 0755); err != nil {
-		return err
+		return "", err
 	}
 	stage, err := os.MkdirTemp(parent, ".mogent-stage-")
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer func() { _ = os.RemoveAll(stage) }()
 	if err := manifest.Materialize(stage); err != nil {
-		return err
+		_ = os.RemoveAll(stage)
+		return "", err
 	}
-	backup := destination + ".mogent-backup"
-	if _, err := os.Lstat(backup); err == nil {
-		return fmt.Errorf("refusing to replace existing backup %q", backup)
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	if _, err := os.Lstat(destination); err == nil {
-		if err := os.Rename(destination, backup); err != nil {
+	return stage, nil
+}
+
+type managedSwap struct{ stage, destination, backup string }
+
+// swapManagedPaths replaces each staged managed root and restores every prior
+// root if a later rename fails. Every stage is created beside its destination,
+// keeping renames within one filesystem.
+func swapManagedPaths(swaps []managedSwap) (err error) {
+	for index := range swaps {
+		swap := &swaps[index]
+		swap.backup = swap.destination + ".mogent-backup"
+		if _, err := os.Lstat(swap.backup); err == nil {
+			return fmt.Errorf("refusing to replace existing backup %q", swap.backup)
+		} else if !os.IsNotExist(err) {
 			return err
 		}
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	if err := os.Rename(stage, destination); err != nil {
-		if _, backupErr := os.Lstat(backup); backupErr == nil {
-			_ = os.Rename(backup, destination)
+		if _, err := os.Lstat(swap.destination); err == nil {
+			if err := os.Rename(swap.destination, swap.backup); err != nil {
+				return err
+			}
+		} else if !os.IsNotExist(err) {
+			return err
 		}
-		return err
+		if err := os.Rename(swap.stage, swap.destination); err != nil {
+			if _, backupErr := os.Lstat(swap.backup); backupErr == nil {
+				_ = os.Rename(swap.backup, swap.destination)
+			}
+			for restore := index - 1; restore >= 0; restore-- {
+				_ = os.RemoveAll(swaps[restore].destination)
+				if _, backupErr := os.Lstat(swaps[restore].backup); backupErr == nil {
+					_ = os.Rename(swaps[restore].backup, swaps[restore].destination)
+				}
+			}
+			return err
+		}
 	}
-	if err := os.RemoveAll(backup); err != nil {
-		return err
+	for _, swap := range swaps {
+		if err := os.RemoveAll(swap.backup); err != nil && !os.IsNotExist(err) {
+			return err
+		}
 	}
 	return nil
 }
