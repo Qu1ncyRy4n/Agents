@@ -1,6 +1,6 @@
 # Mogent Handoff
 
-Updated: 2026-09-10
+Updated: 2026-10-14
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
@@ -26,10 +26,59 @@ above, inspect the authority and current working tree.
 
 ## Current Resume Point
 
-The active product workstream is the HCL v2 rollout:
+The owner approved initial implementation, chose `mogent.lib`, clarified
+separators, and requested API implementation -> API tests -> CLI -> CLI behavior
+tests. The first bounded syntax API slice is now implemented in `syntax/`:
+Parse, source-located ordered AST/comments, explicit string substitution, and
+deterministic formatting/alias expansion. External-package API tests pass.
+`nix develop -c tools/check` passes, including full tests/vet/deadcode/errcheck.
+
+**Next: S2 typed catalog/resolver API and its tests**, with source-range authoring
+edits still tracked under S1. New syntax is not wired into CLI execution. Expected
+CLI behavior is documented before wiring and can be encoded in tests first.
+Unused/undefined source bindings, curation/type applicability, integrity records,
+and assembly execution are not delivered by syntax parsing alone.
+
+1. [First-slice spec](proposals/MOGENT-FIRST-SLICE-SPEC.md): accepted direction plus
+   a clearly marked proposed-engineering-detail table.
+2. [Acceptance cases](proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md): pilot fixture,
+   concrete success/failure/rollback cases; syntax portions are tested, others pending.
+3. [Implementation sequence](../TODO/TODO-config-first-slice.md): R1-R3 review gates
+   and S1-S6 slices mapping onto reusable code.
+
+Owner selected **B: include the new library format in the initial redesign**.
+Typed-node refinements are now in spec section 4 and acceptance L01-L13:
+`md-section` for guidance and `md-file` for intact Markdown, with `dir`/`file`,
+optional role/content, curation/presets, and explicit guidance vars/values.
+The owner accepted the final review and starting the first slice. Keep existing config files for interpretation during
+migration/reference, but do not carry YAML as a maintained runtime format. This
+supersedes the earlier proposed HCL-library bridge. Library filename is `mogent.lib`;
+no special `skill` keyword is needed. No commits have been made during this work.
+
+Key accepted direction: custom small language; one `include` family; `replace`
+alias normalizes to `include` with a flag; no copy alias or ordinary copy/render/
+append switches. Plans compile through the same build representation/executor as
+direct authored builds. Default build sequences if needed, protects authored and
+edited generated files, and materializes root AGENTS.md plus selected `.agents/`
+artifacts. Localize once into an editable local sublibrary; later builds preserve
+edits. Git commits/local complete-node hashes identify inputs. Tags/curation,
+reasons, defaults, library order, and unresolved result callouts remain core.
+
+The [conversation stack](../TODO/2026-10-14-212422-conversation-stack.md) preserves
+all refinements and parked questions. Keep responses short, handle one issue at a
+time, and do not restart vocabulary/format research. The
+[walkthrough](proposals/MOGENT-LANGUAGE-WALKTHROUGH.md) preserves example evolution;
+the [CLI inventory](CLI-COMMAND-INVENTORY.md) distinguishes delivered behavior.
+Legacy commands/formats may be retired after equivalent core workflows are verified.
+Protocol headers, standards/harness comparison, CI/skill wrappers, symlinks/global
+targets, reverse inference, and the richer interactive UI remain follow-ups.
+
+### Existing Implementation Baseline
+
+The delivered HCL v2 rollout is tracked in
 [`TODO/TODO-pupab-hcl-v2-rollout.md`](../TODO/TODO-pupab-hcl-v2-rollout.md)
 against [`proposals/MOGENT-HCL-V2-SPEC.md`](proposals/MOGENT-HCL-V2-SPEC.md).
-`plan`, `apply`, `update`, commit pinning, offers, tree outputs, and v2
+`plan`, `apply`, `update`, commit pinning, curation, tree outputs, and v2
 `source list`/`show` are implemented; `tools/v2-stories` exercises the
 acceptance scenarios against the sibling QMR library. Open owner decisions:
 whether `curate` becomes required
@@ -66,6 +115,8 @@ precedence also remain separate open questions.
 ## Document Convention
 
 - `TODO/TODO.md`: durable, canonical work state.
+- `TODO/<datetime>-conversation-stack.md`: indexed owner discussion, single-item
+  resume point, preferences, proposals, and parked questions; not a grammar spec.
 - `TODO/PICKUP-<date>-<workstream>.md`: volatile checkpoint for one active
   workstream; it may point to a detailed checkpoint in the repository that owns
   the active work.

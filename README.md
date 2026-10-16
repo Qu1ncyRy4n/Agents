@@ -1,7 +1,7 @@
 # Mogent
 
-Mogent builds repository-specific `AGENTS.md` files from reusable Markdown
-libraries and an `agents.yaml` manifest.
+Mogent composes repository-specific agent instructions and file bundles from
+reusable libraries. It supports YAML manifests and HCL v2 configurations.
 
 The short version:
 
@@ -9,6 +9,78 @@ The short version:
 - `agents.yaml` chooses, orders, and renames those modules for one repo.
 - `mogent build` renders the manifest to `AGENTS.md`.
 - `mogent build --dry-run` validates the render without writing outputs or state.
+- HCL v2 uses `mogent.hcl` and `plan` / `apply` / `update`, including mixed
+  copied files, complete skill bundles, and rendered Markdown.
+
+## Feature Coverage And Release Planning
+
+Status is specific to the format shown; a v1 capability is not automatically
+available in v2. Dates below are recorded delivery checkpoints, not a claim about
+the earliest introducing commit. A dash means no delivery date is asserted.
+
+| Capability | Delivered scope | Recorded checkpoint | Redesign / release treatment |
+|---|---|---|---|
+| Authored headings, nesting, renaming, ordered multi-source composition | YAML v1 `doc` | — | Preserve consumer composition intent |
+| Explicit content template variables | YAML v1 `vars`; not HCL v2 | 2026-08-18 | Compatibility decision required |
+| Source discovery, metadata/TLDR browsing, coverage | v1; v2 has `source list` / `show`, not full v1 parity | v2 browsing: 2026-10-05 | Preserve; unify views and selection explanations |
+| Copy-on-write localization and conservative single-section drift import | YAML v1 workspace API / CLI | — | Preserve workflow; v2 parity is not delivered |
+| Library identity, hierarchy, metadata, and relationship validation | v1 sidecar; v2 sidecar has its own schema | — | Preserve; relationship validation is not a general solver |
+| Sparse selections, curated choices/defaults and reasoned foundation exclusions | HCL v2 authored guidance | 2026-10-05 | Preserve curation; simplify choice/exception interaction |
+| Tag-based content selection | v1 output selectors; v2 additive authored-leaf queries | — | Preserve; define tag/default/exclusion precedence |
+| Named init templates | v1 and v2; editable starting configurations | v2 `qmr-core`: 2026-10-05 | Distinguish templates from live includable presets |
+| Pinned Git sources, update previews | v1 lock; v2 inline commit pins | v2: 2026-10-05 | Reuse Git; frozen local inputs still need a contract |
+| Plan/apply, output drift protection, transactional writes | HCL v2 | 2026-10-05 | Reuse engine and state lifecycle |
+| Single-source raw directory outputs and source exclusions | HCL v2 `tree` | — | Consolidation with richer composition remains open |
+| Physical inventory and intact file/bundle copies | Typed `content` API and HCL v2 `dir-tree` | 2026-10-09 | Preserve bytes, frontmatter, modes, bundle boundaries |
+| Parsed Markdown heading views and explicit rendering | Typed API / HCL v2 | 2026-10-09 | Preserve; extraction is not editing an installed skill |
+| Mixed ordered contributions, subtree replacement, rendered append | Typed API / HCL v2 | 2026-10-09 | Reuse; simplify recommended authoring vocabulary |
+| Member/rendered-document update diffs and operation provenance | Typed HCL v2 | 2026-10-09 | Preserve reasons, omissions, replacements, origin context |
+| Byte, permission, and empty-directory drift protection | Typed HCL v2 | 2026-10-09 | Preserve |
+| Interactive manifest navigator | YAML v1 TUI | — | Typed-result/decision viewer is proposed, not delivered |
+| Small-language syntax API | Public `syntax` parser/formatter and API tests; not CLI/runtime support | Current redesign slice | `mogent.lib` / plan / build syntax, literals, source ranges, comments, alias expansion |
+| Directly authored assembly file and intent-to-build compilation | Syntax API delivered; resolution/execution pending | — | Approved first-slice contract; staged implementation |
+| Includable recipes, curated cross-branch presets, build-to-plan suggestions | Not implemented as proposed | — | Distinguish from existing branch selection/init templates |
+| Lower-layer deletion, editable heading derivatives, semantic JSON/TOML merges | Not implemented | — | Separate design work; whole-file copying already works |
+| DotAgents workspace layout/format compatibility | Opaque files can be copied; protocol conformance not established | — | Candidate 1.0 scope; compare native harness support first |
+| Automatic global installation and vendor-format conversion | Not implemented | — | Deferred; workspace-first direction |
+| Guided multi-repository deployment | Campaign documented; no batch transaction | 2026-10-09 plan | Agree pilot repositories and useful modules with owner |
+
+The [configuration redesign conversation stack](TODO/2026-10-14-212422-conversation-stack.md)
+tracks current preferences and open decisions. The consolidated
+[first-slice spec](docs/proposals/MOGENT-FIRST-SLICE-SPEC.md) and
+[acceptance cases](docs/proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md) define the approved
+initial implementation, with a [staged implementation plan](TODO/TODO-config-first-slice.md).
+The syntax API is now implemented/tested; catalog/resolver and CLI integration
+are still pending.
+They do not replace the executable
+[HCL v2 specification](docs/proposals/MOGENT-HCL-V2-SPEC.md) or
+[typed-content contract](docs/TYPED-CONTENT.md).
+
+### Current Workflow And Design Goal
+
+The current v2 loop is **initialize -> inspect sources -> edit configuration ->
+plan -> revise -> apply -> review updates**. For example, with the sibling QMR
+library checked out, run these inside a chosen consumer workspace:
+
+```sh
+mogent init --template qmr-core --source qmr=../qmr-agents-library
+mogent source list qmr --tldr --tags
+mogent source show qmr:constraints/security
+# Edit mogent.hcl to change sources, selections, or destinations.
+mogent plan
+mogent apply
+```
+
+For a Git-backed source, `mogent update qmr` previews a pin update; a local
+source is read as checked out. V2
+selection changes currently use the editor; v1 `source add` / `add` commands are
+not a promised v2 editing interface. For a self-contained typed-content inspection
+and plan/apply example, see [Typed Content Composition](docs/TYPED-CONTENT.md).
+
+The redesign should make the same loop easier through CLI and editor authoring,
+with available-content, resolved-action, and final-result tree views. Dedicated
+workflow/config/CLI help topics, KDL files, and `mogent.plan` / `mogent.build`
+are discussion proposals, not commands or formats accepted today.
 
 ## License
 

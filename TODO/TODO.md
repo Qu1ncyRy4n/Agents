@@ -2,6 +2,8 @@
 
 | Handle | Title | Status |
 |--------|-------|--------|
+| config-first-slice | Small language, sequencing, inspection, localization | [syntax API delivered; resolver next](TODO-config-first-slice.md) |
+| conversation-2026-10-14 | Configuration redesign: consumer plan, direct build, curated libraries | [discussion active](2026-10-14-212422-conversation-stack.md) |
 | jusuk | Mogent: Modular Agent Prompt Manager | [open](TODO-jusuk-mogent-agent-modules.md) |
 | pupab | HCL v2 rollout: offer vocabulary, plan/apply, commit pinning | [active](TODO-pupab-hcl-v2-rollout.md) |
 | tugur | HCL v2 composition follow-up: curate, selection, tree overlays | [active](TODO-tugur-v2-composition-followup.md) |
@@ -16,6 +18,42 @@ Detailed M-* tasks and Mogent-specific owner decisions were migrated from
 blockers, and dependency graph; the weekly note is only a cross-project pointer.
 
 ## Current Library Direction
+
+Current product discussion: [configuration redesign conversation stack](2026-10-14-212422-conversation-stack.md).
+Initial implementation is approved with `mogent.lib` naming and API-first delivery.
+The syntax API/parser/formatter is implemented and tested; catalog/resolver API is
+next. Follow the consolidated
+[first-slice spec](../docs/proposals/MOGENT-FIRST-SLICE-SPEC.md),
+[acceptance cases](../docs/proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md), and
+[implementation sequence](TODO-config-first-slice.md). The CLI still uses existing
+formats until the tested new APIs are integrated; parsing recognized option names
+does not implement their runtime semantics.
+Owner chose new library syntax in the initial redesign (B), rather than maintaining
+a temporary HCL-sidecar execution bridge. Retain existing configurations as
+migration/reference material; ongoing YAML maintenance is not a goal. Preserve
+metadata/curation semantics while building the new typed catalog.
+Ordering and library/preset direction are accepted. Preserve metadata/tag/curation
+composition and reuse the existing engine. Workspace-only installation is the
+release-scope direction. Direct builds are an accepted independent entry point;
+plans must compile through the same build representation and executor. Provenance
+storage details and precise standards target still have staged work. Do not infer
+complete implementation from accepted syntax. Existing task histories and format contracts remain the
+record of delivered behavior.
+
+Initial output placement is root `AGENTS.md` and other managed artifacts under
+`.agents/`, using real files. Skip a `copy` alias. Deferred follow-up:
+
+- [ ] Define optional per-file protocol/target-profile headers for destination
+  and format defaults (illustrative `protocol = "dotagents"` / `"openai"`).
+  Verify harness support/versioning, explicit placement overrides, included-recipe
+  scope, and generated-build recording before implementation. Do not expand this
+  tangent during the current core walkthrough.
+- [ ] Add a non-mutating setup-freshness/reproducibility check to the new CLI,
+  then a GitHub Actions example using the same core. Check source pins/local
+  hashes, generated-build freshness, unresolved decisions, and managed output
+  drift. Distinguish pinned reproducibility from optional upstream updates.
+  Optional skill/harness wrappers should call this check rather than implement
+  their own rules. New `build --check` semantics are not implemented yet.
 
 Mogent owns renderer behavior, CLI workflows, and test fixtures. The personal
 live library is the sibling QMR Agents Library; its archive and reference trees
