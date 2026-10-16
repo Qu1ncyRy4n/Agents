@@ -119,6 +119,7 @@ different syntax under a misleading format name.
 - [x] Introduce `--file`, `sequence`, and `build --file` sequencing when the
   named file is a plan, plus basic source/build/result text views after shared APIs exist.
 - [ ] Add no-argument workspace discovery/default build authority rules from spec section 8.
+  [done: plan first, then build, otherwise legacy manifest; explicit --file remains authoritative]
 - [ ] Add result-default tree, node explanation, issue filter, and generated-build
   freshness messages. A partial view remains available even when build would fail.
 - [x] Implement `edit include --localize` with dry-run and shared localized

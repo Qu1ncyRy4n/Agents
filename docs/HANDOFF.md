@@ -42,6 +42,12 @@ complete output/state rollback, source-update acceptance/provenance baseline rec
 no-argument build discovery, and richer result inspection/help. Do not describe the current CLI as a replacement
 for legacy default commands until the cutover slice verifies those workflows.
 
+Delivered no-argument behavior: when invoked without `--manifest`/`--file`,
+`mogent build` chooses a local `mogent.plan` first, then `mogent.build`; otherwise
+it preserves legacy manifest behavior. `sequence` refuses to replace an authored
+or manually edited generated build. `build --file` remains the unambiguous route
+for scripted workflows. These behaviors have focused CLI tests.
+
 1. [First-slice spec](proposals/MOGENT-FIRST-SLICE-SPEC.md): accepted direction plus
    a clearly marked proposed-engineering-detail table.
 2. [Acceptance cases](proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md): pilot fixture,

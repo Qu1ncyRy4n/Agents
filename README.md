@@ -51,7 +51,9 @@ tracks current preferences and open decisions. The consolidated
 [acceptance cases](docs/proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md) define the approved
 initial implementation, with a [staged implementation plan](TODO/TODO-config-first-slice.md).
 The syntax API is now implemented/tested; catalog/resolver and CLI integration
-are still pending.
+are now available for the initial local/Git workflow. The legacy commands remain
+available while advanced curation, output transaction/state parity, and cutover
+work continue.
 They do not replace the executable
 [HCL v2 specification](docs/proposals/MOGENT-HCL-V2-SPEC.md) or
 [typed-content contract](docs/TYPED-CONTENT.md).
