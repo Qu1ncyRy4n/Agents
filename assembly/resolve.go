@@ -84,7 +84,49 @@ func ResolvePlan(file *syntax.File, filename string) (*Result, map[string]Source
 	if file.Kind == syntax.Build {
 		validateRecordedInputs(r, file)
 	}
+	validateRelationships(r, sources)
 	return r, sources, nil
+}
+
+// validateRelationships checks the selected identities after all includes have
+// resolved. A replacement does not satisfy a requirement for another identity.
+func validateRelationships(result *Result, sources map[string]Source) {
+	selected := make(map[string]bool)
+	for _, contribution := range result.Contributions {
+		if contribution.Node != nil {
+			selected[contribution.Source+":"+contribution.Node.Path] = true
+		}
+	}
+	groups := make(map[string][]string)
+	for _, contribution := range result.Contributions {
+		if contribution.Node == nil {
+			continue
+		}
+		node, source := contribution.Node, contribution.Source
+		for _, required := range node.Requires {
+			if !selected[source+":"+required] {
+				result.Diagnostics = append(result.Diagnostics, diagnostic(contribution.RangeEntry(), Error, fmt.Sprintf("%s:%s requires %s:%s", source, node.Path, source, required)))
+			}
+		}
+		for _, conflict := range node.ConflictsWith {
+			if selected[source+":"+conflict] {
+				result.Diagnostics = append(result.Diagnostics, diagnostic(contribution.RangeEntry(), Error, fmt.Sprintf("%s:%s conflicts with %s:%s", source, node.Path, source, conflict)))
+			}
+		}
+		if node.ExclusiveGroup != "" {
+			library := sources[source].Lib
+			if _, found := library.Groups[node.ExclusiveGroup]; !found {
+				result.Diagnostics = append(result.Diagnostics, diagnostic(contribution.RangeEntry(), Error, fmt.Sprintf("%s:%s names unknown exclusive group %q", source, node.Path, node.ExclusiveGroup)))
+			} else {
+				groups[source+":"+node.ExclusiveGroup] = append(groups[source+":"+node.ExclusiveGroup], node.Path)
+			}
+		}
+	}
+	for group, members := range groups {
+		if len(members) > 1 {
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{Severity: Error, Path: group, Message: fmt.Sprintf("exclusive group selects multiple nodes: %s", strings.Join(members, ", "))})
+		}
+	}
 }
 
 func resolveGitSource(workspace, alias, url, ref, commit string) (string, string, error) {

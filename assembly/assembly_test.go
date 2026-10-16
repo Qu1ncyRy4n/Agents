@@ -208,6 +208,33 @@ md-section "base" {curate="foundation"}
 	}
 }
 
+func TestResolvePlanValidatesFinalRelationships(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "team/mogent.lib", `library {format=1;name="Team"}
+group "pick" {mode="at-most-one"}
+md-section "a" {source="a.md";requires=["required"];exclusive_group="pick"}
+md-section "b" {source="b.md";conflicts_with=["a"];exclusive_group="pick"}
+md-section "required" {source="required.md"}
+`)
+	write(t, root, "team/a.md", "# A\n")
+	write(t, root, "team/b.md", "# B\n")
+	write(t, root, "team/required.md", "# R\n")
+	plan := parse(t, filepath.Join(root, "mogent.plan"), `plan {format=1};source "team" {local="team"};include "team:a";include "team:b"`)
+	result, _, err := assembly.ResolvePlan(plan, filepath.Join(root, "mogent.plan"))
+	if err != nil || !result.HasErrors() {
+		t.Fatalf("result=%#v err=%v", result, err)
+	}
+	var require, conflict, exclusive bool
+	for _, diagnostic := range result.Diagnostics {
+		require = require || strings.Contains(diagnostic.Message, "requires")
+		conflict = conflict || strings.Contains(diagnostic.Message, "conflicts")
+		exclusive = exclusive || strings.Contains(diagnostic.Message, "exclusive")
+	}
+	if !require || !conflict || !exclusive {
+		t.Fatalf("diagnostics=%#v", result.Diagnostics)
+	}
+}
+
 func TestResolvePlanGuidanceValuesAreWhitelisted(t *testing.T) {
 	root := t.TempDir()
 	fixtureLibrary(t, root)

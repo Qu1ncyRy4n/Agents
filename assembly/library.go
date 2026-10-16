@@ -38,7 +38,7 @@ func LoadLibrary(root string) (*Library, error) {
 		}
 		return nil, fmt.Errorf("library header requires a non-empty name")
 	}
-	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: name, ByPath: make(map[string]*Node), Presets: make(map[string]Preset)}
+	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: name, ByPath: make(map[string]*Node), Presets: make(map[string]Preset), Groups: make(map[string]Group)}
 	for _, entry := range f.Entries[1:] {
 		switch {
 		case isNodeEntry(entry):
@@ -57,8 +57,14 @@ func LoadLibrary(root string) (*Library, error) {
 			}
 			l.Presets[preset.Name] = preset
 		case entry.Name == "group":
-			// Group definitions are parsed by syntax; relationship enforcement is
-			// resolved with the final effective selection in the next slice.
+			group, err := loadGroup(entry)
+			if err != nil {
+				return nil, err
+			}
+			if _, exists := l.Groups[group.Name]; exists {
+				return nil, fmt.Errorf("%s: duplicate group %q", l.Path, group.Name)
+			}
+			l.Groups[group.Name] = group
 		default:
 			return nil, fmt.Errorf("%s: unsupported library declaration %q", l.Path, entry.Name)
 		}
@@ -67,7 +73,7 @@ func LoadLibrary(root string) (*Library, error) {
 }
 
 func loadRawLibrary(root string) (*Library, error) {
-	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: filepath.Base(root), ByPath: make(map[string]*Node), Presets: make(map[string]Preset)}
+	l := &Library{Path: filepath.Join(root, LibraryFile), Root: root, Name: filepath.Base(root), ByPath: make(map[string]*Node), Presets: make(map[string]Preset), Groups: make(map[string]Group)}
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return nil, err
@@ -109,6 +115,21 @@ func loadRawLibrary(root string) (*Library, error) {
 		}
 	}
 	return l, nil
+}
+
+func loadGroup(entry *syntax.Entry) (Group, error) {
+	if entry.Label == nil {
+		return Group{}, fmt.Errorf("group requires a name")
+	}
+	name, err := entry.Label.ResolveString(nil)
+	if err != nil {
+		return Group{}, err
+	}
+	mode, found, err := fieldString(entry, "mode")
+	if err != nil || !found || mode != "at-most-one" {
+		return Group{}, fmt.Errorf("group %q requires mode = %q", name, "at-most-one")
+	}
+	return Group{Name: name, Mode: mode, Range: entry.Range}, nil
 }
 
 func isNodeEntry(e *syntax.Entry) bool {

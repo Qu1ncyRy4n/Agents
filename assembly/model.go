@@ -73,6 +73,13 @@ type Library struct {
 	Nodes   []*Node
 	ByPath  map[string]*Node
 	Presets map[string]Preset
+	Groups  map[string]Group
+}
+
+type Group struct {
+	Name  string
+	Mode  string
+	Range syntax.Range
 }
 
 type Source struct {
