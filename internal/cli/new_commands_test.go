@@ -135,3 +135,29 @@ func TestNewEditIncludeLocalize(t *testing.T) {
 		t.Fatalf("plan=%q err=%v", contents, err)
 	}
 }
+
+func TestBuildDiscoversPlanAndSequenceProtectsAuthoredBuild(t *testing.T) {
+	root := newCLIFixture(t)
+	plan := filepath.Join(root, "mogent.plan")
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"build"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "AGENTS.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "mogent.build"), []byte(`build {format=1;origin="authored"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Run([]string{"sequence", "--file", plan}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "authored") {
+		t.Fatalf("sequence error=%v", err)
+	}
+}

@@ -50,6 +50,14 @@ func sequenceFile(planPath string, stdout io.Writer) error {
 	}
 	buildPath := filepath.Join(filepath.Dir(planPath), "mogent.build")
 	if existing, err := os.ReadFile(buildPath); err == nil {
+		existingFile, parseErr := syntax.Parse(buildPath, existing)
+		if parseErr != nil {
+			return fmt.Errorf("refusing to replace unreadable %s: %w", buildPath, parseErr)
+		}
+		origin, found, originErr := buildOrigin(existingFile)
+		if originErr != nil || !found || origin == "authored" {
+			return fmt.Errorf("refusing to replace authored %s; select it explicitly with build --file", buildPath)
+		}
 		if err := assembly.VerifyBuildChecksum(existing); err != nil {
 			return fmt.Errorf("refusing to replace %s: %w", buildPath, err)
 		}
@@ -61,6 +69,19 @@ func sequenceFile(planPath string, stdout io.Writer) error {
 	}
 	_, err = fmt.Fprintf(stdout, "Sequenced %s -> %s\n", planPath, buildPath)
 	return err
+}
+
+func buildOrigin(file *syntax.File) (string, bool, error) {
+	if file.Kind != syntax.Build || len(file.Entries) == 0 {
+		return "", false, nil
+	}
+	for _, child := range file.Entries[0].Body {
+		if child.Kind == syntax.Field && child.Name == "origin" {
+			value, err := child.Value.ResolveString(nil)
+			return value, true, err
+		}
+	}
+	return "", false, nil
 }
 
 // stderrDiscard keeps API diagnostics out of successful command stdout while

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/manifest"
@@ -146,6 +147,14 @@ func runLocalize(args []string, stdout, stderr io.Writer) error {
 func runBuild(args []string, stdout, stderr io.Writer) error {
 	if hasFlag(args, "--file") || hasFlag(args, "-file") {
 		return runNewBuild(args, stdout, stderr)
+	}
+	if !hasFlag(args, "--manifest") && !hasFlag(args, "-manifest") {
+		if _, err := os.Stat("mogent.plan"); err == nil {
+			return runNewBuild([]string{"--file", "mogent.plan"}, stdout, stderr)
+		}
+		if _, err := os.Stat("mogent.build"); err == nil {
+			return runNewBuild([]string{"--file", "mogent.build"}, stdout, stderr)
+		}
 	}
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	flags.SetOutput(stderr)
