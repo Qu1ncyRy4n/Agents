@@ -1,6 +1,9 @@
 # Mogent Handoff
 
-Updated: 2026-10-14
+**Current conversation: [NOW](convo/head.md).** This handoff is product
+navigation/reference; older resume language below is not a competing live checkpoint.
+
+Updated: 2026-10-14; conversation navigation reconciled after the pull.
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
@@ -8,8 +11,10 @@ instructions.
 
 ## Sources of Authority
 
-- [`TODO/TODO.md`](../TODO/TODO.md) owns current tasks, owner decisions,
-  statuses, and blockers.
+- [`convo/head.md`](convo/head.md) owns the live conversation resume point;
+  its linked work and decision records own the conversation queue and choices.
+- [`TODO/TODO.md`](../TODO/TODO.md) owns the product backlog and related owner
+  decisions, statuses, and blockers.
 - [`TODO/PICKUP-2026-09-04-agents-library-dogfood.md`](../TODO/PICKUP-2026-09-04-agents-library-dogfood.md)
   is historical checkpoint context. It is not the current curation entry point.
 - [`DESIGN.md`](DESIGN.md) is the product design of record.
@@ -24,7 +29,7 @@ instructions.
 If a chat recap or this navigation file conflicts with Git or an authority
 above, inspect the authority and current working tree.
 
-## Current Resume Point
+## Product Workstream Reference
 
 The owner approved initial implementation, chose `mogent.lib`, clarified
 separators, and requested API implementation -> API tests -> CLI -> CLI behavior
@@ -76,7 +81,9 @@ edits. Git commits/local complete-node hashes identify inputs. Tags/curation,
 reasons, defaults, library order, and unresolved result callouts remain core.
 
 The [conversation stack](../TODO/2026-10-14-212422-conversation-stack.md) preserves
-all refinements and parked questions. Keep responses short, handle one issue at a
+the historical refinements and parked questions; its old resume pointers are
+reference only. Use [NOW](convo/head.md) for current work.
+Keep responses short, handle one issue at a
 time, and do not restart vocabulary/format research. The
 [walkthrough](proposals/MOGENT-LANGUAGE-WALKTHROUGH.md) preserves example evolution;
 the [CLI inventory](CLI-COMMAND-INVENTORY.md) distinguishes delivered behavior.

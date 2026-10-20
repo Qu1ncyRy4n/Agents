@@ -1,5 +1,9 @@
 # Configuration Redesign Conversation Stack
 
+> History/reference: this source narrative is preserved below, including old
+> resume and NEXT text. The current conversation entry point is
+> [docs/convo/head.md](../docs/convo/head.md); do not resume from historical pointers here.
+
 Captured: 2026-10-14 21:24:22 PDT
 Status: active owner discussion; not an executable specification
 Resume: syntax API implemented/tested; S2 typed catalog/resolver API next; source-editing follow-up remains in S1

@@ -1,7 +1,11 @@
 # Mogent
 
+**Conversation NOW: [docs/convo/head.md](docs/convo/head.md).** Start here to resume;
+older discussion and checkpoints are separated under `docs/convo/archive/`.
+
 Mogent composes repository-specific agent instructions and file bundles from
-reusable libraries. It supports YAML manifests and HCL v2 configurations.
+reusable libraries. It supports the new plan/build language alongside the
+existing YAML manifest and HCL v2 workflows during cutover.
 
 The short version:
 
@@ -45,8 +49,9 @@ the earliest introducing commit. A dash means no delivery date is asserted.
 | Automatic global installation and vendor-format conversion | Not implemented | — | Deferred; workspace-first direction |
 | Guided multi-repository deployment | Campaign documented; no batch transaction | 2026-10-09 plan | Agree pilot repositories and useful modules with owner |
 
+The [NOW panel](docs/convo/head.md) owns the current conversation resume point.
 The [configuration redesign conversation stack](TODO/2026-10-14-212422-conversation-stack.md)
-tracks current preferences and open decisions. The consolidated
+preserves the historical discussion and rationale. The consolidated
 [first-slice spec](docs/proposals/MOGENT-FIRST-SLICE-SPEC.md) and
 [acceptance cases](docs/proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md) define the approved
 initial implementation, with a [staged implementation plan](TODO/TODO-config-first-slice.md).
@@ -79,10 +84,12 @@ selection changes currently use the editor; v1 `source add` / `add` commands are
 not a promised v2 editing interface. For a self-contained typed-content inspection
 and plan/apply example, see [Typed Content Composition](docs/TYPED-CONTENT.md).
 
-The redesign should make the same loop easier through CLI and editor authoring,
-with available-content, resolved-action, and final-result tree views. Dedicated
-workflow/config/CLI help topics, KDL files, and `mogent.plan` / `mogent.build`
-are discussion proposals, not commands or formats accepted today.
+The new language accepts `mogent.lib`, `mogent.plan`, and `mogent.build`, with
+`sequence`, `show`, `build --file`, and `edit include --localize` available for
+the initial workflow. Richer inspection/help and cutover remain staged work;
+KDL is historical exploration, not an accepted input format. See the
+[first-slice spec](docs/proposals/MOGENT-FIRST-SLICE-SPEC.md) and
+[implementation sequence](TODO/TODO-config-first-slice.md) for scope and gaps.
 
 ## License
 
