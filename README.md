@@ -9,6 +9,11 @@ existing YAML manifest and HCL v2 workflows during cutover.
 
 The short version:
 
+- `mogent.lib` describes reusable typed content.
+- `mogent init` creates an authored `mogent.build`; `mogent init --plan` creates
+  selection intent in `mogent.plan`. Neither selects content or installs outputs.
+- `mogent source show` inspects sources; add includes before `mogent build`.
+- The following YAML and HCL workflows remain available through explicit flags:
 - Libraries hold reusable Markdown modules.
 - `agents.yaml` chooses, orders, and renames those modules for one repo.
 - `mogent build` renders the manifest to `AGENTS.md`.
@@ -63,14 +68,98 @@ They do not replace the executable
 [HCL v2 specification](docs/proposals/MOGENT-HCL-V2-SPEC.md) or
 [typed-content contract](docs/TYPED-CONTENT.md).
 
-### Current Workflow And Design Goal
+### Current Plan/Build Workflow
+
+`mogent -h` and `mogent --help` show the same concise overview, grouped by
+**project initialization, browsing, selection, preview, and building**.
+`mogent help --all` expands that workflow with common flags under each command.
+Each group links to focused help with its own advanced section.
+
+Help uses bold headings, command names, and flags in terminals. Piped or
+redirected output stays plain; `NO_COLOR` and `TERM=dumb` disable styling.
+
+```sh
+mogent help --all
+mogent help source
+mogent help select
+mogent build --help
+```
+
+The new format selects modules through `mogent add <source:path>` (also available
+as `mogent select` or `mogent module add`), which appends an `include` declaration
+to the authored build or plan. `mogent add --manifest agents.yaml` retains the
+legacy YAML placement workflow. Legacy commands are grouped under `mogent help
+legacy`, utilities under `mogent help tools`, and all registered command
+signatures remain available with `mogent help commands`.
+
+For an opt-in tree such as QMR skills, select its direct children explicitly:
+
+```sh
+mogent add qmr:skills --all
+```
+
+Without `--all`, a bare opt-in tree selects no members and therefore installs
+nothing.
+
+Exclude a descendant from a selected parent with `mogent except <source:path>`
+(`exclude` is an alias). It edits that parent include's `exclude` list; it does
+not remove a separate direct include or automatically optimize overlap.
+
+Run inside a chosen consumer workspace:
+
+```sh
+mogent init
+mogent source add qmr ../qmr-agents-library
+mogent source list
+mogent source show
+mogent show qmr:intro/assistant-agent --content
+# Edit mogent.build to include the content appropriate for this project.
+mogent show --build --file mogent.build
+mogent build --file mogent.build
+```
+
+Initialization refuses existing files. Sources are declarations, not automatic
+selections. For intent-first authoring, start with `mogent init --plan`; edit
+`mogent.plan`, then use `mogent sequence` to emit a generated build, or
+`mogent build` to sequence and assemble it. Use `--file path` for a custom entry
+path. Dry-run initialization writes nothing and does not fetch sources.
+
+`source show` renders a tree with aligned path/type columns; `--tree` is
+accepted explicitly, `--flat` prints full paths, and `--chars ascii|unicode`
+overrides the existing user display preference. Empty source lists explain how
+to add a local library or Git repository.
+
+Use `mogent show source:path --content` to preview a source node without
+selecting it. `--lines N` limits text output (`0` is full content) and
+`--headings` lists heading addresses for physical Markdown files.
+
+Remember a library once for discovery across projects:
+
+```sh
+mogent source register qmr ~/dev/cdint/qmr-agents-library
+mogent source list --known
+# Inside another initialized project:
+mogent source add qmr
+```
+
+With [Gum](https://github.com/charmbracelet/gum) installed, interactive `init`
+offers known libraries, a local directory, a Git repository, or skipping. Gum is
+included in the Nix development shell. `--no-interactive`, explicit `--source`,
+dry runs, and nonterminal execution bypass the picker. Without Gum, flags and
+manual source addition remain available. `source ls` aliases `source list`.
+
+The discovery registry uses YAML beside the existing user preferences; it is
+never a build input. See [Source discovery and browsing](docs/SOURCE-DISCOVERY.md)
+for storage, project authority, and compatibility details.
+
+### Legacy HCL V2 Workflow
 
 The current v2 loop is **initialize -> inspect sources -> edit configuration ->
 plan -> revise -> apply -> review updates**. For example, with the sibling QMR
 library checked out, run these inside a chosen consumer workspace:
 
 ```sh
-mogent init --template qmr-core --source qmr=../qmr-agents-library
+mogent init --config mogent.hcl --template qmr-core --source qmr=../qmr-agents-library
 mogent source list qmr --tldr --tags
 mogent source show qmr:constraints/security
 # Edit mogent.hcl to change sources, selections, or destinations.
@@ -157,8 +246,8 @@ Create an editable starter manifest:
 
 ```sh
 mogent init --list-templates
-mogent init --template minimal --source shared=/path/to/your/library --dry-run
-mogent init --template minimal --source shared=/path/to/your/library
+mogent init --manifest agents.yaml --template minimal --source shared=/path/to/your/library --dry-run
+mogent init --manifest agents.yaml --template minimal --source shared=/path/to/your/library
 ```
 
 Mogent does not ship a selectable policy library. Use an explicit local library
@@ -246,7 +335,7 @@ subtree. That keeps source selection explicit while the library model settles.
 Start from a library and look at what it offers:
 
 ```sh
-mogent init --template qmr-core --source qmr=../qmr-agents-library
+mogent init --config mogent.hcl --template qmr-core --source qmr=../qmr-agents-library
 mogent source list qmr --tldr
 mogent source show qmr:constraints/security
 ```

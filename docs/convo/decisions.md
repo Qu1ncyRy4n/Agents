@@ -70,3 +70,20 @@ Scope/reservations: This changes the folder location, not the accepted authority
 split. Automatic semantic consistency checking remains a separate proposed item.
 Supersedes: CS-D001
 Superseded by: none
+
+## CS-D005 — Native catalog browsing belongs to `source show`
+
+Status: implemented
+Statement: In native plan/build projects, `mogent source show [alias:path]`
+owns the source-catalog tree. Plain `mogent show` continues to show selected
+contributions, with `show --build`, `show --issues`, and content preview as its
+related views. `show --source` remains a compatibility alias.
+Evidence: Teacher_Bot dogfooding made `show --source` and the legacy `source
+show` visibly confusing. The owner proposed flipping the vocabulary; focused
+CLI/assembly tests passed and the installed CLI was verified in Teacher_Bot on
+2026-10-21.
+Scope/reservations: Legacy YAML/HCL `source show` behavior remains available
+when explicitly routed through those formats. Native upstream input provenance
+is still undecided; this naming choice does not add it.
+Supersedes: none
+Superseded by: none

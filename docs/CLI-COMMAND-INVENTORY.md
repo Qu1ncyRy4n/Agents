@@ -4,34 +4,59 @@ Status: inspected implementation baseline for the configuration redesign.
 Checked against checkout HEAD `7819114`; documentation changes are uncommitted.
 This is an inventory, not approval of replacement commands or new grammar.
 
+Current cutover correction: `init` now creates authored `mogent.build` by
+default; `--plan` creates `mogent.plan`. Sources are declarations only;
+`--dry-run` performs no writes/fetches. Legacy initialization requires explicit
+`--config mogent.hcl` or `--manifest agents.yaml`; `--list-templates` lists legacy
+starters. The inventory below otherwise retains its historical baseline (the
+new runtime also registers `sequence`, `show`, and `edit`).
+
+Source discovery update: plan/build `source add`, `source list|ls`, user-level
+`source register` / `source list --known`, optional Gum initialization, and the
+typed catalog tree are implemented. See [SOURCE-DISCOVERY.md](SOURCE-DISCOVERY.md)
+for the current contract and supported flags. Older verification/gap notes below
+describe the original redesign baseline where explicitly identified.
+
+The [command recovery audit](COMMAND-RECOVERY-AUDIT.md) maps older content
+preview/browsing/mutation behavior into native equivalents and records deliberate
+format boundaries plus the dogfood decisions still required.
+
 ## Registered Commands
 
 `internal/cli/cli.go` supplies dispatch, top-level usage, command-name completion,
-and typo suggestions. It has 16 commands plus the special `help` entry point.
+and typo suggestions. It has 19 commands plus the special `help` entry point.
+`internal/cli/help.go` owns the workflow overview and stage-specific help;
+`-h` and `--help` are the same concise overview, `help --all` expands the workflow
+with common flags, and `help commands` renders every dispatch-registry signature.
 
 | Command | Implemented role | Format boundary |
 |---|---|---|
-| `init` | Editable starters, template listing, dry-run | Defaults to HCL v2; explicit `--manifest` selects YAML v1 setup |
-| `build` | Render/write outputs; dry-run/force | YAML v1; not a plan-to-build compiler |
+| `init` | Authored build or `--plan`, source declarations, dry-run; explicit legacy starters | Plan/build default; `--config` selects HCL v2, `--manifest` selects YAML v1 |
+| `build` | Sequence plans and assemble builds; legacy render/write outputs | Plan/build with discovery or `--file`; YAML v1 with `--manifest` |
+| `sequence` | Compile selection intent into a generated build | New plan/build language |
+| `show` | Rendered/physical content preview, ordered contributions, diagnostics | New plan/build language; project file discovery or `--file`; catalog browsing is `source show` |
+| `edit include --localize` | Copy a selected input into an editable local source | New plan/build language |
 | `plan` | Resolve, validate, show output diffs/member changes/provenance/diagnostics | HCL v2; does not emit a reusable build file |
 | `apply` | Transactional outputs/state and newly resolved commit pins | HCL v2 |
 | `update [alias]` | Preview source-pin/output changes; `--accept` updates pins | HCL v2 |
 | `lib init/scan/check` | Create, inspect, validate library YAML sidecars | Legacy schema, not v2 HCL-sidecar editing |
 | `status` | Output ownership/freshness, source summary, next-action hints | YAML v1 |
-| `drift` | Inspect/diff direct edits; `--import` localizes; `--reject --force` rebuilds | YAML v1; includes mutation |
+| `drift` | Native read-only output-baseline/current-build inspection with optional AGENTS diff; legacy import/reject behavior | Native plan/build by discovery or `--file`; YAML v1 with `--manifest` |
 | `coverage` | Source coverage tree convenience entry point | YAML v1 |
-| `source add` | Declare a source with dry-run; does not select content | YAML v1 |
-| `source list/show` | Browse sources or inspect one node | Both, through different handlers |
+| `source add` | Declare a source with dry-run; does not select content | Plan/authored build; explicit legacy YAML |
+| `source list` / `source ls` | List project declarations; `--tree` browses native content | New format; legacy list browsing remains separately routed |
+| `source register` / `source list --known` | Remember/discover libraries; never active build inputs | User-local YAML registry |
+| `source show` | Browse the native source catalog; inspect one node with legacy metadata/content flags | Native catalog; legacy YAML/HCL inspection is retained under explicit legacy configuration |
 | `source pin/update` | Pin or preview/accept URL source changes | YAML v1; distinct from v2 top-level `update` |
-| `add` | Add selection with heading/placement, previews, optional rebuild | YAML v1 |
+| `add` / `select` / `module add` | Validate and append one native include; `--all` explicitly selects opt-in child trees; `add` retains legacy placement flags | Plan/authored build by discovery or `--file`; YAML v1 with `--manifest` |
 | `localize` | Copy-on-write override with provenance | YAML v1 |
 | `complete` | Print completion candidates | Commands/flags general; source/heading candidates v1 |
 | `completion` | Emit bash/zsh scripts | Scripts/candidates need v2 reconciliation |
 | `tui` | Manifest editing, final Markdown, selected-source context | YAML v1 |
 | `mint` | Proquint handle utility | Separate from assembly semantics |
-| `help`, `--help`, `-h` | Top-level usage | No workflow/config help topics |
+| `help`, `--help`, `-h` | Workflow overview; focused init/source/select/show/build topics with advanced sections | Legacy/tools topics separate; `help commands` lists all signatures; command `--help` routes to its stage without executing |
 
-No top-level `show`, `tree`, `render`, `diff`, `validate`, `compile`, `include`,
+No top-level `tree`, `render`, `diff`, `validate`, `compile`, `include`,
 `replace`, or `explain` command is registered. New file roles do not automatically
 change existing command meanings.
 
@@ -71,12 +96,13 @@ calls `ResolveSources`; do not assume inspection is always network-free.
    already resolves the sequence.
 3. Reuse source coverage, presentation, TUI, and typed manifests through one
    inspection model for source/build/result and text/interactive clients.
-4. Preserve existing command meanings until explicit migration: `plan` currently
-   previews v2 output; `build` writes v1 output. Neither currently implements the
-   new compilation stage. Proposed `show source/build/result` is not implemented.
-5. Top-level `help <anything>` prints the same usage list. Structured workflow,
-   config, and command help would be new functionality. Top-level usage also omits
-   many existing flags such as drift import/reject and add preview/rebuild.
+4. `plan` still previews HCL v2 output. New compilation/assembly is implemented
+   through `sequence` and `build`; inspection uses `source show`, `show --build`, and `show --issues`,
+   not the proposed `show source/build/result` positional vocabulary.
+5. Workflow help and focused stage topics are implemented. Unknown help topics
+   now fail with guidance rather than silently displaying the same list. Registry
+   signatures are not an exhaustive per-handler flag reference; full config help,
+   richer per-command option documentation and newer-format completion remain gaps.
 
 ## Verification
 

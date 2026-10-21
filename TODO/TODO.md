@@ -53,7 +53,10 @@ Initial output placement is root `AGENTS.md` and other managed artifacts under
   hashes, generated-build freshness, unresolved decisions, and managed output
   drift. Distinguish pinned reproducibility from optional upstream updates.
   Optional skill/harness wrappers should call this check rather than implement
-  their own rules. New `build --check` semantics are not implemented yet.
+  their own rules. Native `build --check` verifies current managed outputs;
+  source freshness/reproducibility checks remain follow-up work. The 2026-10-21
+  Teacher_Bot simulation confirms authored output state detects changed effective
+  outputs but does not yet identify the changed/added/removed upstream inputs.
 
 Mogent owns renderer behavior, CLI workflows, and test fixtures. The personal
 live library is the sibling QMR Agents Library; its archive and reference trees

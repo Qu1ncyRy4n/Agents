@@ -23,6 +23,7 @@ Add one row per active experiment:
 | Repository / nickname | Stack and stage | Mogent features in use | Questions or friction | Last exercised |
 |---|---|---|---|---|
 | QMR Agents Library | Personal library, initial live core | Local source, manifest render | Does the core-and-constraints template produce a useful baseline without archive content? | 2026-09-21 |
+| Teacher_Bot | Consumer repository, native walkthrough complete | Authored init, local source, browse/preview, selection/exceptions, build/state/drift | Workflow help and catalog browsing were useful; all-output status, removal preview, and overlap diagnostics were added from this pilot | 2026-10-20 |
 | _Add repository_ | _Language, maturity, migration state_ | _Sources, init, build, localization, etc._ | _What are you trying to learn?_ | _YYYY-MM-DD_ |
 
 <!--

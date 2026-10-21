@@ -3,11 +3,24 @@
 **Current conversation: [NOW](convo/head.md).** This handoff is product
 navigation/reference; older resume language below is not a competing live checkpoint.
 
-Updated: 2026-10-14; conversation navigation reconciled after the pull.
+Updated: 2026-10-21; source-oriented native browsing and upstream-change simulation recorded.
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
 instructions.
+
+## Current Dogfood Checkpoint
+
+The detailed [Teacher_Bot native walkthrough handoff](dogfood/2026-10-20-teacher-bot-native-walkthrough-handoff.md)
+records the current consumer flow, installed outputs/state, exact verification,
+working-tree distinctions, deferred decisions, and safe re-entry. Read it after
+the NOW panel when resuming the native plan/build dogfood work.
+
+The current follow-up uses `mogent source show` for the native catalog and
+`mogent show` for selected contributions. An isolated QMR/CDINT change/add/remove
+simulation confirms that output state detects changed effective outputs but does
+not yet identify authored upstream inputs; [NOW](convo/head.md) owns that active
+design decision.
 
 ## Sources of Authority
 
