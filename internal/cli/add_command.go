@@ -10,6 +10,9 @@ import (
 )
 
 func runAdd(args []string, stdout, stderr io.Writer) error {
+	if nativeSelectionRequested(args) {
+		return runNativeSelect(args, stdout, stderr)
+	}
 	flags := flag.NewFlagSet("add", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")

@@ -95,7 +95,7 @@ func TestTypedCLIUsageDiscoversNodesAndHeadingAddresses(t *testing.T) {
 		}
 	}
 	out.Reset()
-	if err := cli.Run([]string{"help"}, &out, &errOut); err != nil {
+	if err := cli.Run([]string{"help", "legacy"}, &out, &errOut); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "[--headings]") {

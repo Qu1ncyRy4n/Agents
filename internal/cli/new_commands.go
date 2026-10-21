@@ -6,10 +6,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
+	"github.com/Qu1ncyRy4n/Agents/internal/presentation"
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
 	"github.com/Qu1ncyRy4n/Agents/syntax"
 )
@@ -174,7 +175,14 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 				writeAssemblyDiagnostics(stderr, result)
 				return fmt.Errorf("build check contains errors")
 			}
-			_, err = result.Compose()
+			manifest, err := result.Compose()
+			if err != nil {
+				return err
+			}
+			if err := assembly.CheckWorkspace(filepath.Dir(*path), manifest); err != nil {
+				return err
+			}
+			_, err = fmt.Fprintln(stdout, "Build check passed")
 			return err
 		}
 		generatedBuild, buildPath, err = sequenceContents(*path)
@@ -233,29 +241,99 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 func runShow(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("show", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	path := flags.String("file", "mogent.plan", "plan or build file")
+	path := flags.String("file", "", "plan or build file (discovered by default)")
 	sourceView := flags.Bool("source", false, "show source catalog")
+	contentView := flags.Bool("content", false, "show one source module's rendered or physical content")
+	lines := flags.Int("lines", 0, "content preview lines; 0 shows all")
+	headings := flags.Bool("headings", false, "show heading addresses for a physical Markdown file")
+	tree := flags.Bool("tree", false, "show source hierarchy (default source view)")
+	flat := flags.Bool("flat", false, "show full source paths without tree connectors")
+	chars := flags.String("chars", "", "tree characters: ascii or unicode")
 	buildView := flags.Bool("build", false, "show ordered contributions")
 	issues := flags.Bool("issues", false, "show only diagnostics")
-	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-source": false, "--source": false, "-build": false, "--build": false, "-issues": false, "--issues": false})
+	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-source": false, "--source": false, "-content": false, "--content": false, "-lines": true, "--lines": true, "-headings": false, "--headings": false, "-build": false, "--build": false, "-issues": false, "--issues": false, "-tree": false, "--tree": false, "-flat": false, "--flat": false, "-chars": true, "--chars": true})
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
-	if flags.NArg() > 1 || *sourceView && *buildView {
-		return fmt.Errorf("show accepts at most one node and only one of --source or --build")
+	if flags.NArg() > 1 || *sourceView && *buildView || *contentView && *buildView || *contentView && *issues {
+		return fmt.Errorf("show accepts at most one node and only one of --source, --content, or --build")
+	}
+	if *lines < 0 {
+		return fmt.Errorf("--lines must be zero or greater")
+	}
+	if *tree && *flat || (*tree || *flat || *chars != "") && !*sourceView {
+		return fmt.Errorf("--tree, --flat, and --chars apply to --source; choose only one of --tree or --flat")
 	}
 	requested := ""
 	if flags.NArg() == 1 {
 		requested = flags.Arg(0)
 		if _, _, found := strings.Cut(requested, ":"); !found {
-			return fmt.Errorf("show node must be alias:path")
+			if !*sourceView {
+				return fmt.Errorf("show node must be alias:path")
+			}
+			requested += ":"
 		}
 	}
-	file, err := assembly.LoadFile(*path)
+	if (*contentView || *headings) && requested == "" {
+		return fmt.Errorf("--content and --headings require one source:path reference")
+	}
+	if *headings && !*contentView {
+		return fmt.Errorf("--headings requires --content")
+	}
+	entryPath, err := projectEntryFile(*path)
 	if err != nil {
 		return err
 	}
-	result, sources, err := assembly.ResolvePlan(file, *path)
+	file, err := assembly.LoadFile(entryPath)
+	if err != nil {
+		return err
+	}
+	if *contentView {
+		preview, err := assembly.PreviewSource(file, entryPath, requested, *lines, *headings)
+		if err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(stdout, "%s\nType: %s\n", preview.Reference, preview.Type); err != nil {
+			return err
+		}
+		if preview.Source != "" {
+			if _, err := fmt.Fprintf(stdout, "Source: %s\n", preview.Source); err != nil {
+				return err
+			}
+		}
+		if preview.Opaque {
+			_, err := fmt.Fprintf(stdout, "Payload: opaque (%d bytes)\n", preview.Bytes)
+			return err
+		}
+		if len(preview.Headings) > 0 {
+			if _, err := fmt.Fprintln(stdout, "Heading addresses:"); err != nil {
+				return err
+			}
+			for _, heading := range preview.Headings {
+				quoted := make([]string, len(heading))
+				for index, title := range heading {
+					quoted[index] = strconv.Quote(title)
+				}
+				if _, err := fmt.Fprintf(stdout, "  heading = [%s]\n", strings.Join(quoted, ", ")); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if preview.Children != nil {
+			for _, child := range preview.Children {
+				if _, err := fmt.Fprintf(stdout, "  %s\n", child); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if len(preview.Content) > 0 {
+			_, err = fmt.Fprintf(stdout, "---\n%s", preview.Content)
+		}
+		return err
+	}
+	result, sources, err := assembly.ResolvePlan(file, entryPath)
 	if err != nil {
 		return err
 	}
@@ -272,29 +350,23 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 		return nil
 	}
 	if *sourceView {
-		aliases := make([]string, 0, len(sources))
-		for alias := range sources {
-			aliases = append(aliases, alias)
+		if len(sources) == 0 {
+			if requested != "" {
+				return fmt.Errorf("unknown source node %q", requested)
+			}
+			return writeNoSources(stdout, entryPath)
 		}
-		sort.Strings(aliases)
-		for _, alias := range aliases {
-			source := sources[alias]
-			if _, err := fmt.Fprintf(stdout, "%s: %s\n", alias, source.Lib.Name); err != nil {
-				return err
-			}
-			paths := make([]string, 0, len(source.Lib.ByPath))
-			for path := range source.Lib.ByPath {
-				paths = append(paths, path)
-			}
-			sort.Strings(paths)
-			for _, path := range paths {
-				node := source.Lib.ByPath[path]
-				if _, err := fmt.Fprintf(stdout, "  %s [%s]\n", path, node.Type); err != nil {
-					return err
-				}
-			}
+		config, err := presentation.Load()
+		if err != nil {
+			return err
 		}
-		return nil
+		if *chars != "" {
+			config.Chars = *chars
+		}
+		if config.Chars != "ascii" && config.Chars != "unicode" {
+			return fmt.Errorf("--chars must be ascii or unicode")
+		}
+		return writeCatalog(stdout, sources, requested, *flat, config.Align, config.Chars)
 	}
 	for _, contribution := range result.Contributions {
 		name := contribution.Source
@@ -308,6 +380,13 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 		}
 		if _, err := fmt.Fprintf(stdout, "%s -> %s\n", name, contribution.Into); err != nil {
 			return err
+		}
+	}
+	if *buildView {
+		for _, overlap := range assembly.DirectIncludeOverlaps(file) {
+			if _, err := fmt.Fprintf(stdout, "warning: %s also directly includes %s; deliberate repetition is allowed. Inspect with mogent optimize --file %s\n", overlap.Ancestor, overlap.Descendant, entryPath); err != nil {
+				return err
+			}
 		}
 	}
 	if requested != "" {

@@ -20,17 +20,28 @@ func runCoverage(args []string, stdout, stderr io.Writer) error {
 
 func runSource(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("source requires a subcommand; use source add, list, show, pin, or update")
+		return fmt.Errorf("source requires a subcommand; use source add, list (ls), register, show, pin, or update")
 	}
 	switch args[0] {
+	case "register":
+		return runSourceRegister(args[1:], stdout, stderr)
 	case "add":
+		if newSourceRequested(args[1:]) {
+			return runNewSourceAdd(args[1:], stdout, stderr)
+		}
 		return runSourceAdd(args[1:], stdout, stderr)
-	case "list":
+	case "list", "ls":
+		if newSourceRequested(args[1:]) {
+			return runNewSourceList(args[1:], stdout, stderr)
+		}
 		if v2SourceRequested(args[1:]) {
 			return runV2SourceList(args[1:], stdout, stderr)
 		}
 		return runSourceList(args[1:], stdout, stderr)
 	case "show":
+		if newSourceRequested(args[1:]) {
+			return runNativeSourceShow(args[1:], stdout, stderr)
+		}
 		if v2SourceRequested(args[1:]) {
 			return runV2SourceShow(args[1:], stdout, stderr)
 		}
@@ -43,11 +54,17 @@ func runSource(args []string, stdout, stderr io.Writer) error {
 		}
 		return runSourceUpdate(args[1:], stdout, stderr)
 	default:
-		if suggestion := closestString(args[0], []string{"add", "list", "show", "pin", "update"}, 2); suggestion != "" {
+		if suggestion := closestString(args[0], []string{"add", "list", "ls", "register", "show", "pin", "update"}, 2); suggestion != "" {
 			return fmt.Errorf("unknown source subcommand %q; did you mean %q?", args[0], suggestion)
 		}
-		return fmt.Errorf("unknown source subcommand %q; use source add, list, show, pin, or update", args[0])
+		return fmt.Errorf("unknown source subcommand %q; use source add, list (ls), register, show, pin, or update", args[0])
 	}
+}
+
+// runNativeSourceShow makes source browsing read as a source operation. The
+// older show --source spelling remains an alias while native users transition.
+func runNativeSourceShow(args []string, stdout, stderr io.Writer) error {
+	return runShow(append([]string{"--source"}, args...), stdout, stderr)
 }
 
 func runSourceAdd(args []string, stdout, stderr io.Writer) error {

@@ -408,26 +408,29 @@ func apply(workspace string, manifest *content.Manifest, build []byte) error {
 		}
 		defer func() { _ = os.Remove(buildStage) }()
 		swaps = append(swaps, managedSwap{stage: buildStage, destination: filepath.Join(workspace, "mogent.build")})
-		statePath := filepath.Join(workspace, ".mogent", "state.json")
-		files := map[string]string{filepath.Join(workspace, "AGENTS.md"): string(agents.Bytes)}
-		directories := map[string]map[string]string{filepath.Join(workspace, ".agents", "skills"): {}}
-		for name, payload := range skills.Files {
-			directories[filepath.Join(workspace, ".agents", "skills")][name] = state.Hash(payload.Bytes)
-		}
-		stateBytes, err := state.BuildAll(statePath, files, directories)
-		if err != nil {
-			return err
-		}
-		if err := os.MkdirAll(filepath.Dir(statePath), 0755); err != nil {
-			return err
-		}
-		stateStage, err := stageFile(filepath.Dir(statePath), ".mogent-stage-state-", stateBytes, 0600)
-		if err != nil {
-			return err
-		}
-		defer func() { _ = os.Remove(stateStage) }()
-		swaps = append(swaps, managedSwap{stage: stateStage, destination: statePath})
 	}
+	// State records the exact outputs written for both authored and generated
+	// builds. The authored entry remains the authority; this is an output-drift
+	// baseline, not a serialized source-selection lock.
+	statePath := filepath.Join(workspace, ".mogent", "state.json")
+	files := map[string]string{filepath.Join(workspace, "AGENTS.md"): string(agents.Bytes)}
+	directories := map[string]map[string]string{filepath.Join(workspace, ".agents", "skills"): {}}
+	for name, payload := range skills.Files {
+		directories[filepath.Join(workspace, ".agents", "skills")][name] = state.Hash(payload.Bytes)
+	}
+	stateBytes, err := state.BuildAll(statePath, files, directories)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(statePath), 0755); err != nil {
+		return err
+	}
+	stateStage, err := stageFile(filepath.Dir(statePath), ".mogent-stage-state-", stateBytes, 0600)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(stateStage) }()
+	swaps = append(swaps, managedSwap{stage: stateStage, destination: statePath})
 	return swapManagedPaths(swaps)
 }
 

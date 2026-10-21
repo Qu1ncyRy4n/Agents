@@ -266,6 +266,13 @@ md-section "optin" {curate="opt_in";md-section "only" {source="only.md"}}
 	if strings.Join(got, ",") != "foundation/a,foundation/b,optional/yes" {
 		t.Fatalf("selected=%v", got)
 	}
+	foundOptIn := false
+	for _, node := range result.Nodes {
+		foundOptIn = foundOptIn || node.Path == "optin" && node.Status == assembly.Undecided
+	}
+	if len(result.Diagnostics) != 1 || result.Diagnostics[0].Severity != assembly.Warning || !strings.Contains(result.Diagnostics[0].Message, "OPT_IN") || !foundOptIn {
+		t.Fatalf("missing opt-in warning: diagnostics=%#v nodes=%#v", result.Diagnostics, result.Nodes)
+	}
 }
 
 func TestResolvePlanValidatesFinalRelationships(t *testing.T) {
@@ -455,6 +462,9 @@ include "team:recommended"
 	write(t, root, ".agents/skills/obsolete/SKILL.md", "obsolete\n")
 	if err := assembly.Apply(root, manifest); err != nil {
 		t.Fatal(err)
+	}
+	if stateBytes, err := os.ReadFile(filepath.Join(root, ".mogent", "state.json")); err != nil || !strings.Contains(string(stateBytes), "AGENTS.md") {
+		t.Fatalf("authored state=%s err=%v", stateBytes, err)
 	}
 	if bytes, err := os.ReadFile(filepath.Join(root, "AGENTS.md")); err != nil || !strings.Contains(string(bytes), "Project: Example") {
 		t.Fatalf("agents=%q err=%v", bytes, err)

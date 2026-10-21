@@ -13,6 +13,15 @@ import (
 )
 
 func runDrift(args []string, stdout, stderr io.Writer) error {
+	if nativeSelectionRequested(args) {
+		return runNativeDrift(args, stdout, stderr)
+	}
+	if !hasFlag(args, "--manifest") && !hasFlag(args, "-manifest") {
+		if _, err := os.Lstat("agents.yaml"); os.IsNotExist(err) {
+			_, entryErr := projectEntryFile("")
+			return entryErr
+		}
+	}
 	flags := flag.NewFlagSet("drift", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")
@@ -150,10 +159,10 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	}
 	if !hasFlag(args, "--manifest") && !hasFlag(args, "-manifest") {
 		if _, err := os.Stat("mogent.plan"); err == nil {
-			return runNewBuild([]string{"--file", "mogent.plan"}, stdout, stderr)
+			return runNewBuild(append([]string{"--file", "mogent.plan"}, args...), stdout, stderr)
 		}
 		if _, err := os.Stat("mogent.build"); err == nil {
-			return runNewBuild([]string{"--file", "mogent.build"}, stdout, stderr)
+			return runNewBuild(append([]string{"--file", "mogent.build"}, args...), stdout, stderr)
 		}
 	}
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
@@ -204,6 +213,15 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 }
 
 func runStatus(args []string, stdout, stderr io.Writer) error {
+	if nativeStatusRequested(args) {
+		return runNativeStatus(args, stdout, stderr)
+	}
+	if len(args) == 0 && !hasFlag(args, "--manifest") && !hasFlag(args, "-manifest") {
+		if _, err := os.Lstat("agents.yaml"); os.IsNotExist(err) {
+			_, entryErr := projectEntryFile("")
+			return entryErr
+		}
+	}
 	flags := flag.NewFlagSet("status", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "agents.yaml", "path to manifest")

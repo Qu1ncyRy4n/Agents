@@ -28,6 +28,7 @@
               pkgs.gcc
               pkgs.errcheck
               pkgs.ripgrep
+              pkgs.gum
             ];
           };
         });

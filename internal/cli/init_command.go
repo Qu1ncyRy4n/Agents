@@ -9,7 +9,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Qu1ncyRy4n/Agents/assembly"
 	"github.com/Qu1ncyRy4n/Agents/starter"
+	"github.com/Qu1ncyRy4n/Agents/syntax"
 	"github.com/Qu1ncyRy4n/Agents/v2"
 	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
@@ -66,20 +68,26 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("init", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	manifestFile := flags.String("manifest", "", "legacy YAML manifest path")
-	configFile := flags.String("config", v2.ConfigFile, "new v2 HCL configuration path")
+	configFile := flags.String("config", "", "legacy HCL v2 configuration path (explicit opt-in)")
+	entryFile := flags.String("file", "", "plan/build path (default mogent.build, or mogent.plan with --plan)")
+	plan := flags.Bool("plan", false, "create selection intent instead of an authored build")
+	noInteractive := flags.Bool("no-interactive", false, "skip the optional Gum source picker")
 	root := flags.String("root", "agents", "v2 server-side Markdown root")
 	templateName := flags.String("template", "", "starter template name")
 	output := flags.String("output", "AGENTS.md", "generated output path")
 	listTemplates := flags.Bool("list-templates", false, "list starter templates")
-	dryRun := flags.Bool("dry-run", false, "preview the starter manifest without writing")
+	dryRun := flags.Bool("dry-run", false, "preview initialization without writing")
 	build := flags.Bool("build", false, "also build generated output")
 	force := flags.Bool("force", false, "allow --build to replace a reviewed untracked output")
 	sources := make(sourceBindings)
 	variables := make(variableBindings)
-	flags.Var(sources, "source", "available local source binding alias=path; repeat for each required alias")
+	flags.Var(sources, "source", "source declaration alias=local-path|git-url; repeat as needed (does not select content)")
 	flags.Var(variables, "var", "manifest template variable name=value; repeat as needed")
 	args = reorderArgs(args, map[string]bool{
 		"-manifest": true, "--manifest": true,
+		"-file": true, "--file": true,
+		"-plan": false, "--plan": false,
+		"-no-interactive": false, "--no-interactive": false,
 		"-config": true, "--config": true,
 		"-root": true, "--root": true,
 		"-template": true, "--template": true,
@@ -97,12 +105,60 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 	if flags.NArg() != 0 {
 		return fmt.Errorf("init accepts no positional arguments")
 	}
-	if *manifestFile == "" && !*listTemplates {
-		if len(sources) != 1 || len(variables) != 0 {
-			if len(sources) == 0 && *templateName == "" && len(variables) == 0 {
-				_, err := fmt.Fprintln(stdout, "HCL v2 setup:\n  mogent init --source alias=local-path\n  mogent init --source alias=https://host/library.git\n  mogent init --template qmr-core --source qmr=../qmr-agents-library\n\nTemplates: mogent init --list-templates")
-				return err
+	legacy := *configFile != "" || *manifestFile != "" || *listTemplates
+	if *configFile != "" && *manifestFile != "" {
+		return fmt.Errorf("init accepts only one of --config and --manifest")
+	}
+	if legacy && (*plan || *entryFile != "") {
+		return fmt.Errorf("--plan and --file cannot be combined with legacy --config, --manifest, or --list-templates")
+	}
+	if !legacy {
+		var legacyFlag string
+		flags.Visit(func(f *flag.Flag) {
+			switch f.Name {
+			case "template", "root", "output", "var", "build", "force":
+				legacyFlag = f.Name
 			}
+		})
+		if legacyFlag != "" {
+			return fmt.Errorf("--%s requires explicit legacy --config mogent.hcl or --manifest agents.yaml; plain init creates mogent.build (or use --plan)", legacyFlag)
+		}
+		kind := syntax.Build
+		if *plan {
+			kind = syntax.Plan
+		}
+		var picker sourcePicker
+		if !*dryRun && !*noInteractive && len(sources) == 0 {
+			picker = interactiveInitPicker(stdout, stderr)
+		}
+		result, err := initializeProject(assembly.InitOptions{Path: *entryFile, Kind: kind, Sources: sources, DryRun: *dryRun}, picker)
+		if err != nil {
+			return err
+		}
+		if *dryRun {
+			_, err = fmt.Fprint(stdout, string(result.Content))
+		} else {
+			_, err = fmt.Fprintf(stdout, "Created %s\nSources are declarations only; choose includes before building.\n", result.Path)
+			if err == nil {
+				parsed, parseErr := syntax.Parse(result.Path, result.Content)
+				if parseErr != nil {
+					return parseErr
+				}
+				declarations, declarationErr := assembly.SourceDeclarations(parsed)
+				if declarationErr != nil {
+					return declarationErr
+				}
+				if len(declarations) == 0 {
+					err = writeNoSources(stdout, result.Path)
+				} else {
+					_, err = fmt.Fprintf(stdout, "Next: mogent source show --file %s\n", result.Path)
+				}
+			}
+		}
+		return err
+	}
+	if *configFile != "" && !*listTemplates {
+		if len(sources) != 1 || len(variables) != 0 {
 			return fmt.Errorf("v2 init requires --config, exactly one --source alias=local-path|git-url, and optional --template, --output, or --root")
 		}
 		for alias, local := range sources {
@@ -122,7 +178,7 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("legacy YAML init requires --manifest agents.yaml")
 	}
 	if *listTemplates || *templateName == "" {
-		if _, err := fmt.Fprintln(stdout, "HCL v2 templates (mogent init --template <name> --source alias=path|url):"); err != nil {
+		if _, err := fmt.Fprintln(stdout, "Legacy HCL v2 templates (mogent init --config mogent.hcl --template <name> --source alias=path|url):"); err != nil {
 			return fmt.Errorf("write template list: %w", err)
 		}
 		for _, template := range v2.InitTemplates() {
@@ -139,7 +195,7 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 			}
 		}
 		if *templateName == "" {
-			if _, err := fmt.Fprintln(stdout, "\nNext: mogent init --template <name> --source alias=path [--source alias=path ...] --dry-run"); err != nil {
+			if _, err := fmt.Fprintln(stdout, "\nFor legacy YAML: mogent init --manifest agents.yaml --template <name> --source alias=path --dry-run\nFor the current format: mogent init [--plan] [--source alias=path]"); err != nil {
 				return fmt.Errorf("write init guide: %w", err)
 			}
 			return nil

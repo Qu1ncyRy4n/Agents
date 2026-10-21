@@ -456,6 +456,8 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 		return selected, decisions
 	}
 	if entry.Selection == nil && root.Curate == OptIn {
+		result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Warning, fmt.Sprintf("OPT_IN: %s:%s selects no content; choose explicit children or use mogent add %s:%s --all", alias, root.Path, alias, root.Path)))
+		result.Nodes = append(result.Nodes, ResultNode{Source: alias, Path: root.Path, Status: Undecided, Reason: "opt-in content requires explicit child selection", Range: entry.Range})
 		return nil, nil
 	}
 	if entry.Selection != nil {
