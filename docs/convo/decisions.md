@@ -93,11 +93,17 @@ Superseded by: none
 Status: accepted
 Statement: Native upstream-change reporting must identify changed, added, and
 removed resolved modules within each library, rather than only reporting that a
-managed output differs.
+managed output differs. Each library has deterministic content fingerprints for
+every node and for the library root. A consumer records observed fingerprints;
+comparison starts at the root and recursively descends only through mismatched
+nodes until the detailed differences are found.
 Evidence: During the 2026-10-21 Teacher_Bot QMR/CDINT simulation, the owner
 asked that module/within-library changes be detailed.
-Scope/reservations: The storage and identity mechanism is not yet decided.
-Consumer-owned input state is the current recommendation; a mutable per-library
-`state.json` is an alternative to evaluate, not accepted implementation scope.
+Scope/reservations: Content hashes are change fingerprints, not node identity:
+stable source paths remain references. The consumer state stores its prior
+comparison baseline; the library's fingerprints are deterministic from its
+current catalog/content, not mutable per-consumer history. Define canonical
+metadata, source bytes, physical-tree mode/empty-directory behavior, and Git
+input treatment before implementation.
 Supersedes: none
 Superseded by: none
