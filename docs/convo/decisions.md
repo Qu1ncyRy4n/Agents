@@ -87,3 +87,17 @@ when explicitly routed through those formats. Native upstream input provenance
 is still undecided; this naming choice does not add it.
 Supersedes: none
 Superseded by: none
+
+## CS-D006 — Module-level upstream-change detail
+
+Status: accepted
+Statement: Native upstream-change reporting must identify changed, added, and
+removed resolved modules within each library, rather than only reporting that a
+managed output differs.
+Evidence: During the 2026-10-21 Teacher_Bot QMR/CDINT simulation, the owner
+asked that module/within-library changes be detailed.
+Scope/reservations: The storage and identity mechanism is not yet decided.
+Consumer-owned input state is the current recommendation; a mutable per-library
+`state.json` is an alternative to evaluate, not accepted implementation scope.
+Supersedes: none
+Superseded by: none
