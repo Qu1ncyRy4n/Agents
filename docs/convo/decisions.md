@@ -122,9 +122,12 @@ Evidence: During command-tree review, the owner proposed tag-search output that
 can show runnable module-add commands and asked whether it could prove an
 optimization-by-tagging method. `4989165`, `358a7b8`, and `205452d` implement
 negative tag matching, read-only source inspection/add-command rendering, and
-tag-aware module addition.
+tag-aware module addition. `647f17e` makes the comparison direct: `source
+search --add-config` prints the dynamic include, while `module add
+--explicit-commands` prints its matching stable leaf additions. Teacher_Bot
+read-only dogfooding showed both forms on the QMR workflow tag query.
 Scope/reservations: `tags_none` is now available alongside `tags_all` and
-`tags_any`; Teacher_Bot still needs to dogfood its matching/reporting. Whether
-conversion belongs in an optimizer or an explicit migration command remains open.
+`tags_any`. Whether conversion belongs in an optimizer or an explicit migration
+command remains open; no conversion has been offered or applied.
 Supersedes: none
 Superseded by: none

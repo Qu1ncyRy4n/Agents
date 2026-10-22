@@ -62,9 +62,10 @@ The first-slice specification and walkthrough are design/history references,
 not alternate live command references.
 
 The language resolves `tags_all`/`tags_any`/`tags_none` and applies scoped path
-exclusions after tag filtering. `source search` provides read-only inspection
-and an explicit `--add-commands` rendering mode; `module add` accepts the same
-tag predicates. Do not treat
+exclusions after tag filtering. `source search` provides read-only inspection,
+explicit leaf additions with `--add-commands`, and pasteable dynamic query
+configuration with `--add-config`; `module add --explicit-commands` provides
+the same stable leaf alternative beside a prospective dynamic include. Do not treat
 rewriting explicit selections into a tag query as ordinary optimization: it
 changes how future upstream additions are selected. `optimize` remains a
 selection-editing command, never a build flag. `replace` is specified only as
@@ -73,18 +74,14 @@ review.
 
 ## Near-Term Native Roadmap
 
-1. Dogfood source tag search, `tags_none`, and `--add-commands` against QMR/CDINT.
-   Confirm matching, result readability, and the distinction between commands for
-   explicit leaves and a dynamic tag-query include.
-2. Dogfood tag-aware `module add` with `--dry-run --diff`; do not add automatic
-   explicit-to-tag compaction.
-3. Dogfood the consolidated catalog/result/module command tree, then decide which
-   compatibility aliases remain useful.
-4. Complete localization provenance and upstream-reconciliation UX, then dogfood
+1. Choose either the dynamic tag-query include or the explicit leaf commands for
+   the next real selection; do not add automatic explicit-to-tag compaction.
+2. Dogfood tag-aware `module add` with `--dry-run --diff` for that real selection.
+3. Complete localization provenance and upstream-reconciliation UX, then dogfood
    a localized physical module through an upstream change.
-5. Dogfood a real output collision and replacement. Only then decide whether the
+4. Dogfood a real output collision and replacement. Only then decide whether the
    CLI needs a replacement option on `module add` or a separate command.
-6. Return to broader curation/defaults, relationship diagnostics, output adoption
+5. Return to broader curation/defaults, relationship diagnostics, output adoption
    and recovery, source freshness/pinning, and richer interactive inspection.
 
 Vendor adapters, global installation, protocol profiles, hooks, reverse
