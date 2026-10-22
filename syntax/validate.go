@@ -105,7 +105,7 @@ func allowedField(parent, name string) bool {
 	case "source":
 		names = []string{"git", "local", "ref", "commit", "subdir"}
 	case "include", "replace":
-		names = []string{"into", "exclude", "tags_all", "tags_any", "accept_defaults", "replace", "reason", "text"}
+		names = []string{"into", "exclude", "tags_all", "tags_any", "tags_none", "accept_defaults", "replace", "reason", "text"}
 	case "exclude":
 		names = []string{"reason"}
 	case "group":

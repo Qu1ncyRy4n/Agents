@@ -349,6 +349,11 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 		result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, err.Error()))
 		return nil, nil
 	}
+	tagsNone, _, err := fieldStrings(entry, "tags_none")
+	if err != nil {
+		result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, err.Error()))
+		return nil, nil
+	}
 	excluded, exclusionReasons, err := exclusions(entry)
 	if err != nil {
 		result.Diagnostics = append(result.Diagnostics, diagnostic(entry, Error, err.Error()))
@@ -383,11 +388,11 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 		}
 		return kept, decisions
 	}
-	if len(tagsAll) > 0 || len(tagsAny) > 0 {
+	if len(tagsAll) > 0 || len(tagsAny) > 0 || len(tagsNone) > 0 {
 		var selected []*Node
 		seen := make(map[string]bool)
 		for _, child := range root.Children {
-			if matchesTags(child, tagsAll, tagsAny) {
+			if MatchesTags(child, tagsAll, tagsAny, tagsNone) {
 				selected = append(selected, child)
 				seen[child.Path] = true
 			}
@@ -490,7 +495,10 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 	return selected, decisions
 }
 
-func matchesTags(node *Node, all, any []string) bool {
+// MatchesTags reports whether a node matches an AND-of-all positive query, an
+// OR-of-any positive query, and none of the negative tags. Tag prefixes match
+// descendants: "language" also matches "language/go".
+func MatchesTags(node *Node, all, any, none []string) bool {
 	matches := func(query string) bool {
 		for _, tag := range node.Tags {
 			if tag == query || strings.HasPrefix(tag, query+"/") {
@@ -501,6 +509,11 @@ func matchesTags(node *Node, all, any []string) bool {
 	}
 	for _, query := range all {
 		if !matches(query) {
+			return false
+		}
+	}
+	for _, query := range none {
+		if matches(query) {
 			return false
 		}
 	}

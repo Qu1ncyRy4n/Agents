@@ -206,6 +206,19 @@ include "team:skills" {tags_all=["lang"];exclude=["review"]}
 	}
 }
 
+func TestResolvePlanFiltersNegativeTags(t *testing.T) {
+	root := t.TempDir()
+	fixtureLibrary(t, root)
+	plan := parse(t, filepath.Join(root, "mogent.plan"), `plan {format=1}
+source "team" {local="team"}
+include "team:skills" {tags_none=["lang/go"]}
+`)
+	result, _, err := assembly.ResolvePlan(plan, filepath.Join(root, "mogent.plan"))
+	if err != nil || result.HasErrors() || len(result.Contributions) != 1 || result.Contributions[0].Node.Path != "skills/deployment" {
+		t.Fatalf("result=%#v diagnostics=%#v err=%v", result.Contributions, result.Diagnostics, err)
+	}
+}
+
 func TestResolvePlanUnionsTagsAndExplicitChildren(t *testing.T) {
 	root := t.TempDir()
 	fixtureLibrary(t, root)
