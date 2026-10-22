@@ -234,6 +234,10 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 }
 
 func runShow(args []string, stdout, stderr io.Writer) error {
+	args, err := normalizeShowArgs(args)
+	if err != nil {
+		return err
+	}
 	flags := flag.NewFlagSet("show", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("file", "", "plan or build file (discovered by default)")
@@ -257,7 +261,7 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("--lines must be zero or greater")
 	}
 	if *tree && *flat || (*flat || *chars != "") && !*sourceView {
-		return fmt.Errorf("--flat and --chars apply to source show; choose only one of --tree or --flat")
+		return fmt.Errorf("--flat and --chars apply to source tree; choose only one of --tree or --flat")
 	}
 	requested := ""
 	if flags.NArg() == 1 {
@@ -507,27 +511,44 @@ func appendContributionTreeRows(rows *[][]string, nodes []*contributionTreeNode,
 	}
 }
 
-func runEdit(args []string, stdout, stderr io.Writer) error {
-	if len(args) == 0 || args[0] != "include" {
-		return fmt.Errorf("edit requires include; use edit include alias:path --localize")
+func normalizeShowArgs(args []string) ([]string, error) {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		return args, nil
 	}
-	flags := flag.NewFlagSet("edit include", flag.ContinueOnError)
+	switch args[0] {
+	case "tree", "build", "issues":
+		return append(args[1:], "--"+args[0]), nil
+	case "content":
+		if len(args) < 2 || strings.HasPrefix(args[1], "-") {
+			return nil, fmt.Errorf("show content requires one source:path reference")
+		}
+		return append([]string{args[1], "--content"}, args[2:]...), nil
+	default:
+		return args, nil
+	}
+}
+
+func runLocalize(args []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("module localize", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	path := flags.String("file", "mogent.plan", "plan file")
-	localize := flags.Bool("localize", false, "create editable local source")
+	path := flags.String("file", "", "project plan or authored build")
 	dryRun := flags.Bool("dry-run", false, "preview without writing")
-	args = reorderArgs(args[1:], map[string]bool{"-file": true, "--file": true, "-localize": false, "--localize": false, "-dry-run": false, "--dry-run": false})
+	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-dry-run": false, "--dry-run": false})
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
-	if flags.NArg() != 1 || !*localize {
-		return fmt.Errorf("edit include currently requires one reference and --localize")
+	if flags.NArg() != 1 {
+		return fmt.Errorf("module localize requires one selected physical source reference")
 	}
-	plan, err := assembly.LoadFile(*path)
+	entryPath, err := projectEntryFile(*path)
 	if err != nil {
 		return err
 	}
-	result, err := assembly.Localize(plan, *path, flags.Arg(0), *dryRun)
+	plan, err := assembly.LoadFile(entryPath)
+	if err != nil {
+		return err
+	}
+	result, err := assembly.Localize(plan, entryPath, flags.Arg(0), *dryRun)
 	if err != nil {
 		return err
 	}

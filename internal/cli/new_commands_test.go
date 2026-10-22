@@ -63,6 +63,23 @@ func TestSourceSearchListsTagMatchesAndAddCommands(t *testing.T) {
 	}
 }
 
+func TestCanonicalCatalogAndResultCommands(t *testing.T) {
+	root := newCLIFixture(t)
+	plan := filepath.Join(root, "mogent.plan")
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"source", "tree", "team:skills", "--file", plan}, &stdout, &stderr); err != nil || !strings.Contains(stdout.String(), "review") {
+		t.Fatalf("source tree stdout=%q err=%v", stdout.String(), err)
+	}
+	stdout.Reset()
+	if err := Run([]string{"source", "content", "team:guidance/workflow", "--file", plan}, &stdout, &stderr); err != nil || !strings.Contains(stdout.String(), "Project: Demo") {
+		t.Fatalf("source content stdout=%q err=%v", stdout.String(), err)
+	}
+	stdout.Reset()
+	if err := Run([]string{"show", "tree", "--file", plan}, &stdout, &stderr); err != nil || !strings.Contains(stdout.String(), "RESULT") {
+		t.Fatalf("show tree stdout=%q err=%v", stdout.String(), err)
+	}
+}
+
 func TestNewSequenceBuildShowWorkflow(t *testing.T) {
 	root := newCLIFixture(t)
 	plan := filepath.Join(root, "mogent.plan")
@@ -132,11 +149,11 @@ include "team:skills"
 	}
 }
 
-func TestNewEditIncludeLocalize(t *testing.T) {
+func TestModuleLocalize(t *testing.T) {
 	root := newCLIFixture(t)
 	plan := filepath.Join(root, "mogent.plan")
 	var stdout, stderr bytes.Buffer
-	if err := Run([]string{"edit", "include", "team:skills/review", "--localize", "--file", plan, "--dry-run"}, &stdout, &stderr); err != nil {
+	if err := Run([]string{"module", "localize", "team:skills/review", "--file", plan, "--dry-run"}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(stdout.String(), "local:skills/review") {
@@ -146,7 +163,7 @@ func TestNewEditIncludeLocalize(t *testing.T) {
 		t.Fatalf("dry-run wrote local source: %v", err)
 	}
 	stdout.Reset()
-	if err := Run([]string{"edit", "include", "team:skills/review", "--localize", "--file", plan}, &stdout, &stderr); err != nil {
+	if err := Run([]string{"module", "localize", "team:skills/review", "--file", plan}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(root, ".mogent/local/skills/review/SKILL.md")); err != nil {

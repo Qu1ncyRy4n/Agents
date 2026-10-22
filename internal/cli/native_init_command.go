@@ -85,6 +85,6 @@ func runInit(args []string, stdout, stderr io.Writer) error {
 	if len(declarations) == 0 {
 		return writeNoSources(stdout, result.Path)
 	}
-	_, err = fmt.Fprintf(stdout, "Next: mogent source show --file %s\n", result.Path)
+	_, err = fmt.Fprintf(stdout, "Next: mogent source tree --file %s\n", result.Path)
 	return err
 }

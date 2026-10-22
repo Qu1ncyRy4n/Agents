@@ -75,11 +75,10 @@ func TestFocusedHelpDoesNotInitializeOrRequireProject(t *testing.T) {
 		{[]string{"help", "source", "add"}, "source add"},
 		{[]string{"source", "add", "--help"}, "remembered libraries"},
 		{[]string{"help", "module"}, "mogent module add qmr:intro/author-ownership"},
-		{[]string{"help", "edit"}, "This is the only edit operation currently available"},
-		{[]string{"edit", "--help"}, "reference must already be selected"},
+		{[]string{"module", "localize", "--help"}, "Localization requires one already selected physical input"},
 		{[]string{"build", "--help"}, "existing outputs"},
 		{[]string{"show", "-h"}, "contribution preview"},
-		{[]string{"source", "show", "--help"}, "mogent source show"},
+		{[]string{"source", "tree", "--help"}, "mogent source tree"},
 	} {
 		var stdout, stderr bytes.Buffer
 		if err := Run(test.args, &stdout, &stderr); err != nil {

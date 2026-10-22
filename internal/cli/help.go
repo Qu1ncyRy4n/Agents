@@ -23,19 +23,20 @@ Project initialization (advanced: mogent help init)
 
 Browse content (advanced: mogent help source)
    source list                         List connected libraries
-   source show                         Browse their content as a tree
+   source tree                         Browse their content as a tree
 
 Add modules (advanced: mogent help module)
    module add <name:path>             Add a module to the project file
    module rm <name:path>              Remove one direct include
-   except <name:path>                 Exclude a descendant from a selected ancestor
-   optimize                            Preview direct include-overlap cleanup; use --apply to write
+   module exclude <name:path>          Exclude a descendant from a selected ancestor
+   module localize <name:path>         Fork one selected physical input locally
+   module optimize                     Preview direct include-overlap cleanup; use --apply to write
    reorder                             Group bindings/sources before ordered includes
 
 Preview the selection (advanced: mogent help show)
-   show --build                        Show selected modules and destinations
-   show --issues                       Explain unresolved choices or errors
-   show <name:path> --content          Preview a module's rendered or physical content
+   show build                          Show selected modules and destinations
+   show issues                         Explain unresolved choices or errors
+   source content <name:path>          Preview a library module's content
 
 Build outputs (advanced: mogent help build)
    build                               Generate the selected outputs
@@ -69,16 +70,17 @@ Browse content (advanced: mogent help source)
    source list, source ls              List connected libraries and locations
        --known                         List remembered libraries instead
        --tree                          Browse connected libraries' content
-   source show [<name:path>]           Browse all content or one subtree
+   source tree [<name:path>]           Browse all content or one subtree
        --tree | --flat                 Hierarchy (default) or complete paths
        --chars ascii|unicode           Choose tree connectors
+   source search [scope]               Search source metadata by tags
+       --tag-all|--tag-any|--tag-none  Repeat tag predicates; --add-commands prints explicit additions
+   source content <name:path>          Preview source content
    source register <name> <path-or-url> Remember a library for future projects
 
 Add modules (advanced: mogent help module)
     module add <name:path>             Add a module to the project file
-        --all                          Select all direct children (for opt-in trees)
-        --file <path>                  Select a specific plan/build
-        --dry-run                      Preview the include without writing
+        --tag-all|--tag-any|--tag-none Add a tag query to the new include
         --all                          Select all direct children (for opt-in trees)
         --file <path>                  Select a specific plan/build
         --dry-run                      Preview the include without writing
@@ -90,14 +92,14 @@ Add modules (advanced: mogent help module)
        --dry-run                      Preview the exception without writing
    reorder                            Group bindings/sources before ordered includes
        --dry-run                      Preview the formatting rewrite
-   edit include <name:path> --localize Copy one selected physical input into an editable local source
+   module localize <name:path>         Copy one selected physical input into an editable local source
        --file <path>                   Select the plan/build to edit
        --dry-run                       Preview localization without writing
 
 Preview the result (advanced: mogent help show)
-   show --build                       Show selected modules and destinations
-	show --tree                        Show selected modules grouped by output
-   show --issues                      Explain unresolved choices or errors
+   show build                         Show selected modules and destinations
+	show tree                          Show selected modules grouped by output
+   show issues                        Explain unresolved choices or errors
        --file <path>                   Inspect a specific plan/build
 
 Build outputs (advanced: mogent help build)
@@ -150,16 +152,18 @@ Next: mogent help source
   mogent source add qmr ../qmr-agents-library
   mogent source add team https://example.org/team/library.git
   mogent source list
-  mogent source show
+  mogent source tree
 
 source list (or source ls) lists project declarations without opening libraries
-or fetching Git sources. source show loads the libraries and browses content.
+or fetching Git sources. source tree loads the libraries and browses content.
 Local paths are relative to the project entry file; absolute paths are converted.
 
 Advanced — browsing
-  mogent source show --tree --chars unicode
-  mogent source show --flat             Show complete paths
-  mogent source show qmr:intro          Limit the tree to a node and its children
+  mogent source tree --chars unicode
+  mogent source tree --flat             Show complete paths
+  mogent source tree qmr:intro          Limit the tree to a node and its children
+  mogent source search qmr:skills --tag-all language/go --add-commands
+  mogent source content qmr:intro/author-ownership
   mogent source list --tree             Browse all connected libraries
   mogent source add qmr ../library --dry-run
 
@@ -178,10 +182,10 @@ Next: mogent help module
 
   mogent module add qmr:intro/author-ownership
   mogent module rm qmr:intro/author-ownership --dry-run --diff
-  mogent except qmr:workflow/decision-first
+  mogent module exclude qmr:workflow/decision-first
 
 Replace qmr and the path with a connected library and a node shown by:
-  mogent source show
+  mogent source tree
 
 module add appends one validated include to the authored build or plan. Includes
 are applied in the order you add them. Use --dry-run to inspect the exact
@@ -202,8 +206,8 @@ You can also edit includes directly, for example:
 Removal and overlap review
   mogent module rm qmr:intro/author-ownership --dry-run --diff
   mogent module rm qmr:intro/author-ownership
-  mogent optimize                       # default dry-run
-  mogent optimize --apply
+  mogent module optimize                # default dry-run
+  mogent module optimize --apply
 
 module add has --all, --file, --dry-run, and --diff. module rm has --file,
 --dry-run, and --diff. Combine --dry-run --diff for a read-only patch; bare
@@ -217,10 +221,9 @@ by default. Repetition can be intentional, so it changes the file only with
 the explicit --apply.
 
 Exception behavior
-  mogent except qmr:workflow/decision-first
-  mogent exclude qmr:workflow/decision-first  # alias
+  mogent module exclude qmr:workflow/decision-first
 
-except finds the narrowest direct selected ancestor (here qmr:workflow) and
+module exclude finds the narrowest direct selected ancestor (here qmr:workflow) and
 adds decision-first to that include's exclude list. For a curated choose branch,
 it also makes accepting the source defaults explicit. It does not remove another
 direct include or rewrite overlapping selections; that needs an explicit remove
@@ -234,6 +237,13 @@ reorder is explicit formatting only: bindings first, then sources, then includes
 in their existing order. Each include's options remain attached. It does not
 deduplicate content, remove selections, or change build behavior.
 
+Localization
+  mogent module localize qmr:skills/review --dry-run
+
+Localization requires one already selected physical input. It copies that input
+into .mogent/local and appends a local replacing include; later builds do not
+recopy it from upstream.
+
 Advanced — intent-first authoring
   mogent init --plan                    Start a new workspace with mogent.plan
   mogent sequence --file mogent.plan    Compile intent into a generated build
@@ -243,42 +253,25 @@ Do not edit a generated build as though it were authored.
 
 Next: mogent help show
 `,
-	"edit": `Localize one selected physical input
-
-  mogent edit include qmr:skills/review --localize
-  mogent edit include qmr:skills/review --localize --dry-run
-
-This is the only edit operation currently available. It is not an add: the
-reference must already be selected, and it must name a physical module (not a
-Markdown section). Mogent copies that input beneath .mogent/local, adds a local
-source declaration when necessary, and appends a replacing local include.
-
-The original source remains unchanged. The copied local input is yours to edit;
-Mogent does not recopy it during a later build. --dry-run prints the resulting
-project file and makes no copy. Use --file to choose a plan or authored build.
-
-Next: mogent help module
-`,
 	"show": `Preview the result
 
-  mogent show --build
-  mogent show --issues
+  mogent show build
+  mogent show issues
 
 Preview library content before selecting it:
-  mogent show qmr:intro/assistant-agent --content
-  mogent show qmr:intro --content --lines 12
+  mogent source content qmr:intro/assistant-agent
+  mogent source content qmr:intro --lines 12
 
 The build view lists ordered contributions and their destinations. The issues
 view explains unresolved choices and errors. These commands do not install outputs.
 Source inspection may load or fetch libraries.
 
 Advanced
-  mogent show qmr:intro/author-ownership --build
-  mogent show --build --file mogent.build
-  mogent show --issues --file mogent.plan
-  mogent source show                    Browse available, not added, content
-  mogent show qmr:skills/review --content
-  mogent show qmr:assets/readme.md --content --headings
+  mogent show build --file mogent.build
+  mogent show issues --file mogent.plan
+  mogent source tree                    Browse available, not added, content
+  mogent source content qmr:skills/review
+  mogent source content qmr:assets/readme.md --headings
 
 The build view is a contribution preview, not a rendered-file diff. An empty
 build view can mean you have declared sources but have not added includes yet.
@@ -347,7 +340,7 @@ func writeHelpText(output io.Writer, text string) error {
 
 func boldHelp(text string) string {
 	bold := func(value string) string { return "\x1b[1m" + value + "\x1b[22m" }
-	names := []string{"source add", "source list, source ls", "source list", "source ls", "source register", "source show", "source update", "edit include"}
+	names := []string{"source add", "source list, source ls", "source list", "source ls", "source tree", "source search", "source content", "source register", "source show", "source update"}
 	for _, command := range commands() {
 		names = append(names, command.name)
 	}
@@ -412,7 +405,7 @@ func writeHelp(path []string, output io.Writer) error {
 	topic := path[0]
 	if len(path) == 2 {
 		switch path[1] {
-		case "add", "list", "ls", "register", "show", "update":
+		case "add", "list", "ls", "register", "show", "tree", "search", "content", "update":
 		default:
 			return fmt.Errorf("unknown source help topic %q; use mogent help source", path[1])
 		}

@@ -79,21 +79,27 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 	if *dryRun {
 		_, err = fmt.Fprint(stdout, string(contents))
 	} else {
-		_, err = fmt.Fprintf(stdout, "Added %s in %s\nNext: mogent show --tree --file %s\n", flags.Arg(0), entryPath, entryPath)
+		_, err = fmt.Fprintf(stdout, "Added %s in %s\nNext: mogent show tree --file %s\n", flags.Arg(0), entryPath, entryPath)
 	}
 	return err
 }
 
 func runModule(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("module requires add or rm; use mogent module add|rm source:path")
+		return fmt.Errorf("module requires add, rm, exclude, localize, or optimize")
 	}
 	switch args[0] {
 	case "add":
 		return runNativeSelect(args[1:], stdout, stderr)
 	case "rm":
 		return runRemove(args[1:], stdout, stderr)
+	case "exclude":
+		return runExcept(args[1:], stdout, stderr)
+	case "localize":
+		return runLocalize(args[1:], stdout, stderr)
+	case "optimize":
+		return runOptimise(args[1:], stdout, stderr)
 	default:
-		return fmt.Errorf("unknown module command %q; use mogent module add|rm source:path", args[0])
+		return fmt.Errorf("unknown module command %q; use module add, rm, exclude, localize, or optimize", args[0])
 	}
 }

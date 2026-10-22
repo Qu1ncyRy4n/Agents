@@ -103,7 +103,7 @@ func runNewSourceAdd(args []string, stdout, stderr io.Writer) error {
 	}
 	for _, source := range declarations {
 		if source.Alias == alias {
-			return fmt.Errorf("source %q is already connected in %s; browse it with mogent source show %s", alias, entryPath, alias)
+			return fmt.Errorf("source %q is already connected in %s; browse it with mogent source tree %s", alias, entryPath, alias)
 		}
 	}
 	if flags.NArg() == 1 {
@@ -128,7 +128,7 @@ func runNewSourceAdd(args []string, stdout, stderr io.Writer) error {
 	if *dryRun {
 		_, err = fmt.Fprint(stdout, string(content))
 	} else {
-		_, err = fmt.Fprintf(stdout, "Added source %s to %s\nNext: mogent source show --file %s\n", alias, entryPath, entryPath)
+		_, err = fmt.Fprintf(stdout, "Added source %s to %s\nNext: mogent source tree --file %s\n", alias, entryPath, entryPath)
 	}
 	return err
 }

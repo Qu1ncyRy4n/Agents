@@ -68,7 +68,7 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 		_, err = fmt.Fprint(stdout, string(contents))
 		return err
 	}
-	_, err = fmt.Fprintf(stdout, "Removed %s from %s\nNext: mogent show --tree --file %s, then mogent build --check --file %s\n", flags.Arg(0), entryPath, entryPath, entryPath)
+	_, err = fmt.Fprintf(stdout, "Removed %s from %s\nNext: mogent show tree --file %s, then mogent build --check --file %s\n", flags.Arg(0), entryPath, entryPath, entryPath)
 	return err
 }
 
