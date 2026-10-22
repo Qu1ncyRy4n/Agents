@@ -90,7 +90,7 @@ Add modules (advanced: mogent help module)
        --dry-run                      Preview the exception without writing
    reorder                            Group bindings/sources before ordered includes
        --dry-run                      Preview the formatting rewrite
-   edit include <name:path> --localize Copy an input into an editable local source
+   edit include <name:path> --localize Copy one selected physical input into an editable local source
        --file <path>                   Select the plan/build to edit
        --dry-run                       Preview localization without writing
 
@@ -241,13 +241,23 @@ Advanced — intent-first authoring
 Edit includes in the plan when using this workflow; build also sequences it.
 Do not edit a generated build as though it were authored.
 
-Advanced — local customization
-  mogent edit include qmr:intro/author-ownership --localize --file mogent.build
-
-Localization copies the selected input into an editable project-local source
-and rewrites its reference. Add --dry-run to preview. For a plan, pass its path.
-
 Next: mogent help show
+`,
+	"edit": `Localize one selected physical input
+
+  mogent edit include qmr:skills/review --localize
+  mogent edit include qmr:skills/review --localize --dry-run
+
+This is the only edit operation currently available. It is not an add: the
+reference must already be selected, and it must name a physical module (not a
+Markdown section). Mogent copies that input beneath .mogent/local, adds a local
+source declaration when necessary, and appends a replacing local include.
+
+The original source remains unchanged. The copied local input is yours to edit;
+Mogent does not recopy it during a later build. --dry-run prints the resulting
+project file and makes no copy. Use --file to choose a plan or authored build.
+
+Next: mogent help module
 `,
 	"show": `Preview the result
 
@@ -337,7 +347,7 @@ func writeHelpText(output io.Writer, text string) error {
 
 func boldHelp(text string) string {
 	bold := func(value string) string { return "\x1b[1m" + value + "\x1b[22m" }
-	names := []string{"source add", "source list, source ls", "source list", "source ls", "source register", "source show", "source pin", "source update", "edit include"}
+	names := []string{"source add", "source list, source ls", "source list", "source ls", "source register", "source show", "source update", "edit include"}
 	for _, command := range commands() {
 		names = append(names, command.name)
 	}
@@ -417,7 +427,7 @@ func writeHelp(path []string, output io.Writer) error {
 			reference.WriteString("  mogent " + command.usage + "\n")
 		}
 		return writeHelpText(output, reference.String())
-	case "sequence", "edit", "module", "rm", "except", "exclude", "reorder", "optimise", "optimize":
+	case "sequence", "module", "rm", "except", "exclude", "reorder", "optimise", "optimize":
 		topic = "module"
 	case "status", "drift", "add", "completion", "mint":
 		topic = "tools"
