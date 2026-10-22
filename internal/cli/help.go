@@ -73,8 +73,9 @@ Browse content (advanced: mogent help source)
    source tree [<name:path>]           Browse all content or one subtree
        --tree | --flat                 Hierarchy (default) or complete paths
        --chars ascii|unicode           Choose tree connectors
-   source search [scope]               Search source metadata by tags
-       --tag-all|--tag-any|--tag-none  Repeat tag predicates; --add-commands or --add-config preview additions
+   source search <term>                Search path, title, tags, and content
+       --path|--title|--tags|--content Narrow text search to one field
+       --tag-all|--tag-any|--tag-none  Run a selection-oriented tag query instead
    source content <name:path>          Preview source content
    source register <name> <path-or-url> Remember a library for future projects
 
@@ -165,6 +166,8 @@ Advanced — browsing
   mogent source tree qmr:intro          Limit the tree to a node and its children
   mogent source search qmr:skills --tag-all language/go --add-commands
   mogent source search qmr:skills --tag-all language/go --add-config
+  mogent source search workflow
+  mogent source search --content workflow
   mogent source content qmr:intro/author-ownership
   mogent source list --tree             Browse all connected libraries
   mogent source add qmr ../library --dry-run

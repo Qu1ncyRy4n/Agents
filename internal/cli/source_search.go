@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
+	"github.com/Qu1ncyRy4n/Agents/syntax"
 	"github.com/charmbracelet/x/term"
 )
 
@@ -38,15 +39,14 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 	flags.Var(&none, "tag-none", "exclude tag; repeat for any matching tag")
 	addCommands := flags.Bool("add-commands", false, "print explicit module-add commands for matches")
 	addConfig := flags.Bool("add-config", false, "print a dynamic tag-query include block")
-	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--tag-all": true, "-tag-all": true, "--tag-any": true, "-tag-any": true, "--tag-none": true, "-tag-none": true, "--add-commands": false, "-add-commands": false, "--add-config": false, "-add-config": false})
+	searchAll := flags.Bool("all", false, "search path, title, tags, and content")
+	searchPath := flags.Bool("path", false, "search module paths")
+	searchTitle := flags.Bool("title", false, "search module titles")
+	searchTags := flags.Bool("tags", false, "search tags as text")
+	searchContent := flags.Bool("content", false, "search rendered text content")
+	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--tag-all": true, "-tag-all": true, "--tag-any": true, "-tag-any": true, "--tag-none": true, "-tag-none": true, "--add-commands": false, "-add-commands": false, "--add-config": false, "-add-config": false, "--all": false, "-all": false, "--path": false, "-path": false, "--title": false, "-title": false, "--tags": false, "-tags": false, "--content": false, "-content": false})
 	if err := parseFlags(flags, args); err != nil {
 		return err
-	}
-	if flags.NArg() > 1 {
-		return fmt.Errorf("source search accepts at most one source or source:path scope")
-	}
-	if len(all) == 0 && len(any) == 0 && len(none) == 0 {
-		return fmt.Errorf("source search requires --tag-all, --tag-any, or --tag-none")
 	}
 	entryPath, err := projectEntryFile(*path)
 	if err != nil {
@@ -60,7 +60,31 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	alias, prefix, err := searchScope(flags.Arg(0), sources)
+	tagMode := len(all) != 0 || len(any) != 0 || len(none) != 0
+	fieldMode := *searchAll || *searchPath || *searchTitle || *searchTags || *searchContent
+	if tagMode && fieldMode {
+		return fmt.Errorf("tag predicates cannot be combined with text-search fields")
+	}
+	if tagMode && flags.NArg() > 1 {
+		return fmt.Errorf("tag search accepts at most one source or source:path scope")
+	}
+	if !tagMode && (*addCommands || *addConfig) {
+		return fmt.Errorf("--add-commands and --add-config require a tag predicate")
+	}
+	var scope, query string
+	if tagMode {
+		scope = flags.Arg(0)
+	} else {
+		if flags.NArg() == 0 || flags.NArg() > 2 {
+			return fmt.Errorf("text search requires a term, optionally after a source or source:path scope")
+		}
+		if flags.NArg() == 2 {
+			scope, query = flags.Arg(0), flags.Arg(1)
+		} else {
+			query = flags.Arg(0)
+		}
+	}
+	alias, prefix, err := searchScope(scope, sources)
 	if err != nil {
 		return err
 	}
@@ -71,6 +95,23 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 		}
 	}
 	sort.Strings(aliases)
+	if !tagMode {
+		fields := textSearchFields{all: *searchAll || !fieldMode, path: *searchPath, title: *searchTitle, tags: *searchTags, content: *searchContent}
+		matches, err := sourceTextMatches(file, entryPath, sources, aliases, prefix, query, fields)
+		if err != nil {
+			return err
+		}
+		if len(matches) == 0 {
+			_, err := fmt.Fprintln(stdout, "No source nodes matched the text search.")
+			return err
+		}
+		rows := [][]string{{"REF", "TYPE", "TAGS", "MATCH"}}
+		styled := supportsTerminalStyle(stdout)
+		for _, found := range matches {
+			rows = append(rows, []string{highlightText(found.reference, query, styled), string(found.node.Type), highlightText(strings.Join(found.node.Tags, ", "), query, styled), strings.Join(found.fields, ", ")})
+		}
+		return writeColumns(stdout, rows, true)
+	}
 	matches := sourceTagMatches(sources, aliases, prefix, all, any, none)
 	if len(matches) == 0 {
 		_, err := fmt.Fprintln(stdout, "No source nodes matched the tag query.")
@@ -136,6 +177,75 @@ func highlightTagQuery(tag, query string) (string, bool) {
 		}
 	}
 	return tag, false
+}
+
+type textSearchFields struct {
+	all, path, title, tags, content bool
+}
+
+type textSearchMatch struct {
+	reference string
+	node      *assembly.Node
+	fields    []string
+}
+
+func sourceTextMatches(file *syntax.File, entryPath string, sources map[string]assembly.Source, aliases []string, prefix, query string, fields textSearchFields) ([]textSearchMatch, error) {
+	needle := strings.ToLower(query)
+	var matches []textSearchMatch
+	for _, name := range aliases {
+		library := sources[name].Lib
+		paths := make([]string, 0, len(library.ByPath))
+		for nodePath := range library.ByPath {
+			if prefix == "" || nodePath == prefix || strings.HasPrefix(nodePath, prefix+"/") {
+				paths = append(paths, nodePath)
+			}
+		}
+		sort.Strings(paths)
+		for _, nodePath := range paths {
+			node := library.ByPath[nodePath]
+			ref := name + ":" + nodePath
+			var found []string
+			if (fields.all || fields.path) && containsSearchText(nodePath, needle) {
+				found = append(found, "path")
+			}
+			if (fields.all || fields.title) && containsSearchText(node.Title, needle) {
+				found = append(found, "title")
+			}
+			if (fields.all || fields.tags) && containsSearchText(strings.Join(node.Tags, " "), needle) {
+				found = append(found, "tags")
+			}
+			if fields.all || fields.content {
+				preview, err := assembly.PreviewSource(file, entryPath, ref, 0, false)
+				if err != nil {
+					// A content search should still report searchable metadata when
+					// another node cannot render with the project's bindings.
+				} else if !preview.Opaque && containsSearchText(string(preview.Content), needle) {
+					found = append(found, "content")
+				}
+			}
+			if len(found) != 0 {
+				matches = append(matches, textSearchMatch{reference: ref, node: node, fields: found})
+			}
+		}
+	}
+	return matches, nil
+}
+
+func containsSearchText(value, needle string) bool {
+	return needle != "" && strings.Contains(strings.ToLower(value), needle)
+}
+
+func highlightText(value, query string, styled bool) string {
+	if !styled || query == "" {
+		return value
+	}
+	lower, needle := strings.ToLower(value), strings.ToLower(query)
+	index := strings.Index(lower, needle)
+	if index < 0 {
+		return value
+	}
+	end := index + len(query)
+	return value[:index] + "\x1b[1m" + value[index:end] + "\x1b[22m" + value[end:]
 }
 
 type sourceMatch struct {

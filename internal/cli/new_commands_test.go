@@ -24,7 +24,7 @@ func newCLIFixture(t *testing.T) string {
 	root := t.TempDir()
 	writeNewCLIFile(t, root, "team/mogent.lib", `library {format=1;name="Team"}
 dir "agents" {source="guidance"}
-md-section "guidance" {md-section "workflow" {source="guidance/workflow.md";vars=["repo_name"]}}
+md-section "guidance" {md-section "workflow" {title="Workflow Guidance";source="guidance/workflow.md";vars=["repo_name"]}}
 md-section "obsolete" {source="obsolete.md"}
 dir "skills" {source="skills";curate="choose"
   node "review" {role="skill";content="SKILL.md";default=true;tags=["quality/review"]}
@@ -79,6 +79,32 @@ func TestSearchTagHighlightingAndColumnWidth(t *testing.T) {
 	qualified := formatSearchTags([]string{"topic/workflow"}, nil, []string{"topic/workflow"}, true)
 	if qualified != "\x1b[1mtopic/workflow\x1b[22m" {
 		t.Fatalf("qualified highlight=%q", qualified)
+	}
+}
+
+func TestSourceSearchTextDefaultsToAllFieldsAndCanNarrow(t *testing.T) {
+	root := newCLIFixture(t)
+	plan := filepath.Join(root, "mogent.plan")
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"source", "search", "workflow", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "team:guidance/workflow") || !strings.Contains(stdout.String(), "MATCH") {
+		t.Fatalf("all-fields search=%s", stdout.String())
+	}
+	stdout.Reset()
+	if err := Run([]string{"source", "search", "--title", "guidance", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "team:guidance/workflow") || !strings.Contains(stdout.String(), "title") {
+		t.Fatalf("title search=%s", stdout.String())
+	}
+	stdout.Reset()
+	if err := Run([]string{"source", "search", "--content", "Project: Demo", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "team:guidance/workflow") || !strings.Contains(stdout.String(), "content") {
+		t.Fatalf("content search=%s", stdout.String())
 	}
 }
 

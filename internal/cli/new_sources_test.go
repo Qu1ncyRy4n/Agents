@@ -245,7 +245,7 @@ func TestNativeShowTreeGroupsHeadingsAndSources(t *testing.T) {
 	if err := Run([]string{"show", "--tree"}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"RESULT", "SOURCE", "AGENTS.md", "guidance", "workflow", ".agents/skills", "team"} {
+	for _, want := range []string{"RESULT", "SOURCE", "AGENTS.md", "guidance", "Workflow Guidance", ".agents/skills", "team"} {
 		if !strings.Contains(stdout.String(), want) {
 			t.Fatalf("tree missing %q:\n%s", want, stdout.String())
 		}
