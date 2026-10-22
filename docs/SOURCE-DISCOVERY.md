@@ -37,10 +37,10 @@ files require `--file`.
 ## Catalog View
 
 ```sh
-mogent source show
-mogent source show --tree --chars unicode
-mogent source show --flat
-mogent source show qmr:intro
+mogent source tree
+mogent source tree --chars unicode
+mogent source tree --flat
+mogent source tree qmr:intro
 mogent source list --tree
 ```
 
@@ -64,10 +64,10 @@ listing does not. No selection or installation occurs during source addition.
 Preview a module without selecting it:
 
 ```sh
-mogent show qmr:intro/assistant-agent --content
-mogent show qmr:intro --content --lines 12
-mogent show qmr:skills/review --content
-mogent show qmr:assets/readme.md --content --headings
+mogent source content qmr:intro/assistant-agent
+mogent source content qmr:intro --lines 12
+mogent source content qmr:skills/review
+mogent source content qmr:assets/readme.md --headings
 ```
 
 Section previews use the same rendered-section behavior as builds, including
@@ -179,15 +179,14 @@ include "qmr:skills" {
 prefix matches its descendants, so `language` also matches `language/go`.
 Explicit child selections are unioned with tag matches. The normal scoped
 `exclude` filter runs afterward; it excludes a source-relative path, not a tag.
-There is no negative-tag predicate yet.
+`tags_none` retains nodes carrying none of its tags.
 
-Tag discovery is the next dogfooding candidate. The proposed read-only surface
-is `mogent source search [source:path] --tag-all <tag> --tag-any <tag>` and a
-clear `--add-commands` rendering mode that prints runnable `mogent module add`
-commands. The recommended negative predicate is `--tag-none <tag>` / `tags_none
-= [...]`: retain nodes carrying none of the listed tags. It composes with
-`tags_all` and `tags_any` without introducing ambiguous `exclude-all` or
-negated-flag spellings. Dogfood it read-only before making it a module-add flag.
+Use `mogent source search [source:path] --tag-all <tag> --tag-any <tag>
+--tag-none <tag>` to inspect matching catalog nodes. `--add-commands` prints
+runnable explicit `mogent module add` commands for every match. The same
+repeated `--tag-all`, `--tag-any`, and `--tag-none` flags are accepted by
+`mogent module add` for a new dynamic tag-query include. They cannot combine
+with `--all`, because an all-child selection would make the tag query redundant.
 
 `module optimize` belongs to selection editing, not `build`: builds never
 rewrite authored choices. Its current overlap removal is semantics-preserving.

@@ -16,8 +16,8 @@ records the current consumer flow, installed outputs/state, exact verification,
 working-tree distinctions, deferred decisions, and safe re-entry. Read it after
 the NOW panel when resuming the native plan/build dogfood work.
 
-The current follow-up uses `mogent source show` for the native catalog and
-`mogent show --tree` for selected contributions. An isolated QMR/CDINT
+The current follow-up uses `mogent source tree` for the native catalog and
+`mogent show tree` for selected contributions. An isolated QMR/CDINT
 change/add/remove simulation confirms that `drift` identifies changed, added,
 and removed upstream module paths as well as output state. [NOW](convo/head.md)
 owns the remaining command-vocabulary review.
@@ -56,16 +56,15 @@ output state and saved upstream source fingerprints. Localizing a selected
 physical input makes one editable project-local copy without later automatic
 recopying.
 
-Tag selection, richer curation/relationship rules, provenance reconciliation,
+Richer curation/relationship CLI workflows, provenance reconciliation,
 interactive UI work, global targets, and reverse inference remain future work.
 The first-slice specification and walkthrough are design/history references,
 not alternate live command references.
 
-The language already resolves `tags_all`/`tags_any` and applies scoped path
-exclusions after tag filtering, but there is no tag-search command or
-negative-tag predicate. The recommended next spelling is `tags_none`; dogfood
-it first through read-only source inspection with an explicit `--add-commands`
-rendering mode. Do not treat
+The language resolves `tags_all`/`tags_any`/`tags_none` and applies scoped path
+exclusions after tag filtering. `source search` provides read-only inspection
+and an explicit `--add-commands` rendering mode; `module add` accepts the same
+tag predicates. Do not treat
 rewriting explicit selections into a tag query as ordinary optimization: it
 changes how future upstream additions are selected. `optimize` remains a
 selection-editing command, never a build flag. `replace` is specified only as
@@ -74,14 +73,13 @@ review.
 
 ## Near-Term Native Roadmap
 
-1. Dogfood read-only source tag search, `tags_none`, and `--add-commands` against
-   QMR/CDINT. Confirm matching, result readability, and the distinction between
-   commands for explicit leaves and commands that create a dynamic tag query.
-2. Add the accepted tag flags to `module add`, with existing `--dry-run`/`--diff`
-   guarantees. Do not add automatic explicit-to-tag compaction.
-3. Consolidate the command tree after that evidence: catalog/result views and
-   `module exclude`, `module localize`, and `module optimize`; retain only useful
-   compatibility aliases during the transition.
+1. Dogfood source tag search, `tags_none`, and `--add-commands` against QMR/CDINT.
+   Confirm matching, result readability, and the distinction between commands for
+   explicit leaves and a dynamic tag-query include.
+2. Dogfood tag-aware `module add` with `--dry-run --diff`; do not add automatic
+   explicit-to-tag compaction.
+3. Dogfood the consolidated catalog/result/module command tree, then decide which
+   compatibility aliases remain useful.
 4. Complete localization provenance and upstream-reconciliation UX, then dogfood
    a localized physical module through an upstream change.
 5. Dogfood a real output collision and replacement. Only then decide whether the

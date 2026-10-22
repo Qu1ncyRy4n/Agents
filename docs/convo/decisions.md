@@ -120,12 +120,11 @@ operation. A conversion from explicit module selections to a `tags_all` or
 query can select future upstream additions.
 Evidence: During command-tree review, the owner proposed tag-search output that
 can show runnable module-add commands and asked whether it could prove an
-optimization-by-tagging method. Resolver tests already establish tag matching
-and scoped path exclusion; no tag-search CLI exists.
-Scope/reservations: Read-only source tag inspection and command rendering are
-the next candidate slice. `tags_none` is the recommended negative predicate;
-dogfood its matching/reporting before accepting it in the language. Whether
-conversion belongs in an optimizer or an explicit migration command remains
-open.
+optimization-by-tagging method. `4989165`, `358a7b8`, and `205452d` implement
+negative tag matching, read-only source inspection/add-command rendering, and
+tag-aware module addition.
+Scope/reservations: `tags_none` is now available alongside `tags_all` and
+`tags_any`; Teacher_Bot still needs to dogfood its matching/reporting. Whether
+conversion belongs in an optimizer or an explicit migration command remains open.
 Supersedes: none
 Superseded by: none
