@@ -42,21 +42,6 @@ func projectEntryFile(path string) (string, error) {
 	return "", fmt.Errorf("no mogent.plan or mogent.build; run mogent init first")
 }
 
-func newSourceRequested(args []string) bool {
-	if hasFlag(args, "--manifest") || hasFlag(args, "-manifest") || hasFlag(args, "--config") || hasFlag(args, "-config") {
-		return false
-	}
-	if hasFlag(args, "--file") || hasFlag(args, "-file") || hasFlag(args, "--known") || hasFlag(args, "-known") {
-		return true
-	}
-	for _, path := range []string{"mogent.plan", "mogent.build"} {
-		if _, err := os.Lstat(path); err == nil {
-			return true
-		}
-	}
-	return false
-}
-
 func writeNoSources(stdout io.Writer, path string) error {
 	_, err := fmt.Fprintf(stdout, "No sources configured in %s.\nAdd a local library or Git repository:\n  mogent source add <name> <path-or-url> --file %s\nBrowse remembered libraries: mogent source list --known\n", path, path)
 	return err

@@ -144,18 +144,6 @@ func closestAlias(alias string, aliases []string) string {
 	return best
 }
 
-func (s *Session) SourceReferences(sourceAlias string) ([]string, error) {
-	nodes, err := s.SourceNodes(SourceListOptions{SourceAlias: sourceAlias, Sort: "path"})
-	if err != nil {
-		return nil, err
-	}
-	references := make([]string, 0, len(nodes))
-	for _, node := range nodes {
-		references = append(references, node.Reference)
-	}
-	return references, nil
-}
-
 func (s *Session) ManifestHeadingPaths() []string {
 	return manifestHeadingPaths(s.Draft.Doc, nil)
 }
@@ -332,15 +320,4 @@ func writeSourceContent(output *strings.Builder, node *library.Node, depth int) 
 	for _, child := range node.Children {
 		writeSourceContent(output, child, depth+1)
 	}
-}
-
-func Snippet(content string, lines int) string {
-	if lines <= 0 {
-		return ""
-	}
-	parts := strings.Split(strings.TrimSpace(content), "\n")
-	if len(parts) <= lines {
-		return strings.Join(parts, "\n")
-	}
-	return strings.Join(parts[:lines], "\n")
 }

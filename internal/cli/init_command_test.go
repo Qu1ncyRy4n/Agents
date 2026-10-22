@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -62,30 +61,5 @@ func TestInitPlanDryRunAndSourceInspection(t *testing.T) {
 	}
 	if _, err := os.Stat("AGENTS.md"); !os.IsNotExist(err) {
 		t.Fatalf("init/inspection installed output: %v", err)
-	}
-}
-
-func TestInitExplicitLegacyHCLAndInvalidFlagMixes(t *testing.T) {
-	root := t.TempDir()
-	path := filepath.Join(root, "mogent.hcl")
-	var stdout, stderr bytes.Buffer
-	if err := Run([]string{"init", "--config", path, "--source", "team=library"}, &stdout, &stderr); err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile(path)
-	if err != nil || !strings.Contains(string(data), "format = 2") {
-		t.Fatalf("legacy config=%s err=%v", data, err)
-	}
-	for _, args := range [][]string{
-		{"--plan", "--config", path},
-		{"--file", filepath.Join(root, "mogent.build"), "--manifest", "agents.yaml"},
-		{"--config", path, "--manifest", "agents.yaml"},
-		{"--template", "qmr-core"},
-		{"--build"},
-		{"--output", "custom.md"},
-	} {
-		if err := Run(append([]string{"init"}, args...), &stdout, &stderr); err == nil {
-			t.Errorf("invalid init flags accepted: %v", args)
-		}
 	}
 }

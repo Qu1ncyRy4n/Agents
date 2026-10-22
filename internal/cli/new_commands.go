@@ -15,15 +15,6 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/syntax"
 )
 
-func hasFlag(args []string, wanted string) bool {
-	for _, arg := range args {
-		if arg == wanted || strings.HasPrefix(arg, wanted+"=") {
-			return true
-		}
-	}
-	return false
-}
-
 func runLocalSourceUpdate(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("source update local", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -147,7 +138,7 @@ func writeAssemblyDiagnostics(output io.Writer, result *assembly.Result) {
 	}
 }
 
-func runNewBuild(args []string, stdout, stderr io.Writer) error {
+func runBuild(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("build", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("file", "", "plan or build file")
@@ -156,18 +147,22 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
-	if flags.NArg() != 0 || *path == "" {
-		return fmt.Errorf("new build requires --file mogent.plan or mogent.build")
+	if flags.NArg() != 0 {
+		return fmt.Errorf("build accepts no positional arguments")
 	}
-	file, err := assembly.LoadFile(*path)
+	entryPath, err := projectEntryFile(*path)
 	if err != nil {
 		return err
 	}
-	buildPath := *path
+	file, err := assembly.LoadFile(entryPath)
+	if err != nil {
+		return err
+	}
+	buildPath := entryPath
 	var generatedBuild []byte
 	if file.Kind == syntax.Plan {
 		if *check {
-			result, _, err := assembly.ResolvePlan(file, *path)
+			result, _, err := assembly.ResolvePlan(file, entryPath)
 			if err != nil {
 				return err
 			}
@@ -179,13 +174,13 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 			if err != nil {
 				return err
 			}
-			if err := assembly.CheckWorkspace(filepath.Dir(*path), manifest); err != nil {
+			if err := assembly.CheckWorkspace(filepath.Dir(entryPath), manifest); err != nil {
 				return err
 			}
 			_, err = fmt.Fprintln(stdout, "Build check passed")
 			return err
 		}
-		generatedBuild, buildPath, err = sequenceContents(*path)
+		generatedBuild, buildPath, err = sequenceContents(entryPath)
 		if err != nil {
 			return err
 		}

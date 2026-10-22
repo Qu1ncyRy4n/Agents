@@ -44,7 +44,6 @@ Build outputs (advanced: mogent help build)
 Further help
    mogent help --all                    Expanded workflow with common flags
    mogent <command> --help              Detailed help for one workflow stage
-   mogent help legacy                   HCL v2 and YAML workflows
    mogent help tools                    Completion and library utilities
    mogent help commands                 All command signatures
 `
@@ -117,7 +116,6 @@ In include examples, replace qmr with your connected library's name.
 
 Further help
    mogent <command> --help             Common usage and advanced options
-   mogent help legacy                  HCL v2 and YAML workflows
    mogent help tools                   Completion and library utilities
    mogent help commands                All command signatures
 `
@@ -144,7 +142,6 @@ Advanced
   mogent init --no-interactive          Skip the optional Gum picker
 
 Existing files are never overwritten. Explicit --source bypasses the picker.
-For old configurations: mogent help legacy
 
 Next: mogent help source
 `,
@@ -174,9 +171,8 @@ Advanced — remembered libraries
 
 Registration remembers a location for discovery and interactive init; builds
 use only project declarations. Use --file path to choose another project file.
-Legacy source show/content flags: mogent help legacy
 
-Next: mogent help select
+Next: mogent help module
 `,
 	"module": `Add and remove modules
 
@@ -202,8 +198,6 @@ opt-in content such as skills should not be installed accidentally.
 
 You can also edit includes directly, for example:
   include "qmr:intro/author-ownership"
-
-mogent add --manifest agents.yaml remains the legacy YAML placement command.
 
 Removal and overlap review
   mogent module rm qmr:intro/author-ownership --dry-run --diff
@@ -303,7 +297,6 @@ Advanced
 Builds protect managed outputs against drift. For local-source input changes,
 review the update preview; omit --dry-run to accept the new input hashes.
 For selection previews: mogent help show
-For legacy --dry-run/--force workflows: mogent help legacy
 
 Output inspection
   mogent drift
@@ -314,51 +307,10 @@ Mogent output state and whether it matches the current configuration/source
 composition. The two can differ after either direct output edits or config/source
 changes. Skill-directory detail remains part of build --check in this slice.
 `,
-	"legacy": `Legacy workflows — explicit configuration formats
-
-HCL v2 (mogent.hcl)
-  mogent init --config mogent.hcl --source qmr=../qmr-agents-library
-  mogent source list qmr --config mogent.hcl --tldr --tags
-  mogent source show qmr:path --config mogent.hcl [--lines n] [--headings]
-  mogent plan --config mogent.hcl
-  mogent apply --config mogent.hcl
-  mogent update qmr --config mogent.hcl [--accept]
-
-YAML (agents.yaml)
-  mogent init --list-templates
-  mogent init --manifest agents.yaml --template minimal --source shared=../library
-  mogent source add shared ../library --manifest agents.yaml
-  mogent source list --manifest agents.yaml --tree
-  mogent add shared:path --manifest agents.yaml
-  mogent build --manifest agents.yaml [--dry-run] [--force]
-  mogent status --manifest agents.yaml
-  mogent drift --manifest agents.yaml [--diff]
-  mogent coverage --manifest agents.yaml
-  mogent localize <heading-path> --manifest agents.yaml
-  mogent tui --manifest agents.yaml
-
-Advanced
-  YAML source pin/update, add placement, drift import/reject, and template flags
-  belong to these legacy handlers; they do not imply native plan/build support.
-  Use explicit --config or --manifest when mixing formats in one workspace.
-
-All command signatures: mogent help commands
-Current workflow: mogent --help
-`,
 	"tools": `Utilities
 
   mogent completion bash|zsh            Generate shell completion
-  mogent complete commands             List command completion candidates
-  mogent complete flags                List flag completion candidates
-  mogent mint                          Generate an unused proquint handle
-
-Advanced — legacy library sidecars
-  mogent lib init <path>
-  mogent lib scan <path>
-  mogent lib check <path>
-
-lib manages legacy YAML sidecars, not the native mogent.lib catalog language.
-Source-reference completion currently targets the legacy YAML workflow.
+  mogent mint                           Generate an unused proquint handle
 
 All command signatures: mogent help commands
 Current workflow: mogent --help
@@ -393,7 +345,7 @@ func boldHelp(text string) string {
 	lines := strings.Split(text, "\n")
 	for index, line := range lines {
 		switch {
-		case index == 0, line == "Common commands, grouped by workflow:", line == "Further help", strings.HasPrefix(line, "Advanced"), line == "HCL v2 (mogent.hcl)", line == "YAML (agents.yaml)":
+		case index == 0, line == "Common commands, grouped by workflow:", line == "Further help", strings.HasPrefix(line, "Advanced"):
 			lines[index] = bold(line)
 		case strings.Contains(line, " (advanced: mogent help "):
 			title, rest, _ := strings.Cut(line, " (advanced:")
@@ -433,9 +385,6 @@ func helpRequested(args []string) bool {
 }
 
 func commandHelpPath(args []string) []string {
-	if hasFlag(args[1:], "--manifest") || hasFlag(args[1:], "-manifest") || hasFlag(args[1:], "--config") || hasFlag(args[1:], "-config") {
-		return []string{"legacy"}
-	}
 	path := []string{args[0]}
 	if args[0] == "source" && len(args) > 1 && !strings.HasPrefix(args[1], "-") {
 		path = append(path, args[1])
@@ -454,8 +403,6 @@ func writeHelp(path []string, output io.Writer) error {
 	if len(path) == 2 {
 		switch path[1] {
 		case "add", "list", "ls", "register", "show", "update":
-		case "pin":
-			topic = "legacy"
 		default:
 			return fmt.Errorf("unknown source help topic %q; use mogent help source", path[1])
 		}
@@ -465,21 +412,19 @@ func writeHelp(path []string, output io.Writer) error {
 		return writeHelpText(output, expandedWorkflowHelp)
 	case "commands", "all":
 		var reference strings.Builder
-		reference.WriteString("All command signatures (including legacy flags)\nFor the guided workflow: mogent --help\n\n")
+		reference.WriteString("All command signatures\nFor the guided workflow: mogent --help\n\n")
 		for _, command := range commands() {
 			reference.WriteString("  mogent " + command.usage + "\n")
 		}
 		return writeHelpText(output, reference.String())
 	case "sequence", "edit", "module", "rm", "except", "exclude", "reorder", "optimise", "optimize":
 		topic = "module"
-	case "plan", "apply", "update", "status", "drift", "coverage", "add", "localize", "tui":
-		topic = "legacy"
-	case "lib", "mint", "complete", "completion":
+	case "status", "drift", "add", "completion", "mint":
 		topic = "tools"
 	}
 	text, found := workflowTopics[topic]
 	if !found {
-		return fmt.Errorf("unknown help topic %q; use --all, init, source, module, show, build, legacy, tools, or commands", path[0])
+		return fmt.Errorf("unknown help topic %q; use --all, init, source, module, show, build, tools, or commands", path[0])
 	}
 	return writeHelpText(output, text)
 }

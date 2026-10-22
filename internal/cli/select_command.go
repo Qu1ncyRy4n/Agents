@@ -11,14 +11,8 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
 
-func nativeSelectionRequested(args []string) bool {
-	if hasFlag(args, "--manifest") || hasFlag(args, "-manifest") {
-		return false
-	}
-	if hasFlag(args, "--file") || hasFlag(args, "-file") {
-		return true
-	}
-	return newSourceRequested(nil)
+func runAdd(args []string, stdout, stderr io.Writer) error {
+	return runNativeSelect(args, stdout, stderr)
 }
 
 func runNativeSelect(args []string, stdout, stderr io.Writer) error {

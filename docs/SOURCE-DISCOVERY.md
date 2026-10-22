@@ -32,8 +32,7 @@ HTTP(S) and `file://`, without embedded credentials, query strings, or fragments
 
 `show` and new source commands discover `mogent.plan` or `mogent.build`. A plan
 paired with its generated build selects the plan. Competing plan/authored-build
-files require `--file`. Explicit `--manifest` and `--config` retain legacy
-handlers; their browsing/filter capabilities are not implied for the new format.
+files require `--file`.
 
 ## Catalog View
 
@@ -56,7 +55,7 @@ not included in this initial tree view.
 The connectors and alignment reuse existing conventions from
 [DESIGN.md](DESIGN.md): `display.chars: ascii|unicode`, `display.align`, and CLI
 `--chars` override. ASCII remains the portable default. The catalog adapter does
-not yet implement the legacy inventory's coverage, TLDR, width, or search flags.
+not yet implement coverage, TLDR, width, or search flags.
 
 An empty project reports no sources and gives local/Git addition and known-library
 discovery commands. Catalog inspection can load/fetch libraries; declaration
@@ -90,7 +89,6 @@ These native aliases validate the source and catalog node, then append one
 `include` declaration to an authored build or plan. They preserve existing text
 and do not build/install outputs. Selecting the same direct include twice is
 rejected. Generated builds remain read-only: select content in their owning plan.
-`mogent add --manifest agents.yaml` retains the separate legacy placement command.
 
 Opt-in directories, such as QMR's skills tree, need an explicit child selection:
 
@@ -131,8 +129,7 @@ the managed `.agents/skills` tree, including missing, modified, and unexpected
 files; `status` is the concise all-output form. `--diff` prints text output
 diffs and changed skill paths. `build --check` verifies all managed outputs,
 including skill bytes, modes, and directory layout. Native drift/status are
-read-only; legacy import/reject flags remain explicit YAML behavior. Native
-builds also record deterministic library-root and per-node fingerprints. Drift
+read-only. Native builds also record deterministic library-root and per-node fingerprints. Drift
 compares those saved baselines with each connected library, descending a changed
 tree until it can name changed, added, or removed module paths. State written
 before this feature has no upstream baseline; run `mogent build` to record one.
@@ -231,7 +228,7 @@ Gum's UI uses stderr; its selected value is captured separately.
 Gum is optional and included in `nix develop`. It can also be installed with
 `brew install gum`. Without Gum, init creates the minimal file and explains
 source addition. No picker runs with `--no-interactive`, `--dry-run`, explicit
-`--source`, nonterminal input/output, or legacy initialization flags.
+`--source` or nonterminal input/output.
 
 ## Verification
 

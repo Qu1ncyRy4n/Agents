@@ -100,55 +100,6 @@ func Resolve(manifestPath, alias, sourceURL, subdir string) (string, error) {
 	return root, nil
 }
 
-// Pin installs an initial source or restores the exact existing lock commit.
-func Pin(manifestPath, alias, sourceURL, subdir, requestedRef string) (*Result, error) {
-	if err := validateRemote(alias, sourceURL); err != nil {
-		return nil, err
-	}
-	lock, err := loadOptional(lockPath(manifestPath))
-	if err != nil {
-		return nil, err
-	}
-	old, exists := lock.Sources[alias]
-	if err := sourcepath.ValidateSubdir(subdir); err != nil {
-		return nil, fmt.Errorf("URL source %q: %w", alias, err)
-	}
-	if exists && (old.URL != sourceURL || old.Subdir != subdir) {
-		return nil, fmt.Errorf("URL source %q identity changed; remove its lock only after reviewing the new location/subdir", alias)
-	}
-	ref := requestedRef
-	if ref == "" && exists {
-		if _, resolveErr := Resolve(manifestPath, alias, sourceURL, subdir); resolveErr == nil {
-			copy := old
-			return &Result{Alias: alias, URL: sourceURL, Old: &copy, New: old, Wrote: false}, nil
-		}
-		ref = old.Commit
-	}
-	if ref == "" {
-		ref = "HEAD"
-	}
-	candidate, cleanup, err := fetchCandidate(sourceURL, ref, subdir)
-	if err != nil {
-		return nil, err
-	}
-	defer cleanup()
-	if exists && requestedRef == "" && (candidate.Commit != old.Commit || candidate.ContentSHA256 != old.ContentSHA256) {
-		return nil, fmt.Errorf("fetched content for locked source %q does not match its immutable lock", alias)
-	}
-	if exists && requestedRef != "" && candidate.Commit != old.Commit {
-		return nil, fmt.Errorf("source %q is already pinned; use source update to review a changed revision", alias)
-	}
-	if err := install(manifestPath, alias, candidate, lock); err != nil {
-		return nil, err
-	}
-	var oldPointer *LockEntry
-	if exists {
-		copy := old
-		oldPointer = &copy
-	}
-	return &Result{Alias: alias, URL: sourceURL, Old: oldPointer, New: candidate.LockEntry, Wrote: true}, nil
-}
-
 // Update fetches a candidate. It mutates lock/cache only when accept is true.
 func Update(manifestPath, alias, sourceURL, subdir, requestedRef string, accept bool) (*Result, error) {
 	if err := validateRemote(alias, sourceURL); err != nil {
@@ -484,14 +435,6 @@ func lockPath(manifestPath string) string {
 }
 func cachePath(manifestPath, alias, commit string) string {
 	return filepath.Join(filepath.Dir(manifestPath), ".mogent", "sources", alias, commit)
-}
-
-func loadOptional(path string) (*Lock, error) {
-	value, err := load(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return &Lock{Version: lockVersion, Sources: make(map[string]LockEntry)}, nil
-	}
-	return value, err
 }
 
 func load(path string) (*Lock, error) {

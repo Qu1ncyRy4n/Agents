@@ -18,6 +18,14 @@ import (
 
 // runNativeDrift compares current output both with the last Mogent output hash
 // and with the current build composition. It is intentionally read-only.
+func runDrift(args []string, stdout, stderr io.Writer) error {
+	return runNativeDrift(args, stdout, stderr)
+}
+
+func runStatus(args []string, stdout, stderr io.Writer) error {
+	return runNativeStatus(args, stdout, stderr)
+}
+
 func runNativeDrift(args []string, stdout, stderr io.Writer) error {
 	flags := flag.NewFlagSet("drift", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -124,7 +132,7 @@ func writeNativeSourceDrift(stdout io.Writer, statePath string, sources map[stri
 		if _, err := fmt.Fprintln(stdout, "Upstream baseline: differs"); err != nil {
 			return err
 		}
-		changes := sourceChanges(old.Nodes, new.Nodes)
+		changes := suppressAggregateDirectoryChanges(sourceChanges(old.Nodes, new.Nodes), sources[alias].Lib)
 		if len(changes) == 0 {
 			changes = []sourceChange{{kind: "changed", path: "<library metadata>"}}
 		}
@@ -135,6 +143,37 @@ func writeNativeSourceDrift(stdout io.Writer, statePath string, sources map[stri
 		}
 	}
 	return nil
+}
+
+// A physical directory node can cover the same files as more specific logical
+// sections. When those sections already explain the changed files, omit the
+// aggregate directory line rather than making the report repeat itself. Raw
+// directory-only libraries retain their aggregate change because there is no
+// more specific node to show.
+func suppressAggregateDirectoryChanges(changes []sourceChange, library *assembly.Library) []sourceChange {
+	filtered := make([]sourceChange, 0, len(changes))
+	for _, change := range changes {
+		node := library.ByPath[change.path]
+		if node == nil || node.Type != assembly.Directory || node.Source == "" || change.kind != "changed" {
+			filtered = append(filtered, change)
+			continue
+		}
+		covered := false
+		for _, other := range changes {
+			if other.path == change.path {
+				continue
+			}
+			candidate := library.ByPath[other.path]
+			if candidate != nil && strings.HasPrefix(candidate.Source, node.Source+"/") {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			filtered = append(filtered, change)
+		}
+	}
+	return filtered
 }
 
 // sourceChanges descends through changed paths until it reaches the paths that
@@ -185,13 +224,6 @@ func hasChangedDescendant(path string, changed map[string]sourceChange) bool {
 		}
 	}
 	return false
-}
-
-func nativeStatusRequested(args []string) bool {
-	if hasFlag(args, "--manifest") || hasFlag(args, "-manifest") {
-		return false
-	}
-	return hasFlag(args, "--file") || hasFlag(args, "-file") || newSourceRequested(nil)
 }
 
 // runNativeStatus is the concise all-output counterpart to drift. It uses the
