@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
@@ -34,7 +35,8 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 	flags.Var(&any, "tag-any", "match tag; repeat for any matching tag")
 	flags.Var(&none, "tag-none", "exclude tag; repeat for any matching tag")
 	addCommands := flags.Bool("add-commands", false, "print explicit module-add commands for matches")
-	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--tag-all": true, "-tag-all": true, "--tag-any": true, "-tag-any": true, "--tag-none": true, "-tag-none": true, "--add-commands": false, "-add-commands": false})
+	addConfig := flags.Bool("add-config", false, "print a dynamic tag-query include block")
+	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--tag-all": true, "-tag-all": true, "--tag-any": true, "-tag-any": true, "--tag-none": true, "-tag-none": true, "--add-commands": false, "-add-commands": false, "--add-config": false, "-add-config": false})
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
@@ -67,11 +69,39 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 		}
 	}
 	sort.Strings(aliases)
-	type match struct {
-		reference string
-		node      *assembly.Node
+	matches := sourceTagMatches(sources, aliases, prefix, all, any, none)
+	if len(matches) == 0 {
+		_, err := fmt.Fprintln(stdout, "No source nodes matched the tag query.")
+		return err
 	}
-	var matches []match
+	rows := [][]string{{"REF", "TYPE", "TAGS"}}
+	for _, found := range matches {
+		rows = append(rows, []string{found.reference, string(found.node.Type), strings.Join(found.node.Tags, ", ")})
+	}
+	if err := writeColumns(stdout, rows, true); err != nil {
+		return err
+	}
+	if *addConfig {
+		if prefix == "" {
+			return fmt.Errorf("--add-config requires a source:path scope so the include has a target")
+		}
+		if _, err := fmt.Fprintf(stdout, "---\nDynamic tag-query config:\n%s", tagQueryConfig(alias+":"+prefix, all, any, none)); err != nil {
+			return err
+		}
+	}
+	if *addCommands {
+		return writeExplicitAddCommands(stdout, matches)
+	}
+	return nil
+}
+
+type sourceMatch struct {
+	reference string
+	node      *assembly.Node
+}
+
+func sourceTagMatches(sources map[string]assembly.Source, aliases []string, prefix string, all, any, none []string) []sourceMatch {
+	var matches []sourceMatch
 	for _, name := range aliases {
 		library := sources[name].Lib
 		paths := make([]string, 0, len(library.ByPath))
@@ -84,24 +114,14 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 		for _, nodePath := range paths {
 			node := library.ByPath[nodePath]
 			if assembly.MatchesTags(node, all, any, none) {
-				matches = append(matches, match{reference: name + ":" + nodePath, node: node})
+				matches = append(matches, sourceMatch{reference: name + ":" + nodePath, node: node})
 			}
 		}
 	}
-	if len(matches) == 0 {
-		_, err := fmt.Fprintln(stdout, "No source nodes matched the tag query.")
-		return err
-	}
-	rows := [][]string{{"REF", "TYPE", "TAGS"}}
-	for _, found := range matches {
-		rows = append(rows, []string{found.reference, string(found.node.Type), strings.Join(found.node.Tags, ", ")})
-	}
-	if err := writeColumns(stdout, rows, true); err != nil {
-		return err
-	}
-	if !*addCommands {
-		return nil
-	}
+	return matches
+}
+
+func writeExplicitAddCommands(stdout io.Writer, matches []sourceMatch) error {
 	if _, err := fmt.Fprintln(stdout, "---\nExplicit leaf add commands:"); err != nil {
 		return err
 	}
@@ -114,6 +134,27 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 		}
 	}
 	return nil
+}
+
+func tagQueryConfig(reference string, all, any, none []string) string {
+	var output strings.Builder
+	fmt.Fprintf(&output, "include %s {\n", strconv.Quote(reference))
+	writeTagConfigField(&output, "tags_all", all)
+	writeTagConfigField(&output, "tags_any", any)
+	writeTagConfigField(&output, "tags_none", none)
+	output.WriteString("}\n")
+	return output.String()
+}
+
+func writeTagConfigField(output *strings.Builder, name string, tags []string) {
+	if len(tags) == 0 {
+		return
+	}
+	quoted := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		quoted = append(quoted, strconv.Quote(tag))
+	}
+	fmt.Fprintf(output, "  %s = [%s]\n", name, strings.Join(quoted, ", "))
 }
 
 func searchScope(value string, sources map[string]assembly.Source) (string, string, error) {

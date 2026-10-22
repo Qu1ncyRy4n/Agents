@@ -74,13 +74,14 @@ Browse content (advanced: mogent help source)
        --tree | --flat                 Hierarchy (default) or complete paths
        --chars ascii|unicode           Choose tree connectors
    source search [scope]               Search source metadata by tags
-       --tag-all|--tag-any|--tag-none  Repeat tag predicates; --add-commands prints explicit additions
+       --tag-all|--tag-any|--tag-none  Repeat tag predicates; --add-commands or --add-config preview additions
    source content <name:path>          Preview source content
    source register <name> <path-or-url> Remember a library for future projects
 
 Add modules (advanced: mogent help module)
     module add <name:path>             Add a module to the project file
         --tag-all|--tag-any|--tag-none Add a tag query to the new include
+        --explicit-commands            Preview the leaf-by-leaf alternative to a tag query
         --all                          Select all direct children (for opt-in trees)
         --file <path>                  Select a specific plan/build
         --dry-run                      Preview the include without writing
@@ -163,6 +164,7 @@ Advanced — browsing
   mogent source tree --flat             Show complete paths
   mogent source tree qmr:intro          Limit the tree to a node and its children
   mogent source search qmr:skills --tag-all language/go --add-commands
+  mogent source search qmr:skills --tag-all language/go --add-config
   mogent source content qmr:intro/author-ownership
   mogent source list --tree             Browse all connected libraries
   mogent source add qmr ../library --dry-run
@@ -196,6 +198,9 @@ patches. Use --file to name a specific plan/build.
 For an opt-in tree, select its direct children explicitly:
   mogent module add qmr:skills --all
 
+For a tag query, preview the stable explicit alternative without writing:
+  mogent module add qmr:skills --tag-all language/go --explicit-commands
+
 This turns an existing bare include "qmr:skills" into an explicit child list,
 or creates that list for a new include. It is intentionally not the default:
 opt-in content such as skills should not be installed accidentally.
@@ -209,7 +214,9 @@ Removal and overlap review
   mogent module optimize                # default dry-run
   mogent module optimize --apply
 
-module add has --all, --file, --dry-run, and --diff. module rm has --file,
+module add has --all, --file, --dry-run, and --diff. With tag predicates,
+--explicit-commands prints matching leaf-level add commands instead of writing
+a dynamic include. module rm has --file,
 --dry-run, and --diff. Combine --dry-run --diff for a read-only patch; bare
 --diff applies the requested edit and reports it. The short top-level add/rm forms remain compatibility
 shortcuts while we dogfood the explicit module vocabulary.

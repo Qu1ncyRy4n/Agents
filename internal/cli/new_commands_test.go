@@ -23,6 +23,7 @@ func newCLIFixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	writeNewCLIFile(t, root, "team/mogent.lib", `library {format=1;name="Team"}
+dir "agents" {source="guidance"}
 md-section "guidance" {md-section "workflow" {source="guidance/workflow.md";vars=["repo_name"]}}
 md-section "obsolete" {source="obsolete.md"}
 dir "skills" {source="skills";curate="choose"
@@ -63,6 +64,62 @@ func TestSourceSearchListsTagMatchesAndAddCommands(t *testing.T) {
 	}
 	if strings.Contains(stdout.String(), "mogent module add team:skills\n") {
 		t.Fatalf("parent command would broaden the tag search:\n%s", stdout.String())
+	}
+}
+
+func TestSourceSearchPrintsDynamicTagQueryConfig(t *testing.T) {
+	root := newCLIFixture(t)
+	var stdout, stderr bytes.Buffer
+	plan := filepath.Join(root, "mogent.plan")
+	if err := Run([]string{"source", "search", "team:skills", "--tag-all", "language", "--tag-none", "experimental", "--add-config", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Dynamic tag-query config:", `include "team:skills" {`, `tags_all = ["language"]`, `tags_none = ["experimental"]`} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("config output missing %q:\n%s", want, stdout.String())
+		}
+	}
+	if err := Run([]string{"source", "search", "team", "--tag-all", "language", "--add-config", "--file", plan}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "requires a source:path") {
+		t.Fatalf("unscoped config error=%v", err)
+	}
+}
+
+func TestModuleAddPrintsExplicitTagCommandsWithoutWriting(t *testing.T) {
+	root := newCLIFixture(t)
+	plan := filepath.Join(root, "mogent.plan")
+	before, err := os.ReadFile(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"module", "add", "team:skills", "--tag-all", "language", "--explicit-commands", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "mogent module add team:skills/testing") {
+		t.Fatalf("explicit commands=%s", stdout.String())
+	}
+	after, err := os.ReadFile(plan)
+	if err != nil || string(before) != string(after) {
+		t.Fatalf("explicit commands wrote plan: err=%v", err)
+	}
+}
+
+func TestSourceTreeNestsLogicalBranchUnderPhysicalDirectory(t *testing.T) {
+	root := newCLIFixture(t)
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"source", "tree", "team", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	agents := strings.Index(output, "agents")
+	guidance := strings.Index(output, "guidance")
+	if agents < 0 || guidance < agents {
+		t.Fatalf("physical directory should precede its logical branch:\n%s", output)
+	}
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, "guidance") && !strings.Contains(line, "|   ") {
+			t.Fatalf("logical branch should be indented below physical directory:\n%s", output)
+		}
 	}
 }
 

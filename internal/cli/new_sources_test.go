@@ -21,7 +21,7 @@ func TestCatalogTreeFlatAndNodeScope(t *testing.T) {
 		want []string
 		omit string
 	}{
-		{[]string{"--tree", "--chars", "unicode"}, []string{"PATH", "TYPE", "├── guidance", "│   └── workflow", "md-section", "└── skills", "dir"}, "guidance/workflow"},
+		{[]string{"--tree", "--chars", "unicode"}, []string{"PATH", "TYPE", "├── agents", "│   └── guidance", "│       └── workflow", "md-section", "└── skills", "dir"}, "guidance/workflow"},
 		{[]string{"--flat"}, []string{"guidance/workflow", "skills/review", "md-section"}, "├"},
 		{[]string{"team:guidance", "--chars", "ascii"}, []string{"`-- guidance", "    `-- workflow"}, "skills"},
 	} {
