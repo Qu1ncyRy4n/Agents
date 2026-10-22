@@ -34,7 +34,7 @@ with common flags, and `help commands` renders every dispatch-registry signature
 | `init` | Authored build or `--plan`, source declarations, dry-run; explicit legacy starters | Plan/build default; `--config` selects HCL v2, `--manifest` selects YAML v1 |
 | `build` | Sequence plans and assemble builds; legacy render/write outputs | Plan/build with discovery or `--file`; YAML v1 with `--manifest` |
 | `sequence` | Compile selection intent into a generated build | New plan/build language |
-| `show` | Rendered/physical content preview, ordered contributions, diagnostics | New plan/build language; project file discovery or `--file`; catalog browsing is `source show` |
+| `show` | Rendered/physical content preview, heading-oriented result tree, ordered contributions, diagnostics | New plan/build language; `show --tree` groups selected headings by output with a source column; catalog browsing is `source show` |
 | `edit include --localize` | Copy a selected input into an editable local source | New plan/build language |
 | `plan` | Resolve, validate, show output diffs/member changes/provenance/diagnostics | HCL v2; does not emit a reusable build file |
 | `apply` | Transactional outputs/state and newly resolved commit pins | HCL v2 |

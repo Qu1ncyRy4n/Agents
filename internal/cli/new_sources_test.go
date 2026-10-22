@@ -220,6 +220,23 @@ func TestNativeModuleSelectionCommandsAndSourceAliasView(t *testing.T) {
 	}
 }
 
+func TestNativeShowTreeGroupsHeadingsAndSources(t *testing.T) {
+	root := newCLIFixture(t)
+	t.Chdir(root)
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"show", "--tree"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"SOURCE", "RESULT", "AGENTS.md", "guidance", "workflow", ".agents/skills", "team"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("tree missing %q:\n%s", want, stdout.String())
+		}
+	}
+	if strings.Contains(stdout.String(), "team:guidance") {
+		t.Fatalf("tree should use the source column rather than namespace labels:\n%s", stdout.String())
+	}
+}
+
 func TestNativeShowContentPreviewAndLineLimit(t *testing.T) {
 	root := newCLIFixture(t)
 	t.Chdir(root)

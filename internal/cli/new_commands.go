@@ -408,9 +408,31 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	return nil
 }
 
+type contributionTreeNode struct {
+	key      string
+	label    string
+	source   string
+	count    int
+	children []*contributionTreeNode
+	byKey    map[string]*contributionTreeNode
+}
+
+func (n *contributionTreeNode) child(key, label, source string) *contributionTreeNode {
+	if found := n.byKey[key]; found != nil {
+		return found
+	}
+	child := &contributionTreeNode{key: key, label: label, source: source, byKey: map[string]*contributionTreeNode{}}
+	n.byKey[key] = child
+	n.children = append(n.children, child)
+	return child
+}
+
+// writeContributionTree shows the composed result rather than the source
+// catalog: Markdown contributions are nested by their heading ancestry, and
+// source aliases occupy a narrow column instead of expanding every tree label.
 func writeContributionTree(stdout io.Writer, contributions []assembly.Contribution, requested string) error {
-	byOutput := map[string][]string{}
-	var outputs []string
+	roots := map[string]*contributionTreeNode{}
+	var outputs []*contributionTreeNode
 	for _, contribution := range contributions {
 		name := contribution.Source
 		if contribution.Node != nil {
@@ -421,35 +443,73 @@ func writeContributionTree(stdout io.Writer, contributions []assembly.Contributi
 		if requested != "" && requested != name {
 			continue
 		}
-		if _, found := byOutput[contribution.Into]; !found {
-			outputs = append(outputs, contribution.Into)
+		output := contribution.Into
+		suffix := ""
+		if strings.HasPrefix(output, ".agents/skills/") {
+			suffix = strings.TrimPrefix(output, ".agents/skills/")
+			output = ".agents/skills"
 		}
-		byOutput[contribution.Into] = append(byOutput[contribution.Into], name)
+		root := roots[output]
+		if root == nil {
+			root = &contributionTreeNode{key: output, label: output, byKey: map[string]*contributionTreeNode{}}
+			roots[output] = root
+			outputs = append(outputs, root)
+		}
+		current := root
+		if contribution.Node != nil && contribution.Node.Type == assembly.Section {
+			var ancestors []*assembly.Node
+			for node := contribution.Node; node != nil; node = node.Parent {
+				ancestors = append(ancestors, node)
+			}
+			for index := len(ancestors) - 1; index >= 0; index-- {
+				node := ancestors[index]
+				label := node.Title
+				if label == "" {
+					label = node.Name
+				}
+				current = current.child(contribution.Source+":"+node.Path, label, contribution.Source)
+			}
+		} else {
+			label := suffix
+			if label == "" && contribution.Node != nil {
+				label = contribution.Node.Name
+			}
+			if label == "" {
+				label = "inline"
+			}
+			current = current.child(name, label, contribution.Source)
+		}
+		current.count++
 	}
 	if len(outputs) == 0 {
 		_, err := fmt.Fprintln(stdout, "No selected contributions.")
 		return err
 	}
+	rows := [][]string{{"SOURCE", "RESULT"}}
 	for outputIndex, output := range outputs {
-		lastOutput := outputIndex == len(outputs)-1
-		connector, indent := "├── ", "│   "
-		if lastOutput {
-			connector, indent = "└── ", "    "
+		connector, prefix := "├── ", "│   "
+		if outputIndex == len(outputs)-1 {
+			connector, prefix = "└── ", "    "
 		}
-		if _, err := fmt.Fprintln(stdout, connector+output); err != nil {
-			return err
-		}
-		for index, name := range byOutput[output] {
-			childConnector := "├── "
-			if index == len(byOutput[output])-1 {
-				childConnector = "└── "
-			}
-			if _, err := fmt.Fprintln(stdout, indent+childConnector+name); err != nil {
-				return err
-			}
-		}
+		rows = append(rows, []string{"", connector + output.label})
+		appendContributionTreeRows(&rows, output.children, prefix)
 	}
-	return nil
+	return writeColumns(stdout, rows, true)
+}
+
+func appendContributionTreeRows(rows *[][]string, nodes []*contributionTreeNode, prefix string) {
+	for index, node := range nodes {
+		connector, next := "├── ", prefix+"│   "
+		if index == len(nodes)-1 {
+			connector, next = "└── ", prefix+"    "
+		}
+		label := node.label
+		if node.count > 1 {
+			label += fmt.Sprintf(" ×%d", node.count)
+		}
+		*rows = append(*rows, []string{node.source, prefix + connector + label})
+		appendContributionTreeRows(rows, node.children, next)
+	}
 }
 
 func runEdit(args []string, stdout, stderr io.Writer) error {
