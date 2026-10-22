@@ -2,6 +2,7 @@ package assembly
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/renderfs"
@@ -9,8 +10,11 @@ import (
 )
 
 type SelectOptions struct {
-	All    bool
-	DryRun bool
+	All      bool
+	TagsAll  []string
+	TagsAny  []string
+	TagsNone []string
+	DryRun   bool
 }
 
 // Select appends one validated include to an authored build or plan. It never
@@ -55,6 +59,9 @@ func SelectWithOptions(path, reference string, options SelectOptions) ([]byte, e
 	if options.All && node == nil {
 		return nil, fmt.Errorf("--all requires a content node, not preset or recipe %q", reference)
 	}
+	if options.All && (len(options.TagsAll) > 0 || len(options.TagsAny) > 0 || len(options.TagsNone) > 0) {
+		return nil, fmt.Errorf("--all cannot be combined with tag filters")
+	}
 	for _, entry := range file.Entries[1:] {
 		if entry.Name != "include" || entry.Label == nil {
 			continue
@@ -70,10 +77,7 @@ func SelectWithOptions(path, reference string, options SelectOptions) ([]byte, e
 	if options.All && len(node.Children) == 0 {
 		return nil, fmt.Errorf("module %q has no children to select with --all", reference)
 	}
-	declaration := "\ninclude \"" + reference + "\"\n"
-	if options.All {
-		declaration = "\ninclude \"" + reference + "\" [" + selectionNames(node) + "]\n"
-	}
+	declaration := selectDeclaration(reference, node, options)
 	contents := append([]byte(file.Original()), []byte(declaration)...)
 	if _, err := syntax.Parse(path, contents); err != nil {
 		return nil, err
@@ -84,6 +88,33 @@ func SelectWithOptions(path, reference string, options SelectOptions) ([]byte, e
 		}
 	}
 	return contents, nil
+}
+
+func selectDeclaration(reference string, node *Node, options SelectOptions) string {
+	if options.All {
+		return "\ninclude \"" + reference + "\" [" + selectionNames(node) + "]\n"
+	}
+	if len(options.TagsAll) == 0 && len(options.TagsAny) == 0 && len(options.TagsNone) == 0 {
+		return "\ninclude \"" + reference + "\"\n"
+	}
+	var output strings.Builder
+	fmt.Fprintf(&output, "\ninclude %s {\n", strconv.Quote(reference))
+	writeTagField(&output, "tags_all", options.TagsAll)
+	writeTagField(&output, "tags_any", options.TagsAny)
+	writeTagField(&output, "tags_none", options.TagsNone)
+	output.WriteString("}\n")
+	return output.String()
+}
+
+func writeTagField(output *strings.Builder, name string, tags []string) {
+	if len(tags) == 0 {
+		return
+	}
+	quoted := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		quoted = append(quoted, strconv.Quote(tag))
+	}
+	fmt.Fprintf(output, "  %s = [%s]\n", name, strings.Join(quoted, ", "))
 }
 
 func selectAllExisting(file *syntax.File, path string, entry *syntax.Entry, node *Node, reference string, dryRun bool) ([]byte, error) {

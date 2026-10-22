@@ -220,6 +220,24 @@ func TestNativeModuleSelectionCommandsAndSourceAliasView(t *testing.T) {
 	}
 }
 
+func TestModuleAddWritesTagQuery(t *testing.T) {
+	root := newCLIFixture(t)
+	plan := filepath.Join(root, "mogent.plan")
+	var stdout, stderr bytes.Buffer
+	args := []string{"module", "add", "team:skills", "--tag-all", "language", "--tag-none", "experimental", "--dry-run", "--file", plan}
+	if err := Run(args, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`include "team:skills" {`, `tags_all = ["language"]`, `tags_none = ["experimental"]`} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("tag preview missing %q:\n%s", want, stdout.String())
+		}
+	}
+	if err := Run([]string{"module", "add", "team:skills", "--all", "--tag-all", "language", "--file", plan}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "cannot be combined") {
+		t.Fatalf("all/tags error=%v", err)
+	}
+}
+
 func TestNativeShowTreeGroupsHeadingsAndSources(t *testing.T) {
 	root := newCLIFixture(t)
 	t.Chdir(root)

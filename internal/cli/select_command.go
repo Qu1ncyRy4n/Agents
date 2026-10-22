@@ -22,7 +22,11 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 	dryRun := flags.Bool("dry-run", false, "preview the include without writing")
 	diff := flags.Bool("diff", false, "show project and managed-output changes")
 	all := flags.Bool("all", false, "select all direct children")
-	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--dry-run": false, "-dry-run": false, "--diff": false, "-diff": false, "--all": false, "-all": false})
+	var tagsAll, tagsAny, tagsNone stringList
+	flags.Var(&tagsAll, "tag-all", "require tag; repeat for every required tag")
+	flags.Var(&tagsAny, "tag-any", "match tag; repeat for any matching tag")
+	flags.Var(&tagsNone, "tag-none", "exclude tag; repeat for any matching tag")
+	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--dry-run": false, "-dry-run": false, "--diff": false, "-diff": false, "--all": false, "-all": false, "--tag-all": true, "-tag-all": true, "--tag-any": true, "-tag-any": true, "--tag-none": true, "-tag-none": true})
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
@@ -45,7 +49,8 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 	}
-	contents, err := assembly.SelectWithOptions(entryPath, flags.Arg(0), assembly.SelectOptions{All: *all, DryRun: *dryRun || *diff})
+	selection := assembly.SelectOptions{All: *all, TagsAll: tagsAll, TagsAny: tagsAny, TagsNone: tagsNone, DryRun: *dryRun || *diff}
+	contents, err := assembly.SelectWithOptions(entryPath, flags.Arg(0), selection)
 	if err != nil {
 		return err
 	}
@@ -57,7 +62,7 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 		headline := "Applied project change:"
 		if *dryRun {
 			headline = "Dry run: no files written\nProposed project change:"
-		} else if _, err := assembly.SelectWithOptions(entryPath, flags.Arg(0), assembly.SelectOptions{All: *all}); err != nil {
+		} else if _, err := assembly.SelectWithOptions(entryPath, flags.Arg(0), assembly.SelectOptions{All: *all, TagsAll: tagsAll, TagsAny: tagsAny, TagsNone: tagsNone}); err != nil {
 			return err
 		}
 		if _, err := fmt.Fprintln(stdout, headline); err != nil {
