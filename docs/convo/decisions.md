@@ -123,7 +123,9 @@ can show runnable module-add commands and asked whether it could prove an
 optimization-by-tagging method. Resolver tests already establish tag matching
 and scoped path exclusion; no tag-search CLI exists.
 Scope/reservations: Read-only source tag inspection and command rendering are
-the next candidate slice. Negative tag matching, command spelling, and whether
-conversion belongs in an optimizer or an explicit migration command remain open.
+the next candidate slice. `tags_none` is the recommended negative predicate;
+dogfood its matching/reporting before accepting it in the language. Whether
+conversion belongs in an optimizer or an explicit migration command remains
+open.
 Supersedes: none
 Superseded by: none

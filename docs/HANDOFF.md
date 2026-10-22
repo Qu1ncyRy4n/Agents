@@ -63,13 +63,35 @@ not alternate live command references.
 
 The language already resolves `tags_all`/`tags_any` and applies scoped path
 exclusions after tag filtering, but there is no tag-search command or
-negative-tag predicate. The next proposed dogfooding slice is read-only source
-tag inspection with an explicit add-command rendering mode. Do not treat
+negative-tag predicate. The recommended next spelling is `tags_none`; dogfood
+it first through read-only source inspection with an explicit `--add-commands`
+rendering mode. Do not treat
 rewriting explicit selections into a tag query as ordinary optimization: it
 changes how future upstream additions are selected. `optimize` remains a
 selection-editing command, never a build flag. `replace` is specified only as
 an include-language alias/property and is intentionally deferred from this CLI
 review.
+
+## Near-Term Native Roadmap
+
+1. Dogfood read-only source tag search, `tags_none`, and `--add-commands` against
+   QMR/CDINT. Confirm matching, result readability, and the distinction between
+   commands for explicit leaves and commands that create a dynamic tag query.
+2. Add the accepted tag flags to `module add`, with existing `--dry-run`/`--diff`
+   guarantees. Do not add automatic explicit-to-tag compaction.
+3. Consolidate the command tree after that evidence: catalog/result views and
+   `module exclude`, `module localize`, and `module optimize`; retain only useful
+   compatibility aliases during the transition.
+4. Complete localization provenance and upstream-reconciliation UX, then dogfood
+   a localized physical module through an upstream change.
+5. Dogfood a real output collision and replacement. Only then decide whether the
+   CLI needs a replacement option on `module add` or a separate command.
+6. Return to broader curation/defaults, relationship diagnostics, output adoption
+   and recovery, source freshness/pinning, and richer interactive inspection.
+
+Vendor adapters, global installation, protocol profiles, hooks, reverse
+inference, and a full interactive UI follow the core consumer workflow; they do
+not block this sequence.
 
 CDINT source review remains paused pending Steve curation. For a request such
 as "I'm Steve, I'm here to do the content curation that Quincy requested.

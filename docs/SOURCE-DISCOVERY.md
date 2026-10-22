@@ -184,8 +184,10 @@ There is no negative-tag predicate yet.
 Tag discovery is the next dogfooding candidate. The proposed read-only surface
 is `mogent source search [source:path] --tag-all <tag> --tag-any <tag>` and a
 clear `--add-commands` rendering mode that prints runnable `mogent module add`
-commands. A later `--tag-none <tag>` (or equivalent) needs an explicit decision
-about its matching semantics before it becomes part of the language.
+commands. The recommended negative predicate is `--tag-none <tag>` / `tags_none
+= [...]`: retain nodes carrying none of the listed tags. It composes with
+`tags_all` and `tags_any` without introducing ambiguous `exclude-all` or
+negated-flag spellings. Dogfood it read-only before making it a module-add flag.
 
 `module optimize` belongs to selection editing, not `build`: builds never
 rewrite authored choices. Its current overlap removal is semantics-preserving.
