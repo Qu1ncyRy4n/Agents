@@ -198,10 +198,14 @@ same stable leaf-by-leaf alternative without writing. Tag predicates cannot
 combine with `--all`, because an all-child selection would make the tag query
 redundant.
 
-`source search` currently searches catalog tags only. Title/path and rendered
-content search are separate future modes; they must not silently change the
-selection-oriented tag-query meaning. Interactive fuzzy matching is also
-deferred until those mode boundaries are specified.
+`source search <term>` searches all four readable fields—module path, title,
+tags, and rendered text content—and reports which field matched. Narrow it with
+`--path`, `--title`, `--tags`, or `--content`; with no field flag, all fields
+are searched. A source alias/path can precede the term to scope it, for example
+`mogent source search qmr:workflow planning`. This text-search form is distinct
+from the selection-oriented `--tag-all`/`--tag-any`/`--tag-none` query form.
+Interactive fuzzy matching remains deferred; text matching is case-insensitive
+substring matching.
 
 `module optimize` belongs to selection editing, not `build`: builds never
 rewrite authored choices. Its current overlap removal is semantics-preserving.
