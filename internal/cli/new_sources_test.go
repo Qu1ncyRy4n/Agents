@@ -368,10 +368,10 @@ func TestNativeStatusRemoveAndOptimise(t *testing.T) {
 		}
 	}
 	stdout.Reset()
-	if err := Run([]string{"rm", "team:recommended", "--diff"}, &stdout, &stderr); err != nil {
+	if err := Run([]string{"rm", "team:recommended", "--dry-run", "--diff"}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "Output: AGENTS.md") {
+	if !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "Managed-output changes:") || !strings.Contains(stdout.String(), "Output: AGENTS.md") {
 		t.Fatalf("remove diff=%s", stdout.String())
 	}
 	if err := Run([]string{"rm", "team:recommended"}, &stdout, &stderr); err != nil {

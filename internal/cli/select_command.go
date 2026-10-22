@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
+	"github.com/Qu1ncyRy4n/Agents/content"
 	"github.com/Qu1ncyRy4n/Agents/workspace"
 )
 
@@ -25,7 +26,7 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	path := flags.String("file", "", "project plan or authored build")
 	dryRun := flags.Bool("dry-run", false, "preview the include without writing")
-	diff := flags.Bool("diff", false, "preview project and managed-output changes without writing")
+	diff := flags.Bool("diff", false, "show project and managed-output changes")
 	all := flags.Bool("all", false, "select all direct children")
 	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--dry-run": false, "-dry-run": false, "--diff": false, "-diff": false, "--all": false, "-all": false})
 	if err := parseFlags(flags, args); err != nil {
@@ -38,30 +39,40 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+	var before []byte
+	var beforeManifest *content.Manifest
+	if *diff {
+		before, err = os.ReadFile(entryPath)
+		if err != nil {
+			return err
+		}
+		beforeManifest, err = nativeManifest(entryPath, nil)
+		if err != nil {
+			return err
+		}
+	}
 	contents, err := assembly.SelectWithOptions(entryPath, flags.Arg(0), assembly.SelectOptions{All: *all, DryRun: *dryRun || *diff})
 	if err != nil {
 		return err
 	}
 	if *diff {
-		before, err := os.ReadFile(entryPath)
-		if err != nil {
-			return err
-		}
-		beforeManifest, err := nativeManifest(entryPath, nil)
-		if err != nil {
-			return err
-		}
 		afterManifest, err := nativeManifest(entryPath, contents)
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintln(stdout, "Dry run: no files written\nProposed project change:"); err != nil {
+		headline := "Applied project change:"
+		if *dryRun {
+			headline = "Dry run: no files written\nProposed project change:"
+		} else if _, err := assembly.SelectWithOptions(entryPath, flags.Arg(0), assembly.SelectOptions{All: *all}); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprint(stdout, workspace.UnifiedDiff(string(before), string(contents))); err != nil {
+		if _, err := fmt.Fprintln(stdout, headline); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintln(stdout, "Expected managed-output changes:"); err != nil {
+		if _, err := fmt.Fprint(stdout, workspace.UnifiedDiffNamed(string(before), string(contents), "current "+entryPath, "proposed "+entryPath)); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(stdout, "---\nManaged-output changes:"); err != nil {
 			return err
 		}
 		return writeManifestDiff(stdout, beforeManifest, afterManifest)
@@ -69,7 +80,7 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 	if *dryRun {
 		_, err = fmt.Fprint(stdout, string(contents))
 	} else {
-		_, err = fmt.Fprintf(stdout, "Added %s in %s\nNext: mogent show --build --file %s\n", flags.Arg(0), entryPath, entryPath)
+		_, err = fmt.Fprintf(stdout, "Added %s in %s\nNext: mogent show --tree --file %s\n", flags.Arg(0), entryPath, entryPath)
 	}
 	return err
 }

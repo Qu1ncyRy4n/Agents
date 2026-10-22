@@ -181,7 +181,7 @@ Next: mogent help select
 	"module": `Add and remove modules
 
   mogent module add qmr:intro/author-ownership
-  mogent module rm qmr:intro/author-ownership --diff
+  mogent module rm qmr:intro/author-ownership --dry-run --diff
   mogent except qmr:workflow/decision-first
 
 Replace qmr and the path with a connected library and a node shown by:
@@ -189,8 +189,9 @@ Replace qmr and the path with a connected library and a node shown by:
 
 module add appends one validated include to the authored build or plan. Includes
 are applied in the order you add them. Use --dry-run to inspect the exact
-declaration, or --diff to preview both the project and managed-output changes;
-use --file to name a specific plan/build.
+declaration; combine it with --diff to preview project and managed-output
+patches. Without --dry-run, --diff writes the requested change and reports its
+patches. Use --file to name a specific plan/build.
 
 For an opt-in tree, select its direct children explicitly:
   mogent module add qmr:skills --all
@@ -205,12 +206,13 @@ You can also edit includes directly, for example:
 mogent add --manifest agents.yaml remains the legacy YAML placement command.
 
 Removal and overlap review
-  mogent module rm qmr:intro/author-ownership --diff
+  mogent module rm qmr:intro/author-ownership --dry-run --diff
   mogent module rm qmr:intro/author-ownership
   mogent optimize
 
 module add has --all, --file, --dry-run, and --diff. module rm has --file,
---dry-run, and --diff. The short top-level add/rm forms remain compatibility
+--dry-run, and --diff. Combine --dry-run --diff for a read-only patch; bare
+--diff applies the requested edit and reports it. The short top-level add/rm forms remain compatibility
 shortcuts while we dogfood the explicit module vocabulary.
 
 module rm removes one exact direct include, never an ancestor selection. --diff is a

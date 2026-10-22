@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
@@ -17,7 +18,7 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	path := flags.String("file", "", "project plan or authored build")
 	dryRun := flags.Bool("dry-run", false, "preview the declaration removal without writing")
-	diff := flags.Bool("diff", false, "preview resulting managed-output changes without writing")
+	diff := flags.Bool("diff", false, "show resulting project and managed-output changes")
 	args = reorderArgs(args, map[string]bool{"--file": true, "-file": true, "--dry-run": false, "-dry-run": false, "--diff": false, "-diff": false})
 	if err := parseFlags(flags, args); err != nil {
 		return err
@@ -26,6 +27,10 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("module rm requires one direct module reference, for example qmr:intro/author-ownership")
 	}
 	entryPath, err := projectEntryFile(*path)
+	if err != nil {
+		return err
+	}
+	beforeBytes, err := os.ReadFile(entryPath)
 	if err != nil {
 		return err
 	}
@@ -42,7 +47,19 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintln(stdout, "Dry run: no files written\nExpected managed-output changes:"); err != nil {
+		headline := "Applied project change:"
+		if *dryRun {
+			headline = "Dry run: no files written\nProposed project change:"
+		} else if _, err := assembly.Remove(entryPath, flags.Arg(0), false); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(stdout, headline); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprint(stdout, workspace.UnifiedDiffNamed(string(beforeBytes), string(contents), "current "+entryPath, "proposed "+entryPath)); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(stdout, "---\nManaged-output changes:"); err != nil {
 			return err
 		}
 		return writeManifestDiff(stdout, before, after)
@@ -51,7 +68,7 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 		_, err = fmt.Fprint(stdout, string(contents))
 		return err
 	}
-	_, err = fmt.Fprintf(stdout, "Removed %s from %s\nNext: mogent module rm %s --diff --file %s, then mogent build --check --file %s\n", flags.Arg(0), entryPath, flags.Arg(0), entryPath, entryPath)
+	_, err = fmt.Fprintf(stdout, "Removed %s from %s\nNext: mogent show --tree --file %s, then mogent build --check --file %s\n", flags.Arg(0), entryPath, entryPath, entryPath)
 	return err
 }
 
@@ -105,7 +122,7 @@ func writeManifestDiff(stdout io.Writer, before, after *content.Manifest) error 
 		if _, err := fmt.Fprintf(stdout, "Output: %s\n", path); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprint(stdout, workspace.UnifiedDiff(string(old.Bytes), string(new.Bytes))); err != nil {
+		if _, err := fmt.Fprint(stdout, workspace.UnifiedDiffNamed(string(old.Bytes), string(new.Bytes), "current "+path, "proposed "+path)); err != nil {
 			return err
 		}
 	}

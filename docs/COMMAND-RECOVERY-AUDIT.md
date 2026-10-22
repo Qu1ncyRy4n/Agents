@@ -18,7 +18,7 @@ the native plan/build workflow; it does not silently revive competing formats.
 | Authoring declaration order | Native ordered syntax / formatter | `reorder [--dry-run]` |
 | Source declaration/discovery | YAML `source add/list`; HCL v2 source list | `source add`, `source list|ls`, `source register`, `source list --known` |
 | All managed-output status | Typed state plus `build --check` | `status` or `drift --all [--diff]` |
-| Remove a direct include | Native declaration editing (previously absent from CLI) | `module rm source:path [--diff]` (`rm` is a compatibility shortcut) |
+| Remove a direct include | Native declaration editing (previously absent from CLI) | `module rm source:path [--dry-run --diff]` previews; bare `--diff` writes then reports (`rm` is a compatibility shortcut) |
 | Overlap inspection | Explicit selection review (previously absent) | `optimize` (`optimise` alias); `show --build` warning |
 
 Native content preview is read-only. It renders logical Markdown sections as a
