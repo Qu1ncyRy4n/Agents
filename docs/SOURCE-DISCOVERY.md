@@ -183,7 +183,8 @@ Explicit child selections are unioned with tag matches. The normal scoped
 
 Use `mogent source search [source:path] --tag-all <tag> --tag-any <tag>
 --tag-none <tag>` to inspect matching catalog nodes. `--add-commands` prints
-runnable explicit `mogent module add` commands for every match. The same
+runnable explicit `mogent module add` commands for matching leaf modules only;
+it never suggests a broad parent that would include unrelated descendants. The same
 repeated `--tag-all`, `--tag-any`, and `--tag-none` flags are accepted by
 `mogent module add` for a new dynamic tag-query include. They cannot combine
 with `--all`, because an all-child selection would make the tag query redundant.

@@ -23,6 +23,6 @@ module paths.
 
 The language supports `tags_all`, `tags_any`, and `tags_none` on an include,
 plus scoped path `exclude` after tag matching. `source search` exposes these
-predicates read-only; `--add-commands` prints explicit module-add commands.
+predicates read-only; `--add-commands` prints explicit leaf-module add commands.
 `module add` accepts the same tag predicates for a new include. See
 [SOURCE-DISCOVERY.md](SOURCE-DISCOVERY.md).
