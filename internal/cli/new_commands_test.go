@@ -26,8 +26,8 @@ func newCLIFixture(t *testing.T) string {
 md-section "guidance" {md-section "workflow" {source="guidance/workflow.md";vars=["repo_name"]}}
 md-section "obsolete" {source="obsolete.md"}
 dir "skills" {source="skills";curate="choose"
-  node "review" {role="skill";content="SKILL.md";default=true}
-  node "testing" {default=true}
+  node "review" {role="skill";content="SKILL.md";default=true;tags=["quality/review"]}
+  node "testing" {default=true;tags=["language/go"]}
 }
 preset "recommended" {include "self:guidance";include "self:skills" {accept_defaults=true}}
 `)
@@ -41,6 +41,26 @@ source "team" {local="team"}
 include "team:recommended"
 `)
 	return root
+}
+
+func TestSourceSearchListsTagMatchesAndAddCommands(t *testing.T) {
+	root := newCLIFixture(t)
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"source", "search", "team:skills", "--tag-all", "language", "--add-commands", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"REF", "team:skills/testing", "language/go", "Add commands:", "mogent module add team:skills/testing"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("search missing %q:\n%s", want, stdout.String())
+		}
+	}
+	stdout.Reset()
+	if err := Run([]string{"source", "search", "team:skills", "--tag-none", "language", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "team:skills/review") || strings.Contains(stdout.String(), "team:skills/testing") {
+		t.Fatalf("negative search=%s", stdout.String())
+	}
 }
 
 func TestNewSequenceBuildShowWorkflow(t *testing.T) {

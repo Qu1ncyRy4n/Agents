@@ -7,7 +7,7 @@ import (
 
 func runSource(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("source requires a subcommand; use source add, list (ls), register, show, or update local")
+		return fmt.Errorf("source requires a subcommand; use source add, list (ls), tree, search, register, or update local")
 	}
 	switch args[0] {
 	case "register":
@@ -18,16 +18,20 @@ func runSource(args []string, stdout, stderr io.Writer) error {
 		return runNewSourceList(args[1:], stdout, stderr)
 	case "show":
 		return runNativeSourceShow(args[1:], stdout, stderr)
+	case "tree":
+		return runNativeSourceShow(args[1:], stdout, stderr)
+	case "search":
+		return runSourceSearch(args[1:], stdout, stderr)
 	case "update":
 		if len(args) > 1 && args[1] == "local" {
 			return runLocalSourceUpdate(args[2:], stdout, stderr)
 		}
 		return fmt.Errorf("source update supports only local inputs; use source update local")
 	default:
-		if suggestion := closestString(args[0], []string{"add", "list", "ls", "register", "show", "update"}, 2); suggestion != "" {
+		if suggestion := closestString(args[0], []string{"add", "list", "ls", "register", "show", "tree", "search", "update"}, 2); suggestion != "" {
 			return fmt.Errorf("unknown source subcommand %q; did you mean %q?", args[0], suggestion)
 		}
-		return fmt.Errorf("unknown source subcommand %q; use source add, list (ls), register, show, or update", args[0])
+		return fmt.Errorf("unknown source subcommand %q; use source add, list (ls), tree, search, register, or update", args[0])
 	}
 }
 
