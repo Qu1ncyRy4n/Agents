@@ -247,11 +247,12 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	headings := flags.Bool("headings", false, "show heading addresses for a physical Markdown file")
 	tree := flags.Bool("tree", false, "show source hierarchy (default source view)")
 	flat := flags.Bool("flat", false, "show full source paths without tree connectors")
+	included := flags.Bool("included", false, "show only catalog nodes selected by this project")
 	notIncluded := flags.Bool("not-included", false, "show only catalog nodes not selected by this project")
 	chars := flags.String("chars", "", "tree characters: ascii or unicode")
 	buildView := flags.Bool("build", false, "show ordered contributions")
 	issues := flags.Bool("issues", false, "show only diagnostics")
-	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-source": false, "--source": false, "-content": false, "--content": false, "-lines": true, "--lines": true, "-headings": false, "--headings": false, "-build": false, "--build": false, "-issues": false, "--issues": false, "-tree": false, "--tree": false, "-flat": false, "--flat": false, "-not-included": false, "--not-included": false, "-chars": true, "--chars": true})
+	args = reorderArgs(args, map[string]bool{"-file": true, "--file": true, "-source": false, "--source": false, "-content": false, "--content": false, "-lines": true, "--lines": true, "-headings": false, "--headings": false, "-build": false, "--build": false, "-issues": false, "--issues": false, "-tree": false, "--tree": false, "-flat": false, "--flat": false, "-included": false, "--included": false, "-not-included": false, "--not-included": false, "-chars": true, "--chars": true})
 	if err := parseFlags(flags, args); err != nil {
 		return err
 	}
@@ -261,8 +262,11 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	if *lines < 0 {
 		return fmt.Errorf("--lines must be zero or greater")
 	}
-	if *tree && *flat || (*flat || *chars != "" || *notIncluded) && !*sourceView {
-		return fmt.Errorf("--flat, --chars, and --not-included apply to source tree; choose only one of --tree or --flat")
+	if *included && *notIncluded {
+		return fmt.Errorf("--included and --not-included cannot be combined")
+	}
+	if *tree && *flat || (*flat || *chars != "" || *included || *notIncluded) && !*sourceView {
+		return fmt.Errorf("--flat, --chars, --included, and --not-included apply to source tree; choose only one of --tree or --flat")
 	}
 	requested := ""
 	if flags.NArg() == 1 {
@@ -366,11 +370,11 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 		if config.Chars != "ascii" && config.Chars != "unicode" {
 			return fmt.Errorf("--chars must be ascii or unicode")
 		}
-		included := map[string]map[string]bool(nil)
-		if *notIncluded {
-			included = selectedCatalogNodes(result.Contributions)
+		selected := map[string]map[string]bool(nil)
+		if *included || *notIncluded {
+			selected = selectedCatalogNodes(result.Contributions)
 		}
-		return writeCatalog(stdout, sources, requested, *flat, config.Align, config.Chars, included)
+		return writeCatalog(stdout, sources, requested, *flat, config.Align, config.Chars, selected, *included)
 	}
 	if *tree {
 		return writeContributionTree(stdout, result.Contributions, requested)

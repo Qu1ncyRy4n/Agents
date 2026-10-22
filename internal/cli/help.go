@@ -72,6 +72,7 @@ Browse content (advanced: mogent help source)
        --tree                          Browse connected libraries' content
    source tree [<name:path>]           Browse all content or one subtree
        --tree | --flat                 Hierarchy (default) or complete paths
+       --included                      Show modules selected by this project
        --not-included                  Hide modules already selected by this project
        --chars ascii|unicode           Choose tree connectors
    source search <term>                Search path, title, tags, and content
@@ -165,6 +166,7 @@ Advanced — browsing
   mogent source tree --chars unicode
   mogent source tree --flat             Show complete paths
   mogent source tree qmr:intro          Limit the tree to a node and its children
+  mogent source tree qmr --included     Show selected QMR modules only
   mogent source tree qmr --not-included  Show available QMR modules only
   mogent source search qmr:skills --tag-all language/go --add-commands
   mogent source search qmr:skills --tag-all language/go --add-config

@@ -9,7 +9,7 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/assembly"
 )
 
-func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requested string, flat, align bool, charSet string, included map[string]map[string]bool) error {
+func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requested string, flat, align bool, charSet string, selected map[string]map[string]bool, onlyIncluded bool) error {
 	aliases := make([]string, 0, len(sources))
 	for alias := range sources {
 		aliases = append(aliases, alias)
@@ -44,7 +44,7 @@ func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requeste
 			}
 			sort.Strings(paths)
 			for _, path := range paths {
-				if catalogIncluded(included, alias, path) {
+				if selected != nil && catalogIncluded(selected, alias, path) != onlyIncluded {
 					continue
 				}
 				rows = append(rows, []string{path, string(library.ByPath[path].Type)})
@@ -65,8 +65,8 @@ func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requeste
 			if requestedPath != "" {
 				nodes = []*assembly.Node{library.ByPath[requestedPath]}
 			}
-			if included != nil {
-				nodes = catalogUnincluded(nodes, included[alias])
+			if selected != nil {
+				nodes = catalogSelectionFilter(nodes, selected[alias], onlyIncluded)
 			}
 			visit(nodes, "")
 		}
@@ -87,15 +87,23 @@ func catalogIncluded(included map[string]map[string]bool, alias, path string) bo
 	return catalogPathIncluded(included[alias], path)
 }
 
-func catalogUnincluded(nodes []*assembly.Node, included map[string]bool) []*assembly.Node {
+func catalogSelectionFilter(nodes []*assembly.Node, selected map[string]bool, onlyIncluded bool) []*assembly.Node {
 	var result []*assembly.Node
 	for _, node := range nodes {
-		if catalogPathIncluded(included, node.Path) {
+		included := catalogPathIncluded(selected, node.Path)
+		if included && !onlyIncluded {
+			continue
+		}
+		if included && onlyIncluded {
+			result = append(result, node)
 			continue
 		}
 		copy := *node
-		copy.Children = catalogUnincluded(node.Children, included)
+		copy.Children = catalogSelectionFilter(node.Children, selected, onlyIncluded)
 		if len(node.Children) != 0 && len(copy.Children) == 0 {
+			continue
+		}
+		if onlyIncluded && len(node.Children) == 0 {
 			continue
 		}
 		result = append(result, &copy)

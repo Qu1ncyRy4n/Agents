@@ -183,6 +183,38 @@ func TestSourceTreeCanShowOnlyUnincludedNodes(t *testing.T) {
 	}
 }
 
+func TestSourceTreeCanShowOnlyIncludedNodes(t *testing.T) {
+	root := newCLIFixture(t)
+	plan := filepath.Join(root, "mogent.plan")
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"source", "tree", "team", "--included", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	for _, included := range []string{"guidance", "workflow", "review", "testing"} {
+		if !strings.Contains(output, included) {
+			t.Fatalf("included node %q missing:\n%s", included, output)
+		}
+	}
+	for _, excluded := range []string{"obsolete", "deployment"} {
+		if strings.Contains(output, excluded) {
+			t.Fatalf("unselected node %q should be filtered:\n%s", excluded, output)
+		}
+	}
+	stdout.Reset()
+	if err := Run([]string{"source", "show", "team", "--included", "--flat", "--file", plan}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, included := range []string{"guidance/workflow", "skills/review", "skills/testing"} {
+		if !strings.Contains(stdout.String(), included) {
+			t.Fatalf("included flat node %q missing:\n%s", included, stdout.String())
+		}
+	}
+	if err := Run([]string{"source", "tree", "team", "--included", "--not-included", "--file", plan}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "cannot be combined") {
+		t.Fatalf("combined selection filters error=%v", err)
+	}
+}
+
 func TestCanonicalCatalogAndResultCommands(t *testing.T) {
 	root := newCLIFixture(t)
 	plan := filepath.Join(root, "mogent.plan")
