@@ -13,7 +13,7 @@ import (
 )
 
 func runRemove(args []string, stdout, stderr io.Writer) error {
-	flags := flag.NewFlagSet("rm", flag.ContinueOnError)
+	flags := flag.NewFlagSet("module rm", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("file", "", "project plan or authored build")
 	dryRun := flags.Bool("dry-run", false, "preview the declaration removal without writing")
@@ -23,7 +23,7 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	if flags.NArg() != 1 {
-		return fmt.Errorf("rm requires one direct module reference, for example qmr:intro/author-ownership")
+		return fmt.Errorf("module rm requires one direct module reference, for example qmr:intro/author-ownership")
 	}
 	entryPath, err := projectEntryFile(*path)
 	if err != nil {
@@ -51,7 +51,7 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 		_, err = fmt.Fprint(stdout, string(contents))
 		return err
 	}
-	_, err = fmt.Fprintf(stdout, "Removed %s from %s\nNext: mogent rm %s --diff --file %s, then mogent build --check --file %s\n", flags.Arg(0), entryPath, flags.Arg(0), entryPath, entryPath)
+	_, err = fmt.Fprintf(stdout, "Removed %s from %s\nNext: mogent module rm %s --diff --file %s, then mogent build --check --file %s\n", flags.Arg(0), entryPath, flags.Arg(0), entryPath, entryPath)
 	return err
 }
 

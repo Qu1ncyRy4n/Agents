@@ -261,8 +261,8 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	if *lines < 0 {
 		return fmt.Errorf("--lines must be zero or greater")
 	}
-	if *tree && *flat || (*tree || *flat || *chars != "") && !*sourceView {
-		return fmt.Errorf("--tree, --flat, and --chars apply to --source; choose only one of --tree or --flat")
+	if *tree && *flat || (*flat || *chars != "") && !*sourceView {
+		return fmt.Errorf("--flat and --chars apply to source show; choose only one of --tree or --flat")
 	}
 	requested := ""
 	if flags.NArg() == 1 {
@@ -368,6 +368,9 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 		}
 		return writeCatalog(stdout, sources, requested, *flat, config.Align, config.Chars)
 	}
+	if *tree {
+		return writeContributionTree(stdout, result.Contributions, requested)
+	}
 	for _, contribution := range result.Contributions {
 		name := contribution.Source
 		if contribution.Node != nil {
@@ -401,6 +404,50 @@ func runShow(args []string, stdout, stderr io.Writer) error {
 	writeAssemblyDiagnostics(stdout, result)
 	if result.HasErrors() {
 		return fmt.Errorf("show found errors")
+	}
+	return nil
+}
+
+func writeContributionTree(stdout io.Writer, contributions []assembly.Contribution, requested string) error {
+	byOutput := map[string][]string{}
+	var outputs []string
+	for _, contribution := range contributions {
+		name := contribution.Source
+		if contribution.Node != nil {
+			name += ":" + contribution.Node.Path
+		} else {
+			name = "inline"
+		}
+		if requested != "" && requested != name {
+			continue
+		}
+		if _, found := byOutput[contribution.Into]; !found {
+			outputs = append(outputs, contribution.Into)
+		}
+		byOutput[contribution.Into] = append(byOutput[contribution.Into], name)
+	}
+	if len(outputs) == 0 {
+		_, err := fmt.Fprintln(stdout, "No selected contributions.")
+		return err
+	}
+	for outputIndex, output := range outputs {
+		lastOutput := outputIndex == len(outputs)-1
+		connector, indent := "├── ", "│   "
+		if lastOutput {
+			connector, indent = "└── ", "    "
+		}
+		if _, err := fmt.Fprintln(stdout, connector+output); err != nil {
+			return err
+		}
+		for index, name := range byOutput[output] {
+			childConnector := "├── "
+			if index == len(byOutput[output])-1 {
+				childConnector = "└── "
+			}
+			if _, err := fmt.Fprintln(stdout, indent+childConnector+name); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

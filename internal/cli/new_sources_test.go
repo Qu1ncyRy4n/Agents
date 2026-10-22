@@ -196,8 +196,6 @@ func TestNativeModuleSelectionCommandsAndSourceAliasView(t *testing.T) {
 	for _, command := range [][]string{
 		{"add", "team:guidance/workflow", "--dry-run"},
 		{"module", "add", "team:guidance/workflow", "--dry-run"},
-		{"module", "select", "team:guidance/workflow", "--dry-run"},
-		{"select", "team:guidance/workflow", "--dry-run"},
 	} {
 		stdout.Reset()
 		if err := Run(command, &stdout, &stderr); err != nil {
@@ -211,14 +209,14 @@ func TestNativeModuleSelectionCommandsAndSourceAliasView(t *testing.T) {
 	if err := Run([]string{"module", "add", "team:guidance/workflow"}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stdout.String(), "Selected team:guidance/workflow") {
-		t.Fatalf("select=%s", stdout.String())
+	if !strings.Contains(stdout.String(), "Added team:guidance/workflow") {
+		t.Fatalf("add=%s", stdout.String())
 	}
 	if err := Run([]string{"add", "team:guidance/workflow"}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "already selected") {
 		t.Fatalf("duplicate add=%v", err)
 	}
-	if err := Run([]string{"select", "team:missing"}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "unknown module") {
-		t.Fatalf("unknown select=%v", err)
+	if err := Run([]string{"module", "add", "team:missing"}, &stdout, &stderr); err == nil || !strings.Contains(err.Error(), "unknown module") {
+		t.Fatalf("unknown module add=%v", err)
 	}
 }
 

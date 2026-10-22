@@ -48,7 +48,7 @@ with common flags, and `help commands` renders every dispatch-registry signature
 | `source register` / `source list --known` | Remember/discover libraries; never active build inputs | User-local YAML registry |
 | `source show` | Browse the native source catalog; inspect one node with legacy metadata/content flags | Native catalog; legacy YAML/HCL inspection is retained under explicit legacy configuration |
 | `source pin/update` | Pin or preview/accept URL source changes | YAML v1; distinct from v2 top-level `update` |
-| `add` / `select` / `module add` / `module select` | Validate and append one native include; `--all` explicitly selects opt-in child trees; `add` retains legacy placement flags | Plan/authored build by discovery or `--file`; YAML v1 with `--manifest` |
+| `module add` / `module rm` | Validate and append or remove one native include; `--all` explicitly adds opt-in child trees; `--diff` previews project/output changes | Plan/authored build by discovery or `--file`; top-level `add` / `rm` are compatibility shortcuts; YAML v1 uses `add --manifest` |
 | `localize` | Copy-on-write override with provenance | YAML v1 |
 | `complete` | Print completion candidates | Commands/flags general; source/heading candidates v1 |
 | `completion` | Emit bash/zsh scripts | Scripts/candidates need v2 reconciliation |

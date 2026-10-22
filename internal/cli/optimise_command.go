@@ -36,7 +36,7 @@ func runOptimise(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	for _, overlap := range overlaps {
-		if _, err := fmt.Fprintf(stdout, "Overlap: %s already includes descendant %s\n  Deliberate repetition is allowed. To preview removing the direct descendant: mogent rm %s --diff --file %s\n", overlap.Ancestor, overlap.Descendant, overlap.Descendant, entryPath); err != nil {
+		if _, err := fmt.Fprintf(stdout, "Overlap: %s already includes descendant %s\n  Deliberate repetition is allowed. To preview removing the direct descendant: mogent module rm %s --diff --file %s\n", overlap.Ancestor, overlap.Descendant, overlap.Descendant, entryPath); err != nil {
 			return err
 		}
 	}

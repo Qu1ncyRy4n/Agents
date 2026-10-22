@@ -85,9 +85,9 @@ mogent help select
 mogent build --help
 ```
 
-The new format selects modules through `mogent add <source:path>` (also available
-as `mogent select` or `mogent module add`), which appends an `include` declaration
-to the authored build or plan. `mogent add --manifest agents.yaml` retains the
+The new format adds modules through `mogent module add <source:path>`, which
+appends an `include` declaration to the authored build or plan. Top-level `add`
+remains a compatibility shortcut; `mogent add --manifest agents.yaml` retains the
 legacy YAML placement workflow. Legacy commands are grouped under `mogent help
 legacy`, utilities under `mogent help tools`, and all registered command
 signatures remain available with `mogent help commands`.

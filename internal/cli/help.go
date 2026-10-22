@@ -25,11 +25,9 @@ Browse content (advanced: mogent help source)
    source list                         List connected libraries
    source show                         Browse their content as a tree
 
-Select modules (advanced: mogent help select)
-   add <name:path>                    Select a module in the project file
-   select <name:path>                 Alias for add
-   module add|select <name:path>      Explicit module-selection forms
-   rm <name:path>                     Remove one direct include
+Add modules (advanced: mogent help module)
+   module add <name:path>             Add a module to the project file
+   module rm <name:path>              Remove one direct include
    except <name:path>                 Exclude a descendant from a selected ancestor
    optimize                            Inspect direct include overlaps; writes nothing
    reorder                             Group bindings/sources before ordered includes
@@ -77,10 +75,8 @@ Browse content (advanced: mogent help source)
        --chars ascii|unicode           Choose tree connectors
    source register <name> <path-or-url> Remember a library for future projects
 
-Select modules (advanced: mogent help select)
-   add <name:path>                    Select a module in the project file
-   select <name:path>                 Alias for add
-    module add|select <name:path>      Explicit module-selection forms
+Add modules (advanced: mogent help module)
+    module add <name:path>             Add a module to the project file
         --all                          Select all direct children (for opt-in trees)
         --file <path>                  Select a specific plan/build
         --dry-run                      Preview the include without writing
@@ -99,8 +95,9 @@ Select modules (advanced: mogent help select)
        --file <path>                   Select the plan/build to edit
        --dry-run                       Preview localization without writing
 
-Preview the selection (advanced: mogent help show)
+Preview the result (advanced: mogent help show)
    show --build                       Show selected modules and destinations
+	show --tree                        Show selected modules grouped by output
    show --issues                      Explain unresolved choices or errors
        --file <path>                   Inspect a specific plan/build
 
@@ -181,24 +178,22 @@ Legacy source show/content flags: mogent help legacy
 
 Next: mogent help select
 `,
-	"select": `Select modules
+	"module": `Add and remove modules
 
-  mogent add qmr:intro/author-ownership
-  mogent select qmr:intro/author-ownership
   mogent module add qmr:intro/author-ownership
-  mogent module select qmr:intro/author-ownership
-  mogent rm qmr:intro/author-ownership --diff
+  mogent module rm qmr:intro/author-ownership --diff
   mogent except qmr:workflow/decision-first
 
 Replace qmr and the path with a connected library and a node shown by:
   mogent source show
 
-All four commands append the same validated include to the authored build or
-plan. Includes are applied in the order you select them. Use --dry-run to inspect
-the exact declaration first; use --file to name a specific plan/build.
+module add appends one validated include to the authored build or plan. Includes
+are applied in the order you add them. Use --dry-run to inspect the exact
+declaration, or --diff to preview both the project and managed-output changes;
+use --file to name a specific plan/build.
 
 For an opt-in tree, select its direct children explicitly:
-  mogent add qmr:skills --all
+  mogent module add qmr:skills --all
 
 This turns an existing bare include "qmr:skills" into an explicit child list,
 or creates that list for a new include. It is intentionally not the default:
@@ -210,14 +205,15 @@ You can also edit includes directly, for example:
 mogent add --manifest agents.yaml remains the legacy YAML placement command.
 
 Removal and overlap review
-  mogent rm qmr:intro/author-ownership --diff
+  mogent module rm qmr:intro/author-ownership --diff
   mogent module rm qmr:intro/author-ownership
   mogent optimize
 
-module add and module select have the same --all, --file, and --dry-run flags
-as top-level selection. module rm has --file, --dry-run, and --diff.
+module add has --all, --file, --dry-run, and --diff. module rm has --file,
+--dry-run, and --diff. The short top-level add/rm forms remain compatibility
+shortcuts while we dogfood the explicit module vocabulary.
 
-rm removes one exact direct include, never an ancestor selection. --diff is a
+module rm removes one exact direct include, never an ancestor selection. --diff is a
 safe preview of resulting managed-output changes and writes nothing. optimize
 only identifies ancestor/descendant direct includes; repeated content can be
 intentional, so it never rewrites the file.
@@ -255,7 +251,7 @@ and rewrites its reference. Add --dry-run to preview. For a plan, pass its path.
 
 Next: mogent help show
 `,
-	"show": `Preview the selection
+	"show": `Preview the result
 
   mogent show --build
   mogent show --issues
@@ -272,7 +268,7 @@ Advanced
   mogent show qmr:intro/author-ownership --build
   mogent show --build --file mogent.build
   mogent show --issues --file mogent.plan
-  mogent show --source                  Browse available, not selected, content
+  mogent source show                    Browse available, not added, content
   mogent show qmr:skills/review --content
   mogent show qmr:assets/readme.md --content --headings
 
@@ -470,8 +466,8 @@ func writeHelp(path []string, output io.Writer) error {
 			reference.WriteString("  mogent " + command.usage + "\n")
 		}
 		return writeHelpText(output, reference.String())
-	case "sequence", "edit", "select", "module", "rm", "except", "exclude", "reorder", "optimise", "optimize":
-		topic = "select"
+	case "sequence", "edit", "module", "rm", "except", "exclude", "reorder", "optimise", "optimize":
+		topic = "module"
 	case "plan", "apply", "update", "status", "drift", "coverage", "add", "localize", "tui":
 		topic = "legacy"
 	case "lib", "mint", "complete", "completion":
@@ -479,7 +475,7 @@ func writeHelp(path []string, output io.Writer) error {
 	}
 	text, found := workflowTopics[topic]
 	if !found {
-		return fmt.Errorf("unknown help topic %q; use --all, init, source, select, show, build, legacy, tools, or commands", path[0])
+		return fmt.Errorf("unknown help topic %q; use --all, init, source, module, show, build, legacy, tools, or commands", path[0])
 	}
 	return writeHelpText(output, text)
 }
