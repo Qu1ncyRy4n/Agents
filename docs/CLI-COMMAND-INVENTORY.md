@@ -21,3 +21,7 @@ declared in that file; they do not select modules.
 shown as a right-side annotation. `drift` compares current source libraries with
 the fingerprints saved by the last build, reporting changed, added, and removed
 module paths.
+
+The language supports `tags_all` and `tags_any` on an include, plus scoped path
+`exclude` after tag matching. Tag-search and command-suggestion CLI surfaces are
+not implemented yet; see [SOURCE-DISCOVERY.md](SOURCE-DISCOVERY.md).

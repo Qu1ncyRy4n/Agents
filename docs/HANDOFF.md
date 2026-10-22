@@ -61,6 +61,16 @@ interactive UI work, global targets, and reverse inference remain future work.
 The first-slice specification and walkthrough are design/history references,
 not alternate live command references.
 
+The language already resolves `tags_all`/`tags_any` and applies scoped path
+exclusions after tag filtering, but there is no tag-search command or
+negative-tag predicate. The next proposed dogfooding slice is read-only source
+tag inspection with an explicit add-command rendering mode. Do not treat
+rewriting explicit selections into a tag query as ordinary optimization: it
+changes how future upstream additions are selected. `optimize` remains a
+selection-editing command, never a build flag. `replace` is specified only as
+an include-language alias/property and is intentionally deferred from this CLI
+review.
+
 CDINT source review remains paused pending Steve curation. For a request such
 as "I'm Steve, I'm here to do the content curation that Quincy requested.
 Please guide me through it.", read the [Steve library curation

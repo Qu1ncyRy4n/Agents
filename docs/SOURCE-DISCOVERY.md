@@ -163,6 +163,37 @@ outputs without writing; bare `--diff` applies and reports its patch.
 preview by default. Its `--apply` removes redundant direct descendants, but
 never reorders or silently changes selections.
 
+## Tag Filtering And Discovery
+
+Libraries may tag nodes. An authored include can select direct children by tag:
+
+```text
+include "qmr:skills" {
+  tags_all = ["language/go"]
+  tags_any = ["review", "security"]
+  exclude = ["review"]
+}
+```
+
+`tags_all` requires every named tag and `tags_any` requires one or more. A tag
+prefix matches its descendants, so `language` also matches `language/go`.
+Explicit child selections are unioned with tag matches. The normal scoped
+`exclude` filter runs afterward; it excludes a source-relative path, not a tag.
+There is no negative-tag predicate yet.
+
+Tag discovery is the next dogfooding candidate. The proposed read-only surface
+is `mogent source search [source:path] --tag-all <tag> --tag-any <tag>` and a
+clear `--add-commands` rendering mode that prints runnable `mogent module add`
+commands. A later `--tag-none <tag>` (or equivalent) needs an explicit decision
+about its matching semantics before it becomes part of the language.
+
+`module optimize` belongs to selection editing, not `build`: builds never
+rewrite authored choices. Its current overlap removal is semantics-preserving.
+Replacing explicit modules with a tag query is not automatically equivalent,
+because a future upstream tagged module would then become selected. If offered,
+that conversion must be a separately previewed, explicitly accepted change—not
+an ordinary optimize rewrite.
+
 Reorder authored configuration without changing selection semantics:
 
 ```sh

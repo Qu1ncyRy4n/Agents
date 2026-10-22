@@ -110,3 +110,20 @@ assembly/state/CLI tests passed on 2026-10-21; Teacher_Bot remains to be
 dogfooded without overriding owner-authored outputs.
 Supersedes: none
 Superseded by: none
+
+## CS-D007 — Tag query conversion is not ordinary optimization
+
+Status: proposed
+Statement: Keep `module optimize` as a selection-editing, semantics-preserving
+operation. A conversion from explicit module selections to a `tags_all` or
+`tags_any` include query must be previewed and separately accepted, because the
+query can select future upstream additions.
+Evidence: During command-tree review, the owner proposed tag-search output that
+can show runnable module-add commands and asked whether it could prove an
+optimization-by-tagging method. Resolver tests already establish tag matching
+and scoped path exclusion; no tag-search CLI exists.
+Scope/reservations: Read-only source tag inspection and command rendering are
+the next candidate slice. Negative tag matching, command spelling, and whether
+conversion belongs in an optimizer or an explicit migration command remain open.
+Supersedes: none
+Superseded by: none
