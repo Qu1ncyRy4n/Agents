@@ -485,13 +485,13 @@ func writeContributionTree(stdout io.Writer, contributions []assembly.Contributi
 		_, err := fmt.Fprintln(stdout, "No selected contributions.")
 		return err
 	}
-	rows := [][]string{{"SOURCE", "RESULT"}}
+	rows := [][]string{{"RESULT", "SOURCE"}}
 	for outputIndex, output := range outputs {
 		connector, prefix := "├── ", "│   "
 		if outputIndex == len(outputs)-1 {
 			connector, prefix = "└── ", "    "
 		}
-		rows = append(rows, []string{"", connector + output.label})
+		rows = append(rows, []string{connector + output.label, ""})
 		appendContributionTreeRows(&rows, output.children, prefix)
 	}
 	return writeColumns(stdout, rows, true)
@@ -507,7 +507,7 @@ func appendContributionTreeRows(rows *[][]string, nodes []*contributionTreeNode,
 		if node.count > 1 {
 			label += fmt.Sprintf(" ×%d", node.count)
 		}
-		*rows = append(*rows, []string{node.source, prefix + connector + label})
+		*rows = append(*rows, []string{prefix + connector + label, node.source})
 		appendContributionTreeRows(rows, node.children, next)
 	}
 }
