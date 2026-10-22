@@ -49,17 +49,20 @@ func TestSourceSearchListsTagMatchesAndAddCommands(t *testing.T) {
 	if err := Run([]string{"source", "search", "team:skills", "--tag-all", "language", "--add-commands", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"REF", "team:skills/testing", "language/go", "Add commands:", "mogent module add team:skills/testing"} {
+	for _, want := range []string{"REF", "team:skills/testing", "language/go", "Explicit leaf add commands:", "mogent module add team:skills/testing"} {
 		if !strings.Contains(stdout.String(), want) {
 			t.Fatalf("search missing %q:\n%s", want, stdout.String())
 		}
 	}
 	stdout.Reset()
-	if err := Run([]string{"source", "search", "team:skills", "--tag-none", "language", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil {
+	if err := Run([]string{"source", "search", "team:skills", "--tag-none", "language", "--add-commands", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(stdout.String(), "team:skills/review") || strings.Contains(stdout.String(), "team:skills/testing") {
 		t.Fatalf("negative search=%s", stdout.String())
+	}
+	if strings.Contains(stdout.String(), "mogent module add team:skills\n") {
+		t.Fatalf("parent command would broaden the tag search:\n%s", stdout.String())
 	}
 }
 
