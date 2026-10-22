@@ -10,7 +10,7 @@ the native plan/build workflow; it does not silently revive competing formats.
 | Source content preview | YAML `source show --content=none|snippet|full --lines`; HCL v2 source inspector body preview | `show source:path --content [--lines N]` |
 | Physical Markdown heading addresses | HCL v2 `source show alias:path --headings` | `show source:path --content --headings` |
 | Source hierarchy and display controls | YAML coverage/list tree and `display.chars`/alignment presentation | `source show [--tree|--flat] [--chars ascii|unicode]` |
-| Add a selected item | YAML `add`, native include semantics | `add`, `select`, or `module add source:path` |
+| Add a selected item | YAML `add`, native include semantics | `add`, `select`, `module add`, or `module select source:path` |
 | Complete opt-in tree selection | Native child-selection syntax / physical bundles | `add source:path --all` |
 | Authored output baseline | Generated-plan state writer / typed output manifest | `.mogent/state.json` after every native build |
 | Output drift inspection | YAML drift expected-vs-disk comparison and state classification | `drift [--diff]` |

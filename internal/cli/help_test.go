@@ -28,7 +28,7 @@ func TestWorkflowHelpLeadsToSelectionWithoutLegacyFlagDump(t *testing.T) {
 			}
 			previous = index
 		}
-		for _, want := range []string{"add <name:path>", "select <name:path>", "module add <name:path>", "mogent help select", "mogent help legacy", "mogent help commands", "mogent help --all"} {
+		for _, want := range []string{"add <name:path>", "select <name:path>", "module add|select <name:path>", "mogent help select", "mogent help legacy", "mogent help commands", "mogent help --all"} {
 			if !strings.Contains(text, want) {
 				t.Fatalf("workflow missing %q:\n%s", want, text)
 			}
@@ -77,7 +77,7 @@ func TestFocusedHelpDoesNotInitializeOrRequireProject(t *testing.T) {
 		{[]string{"help", "select"}, "mogent module add qmr:intro/author-ownership"},
 		{[]string{"build", "--help"}, "existing outputs"},
 		{[]string{"show", "-h"}, "contribution preview"},
-		{[]string{"source", "show", "--help"}, "[--headings]"},
+		{[]string{"source", "show", "--help"}, "mogent source show"},
 		{[]string{"build", "--manifest", "agents.yaml", "--help"}, "Legacy workflows"},
 	} {
 		var stdout, stderr bytes.Buffer

@@ -196,6 +196,7 @@ func TestNativeModuleSelectionCommandsAndSourceAliasView(t *testing.T) {
 	for _, command := range [][]string{
 		{"add", "team:guidance/workflow", "--dry-run"},
 		{"module", "add", "team:guidance/workflow", "--dry-run"},
+		{"module", "select", "team:guidance/workflow", "--dry-run"},
 		{"select", "team:guidance/workflow", "--dry-run"},
 	} {
 		stdout.Reset()

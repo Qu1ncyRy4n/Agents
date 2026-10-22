@@ -31,7 +31,7 @@ func commands() []commandDefinition {
 		{name: "edit", usage: "edit include <alias:path> --localize [--file mogent.plan] [--dry-run]", run: runEdit},
 		{name: "add", usage: "add <source:path> [--file path] [--dry-run] (legacy: --manifest agents.yaml [--under path | --before path | --after path | --append])", run: runAdd},
 		{name: "select", usage: "select <source:path> [--file path] [--dry-run]", run: runSelect},
-		{name: "module", usage: "module add|rm <source:path> [--file path] [--dry-run]", run: runModule},
+		{name: "module", usage: "module add|select|rm <source:path> [--file path] [--all] [--dry-run|--diff]", run: runModule},
 		{name: "rm", usage: "rm <source:path> [--file path] [--dry-run|--diff]", run: runRemove},
 		{name: "optimize", usage: "optimize [--file path]", run: runOptimise},
 		{name: "optimise", usage: "optimise [--file path] (alias for optimize)", run: runOptimise},

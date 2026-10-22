@@ -53,14 +53,14 @@ func runSelect(args []string, stdout, stderr io.Writer) error {
 
 func runModule(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("module requires add or rm; use mogent module add|rm source:path")
+		return fmt.Errorf("module requires add, select, or rm; use mogent module add|select|rm source:path")
 	}
 	switch args[0] {
-	case "add":
+	case "add", "select":
 		return runNativeSelect(args[1:], stdout, stderr)
 	case "rm":
 		return runRemove(args[1:], stdout, stderr)
 	default:
-		return fmt.Errorf("unknown module command %q; use mogent module add|rm source:path", args[0])
+		return fmt.Errorf("unknown module command %q; use mogent module add|select|rm source:path", args[0])
 	}
 }

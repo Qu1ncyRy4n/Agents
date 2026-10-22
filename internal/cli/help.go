@@ -28,7 +28,7 @@ Browse content (advanced: mogent help source)
 Select modules (advanced: mogent help select)
    add <name:path>                    Select a module in the project file
    select <name:path>                 Alias for add
-   module add <name:path>             Explicit module-selection form
+   module add|select <name:path>      Explicit module-selection forms
    rm <name:path>                     Remove one direct include
    except <name:path>                 Exclude a descendant from a selected ancestor
    optimize                            Inspect direct include overlaps; writes nothing
@@ -80,7 +80,10 @@ Browse content (advanced: mogent help source)
 Select modules (advanced: mogent help select)
    add <name:path>                    Select a module in the project file
    select <name:path>                 Alias for add
-    module add <name:path>             Explicit module-selection form
+    module add|select <name:path>      Explicit module-selection forms
+        --all                          Select all direct children (for opt-in trees)
+        --file <path>                  Select a specific plan/build
+        --dry-run                      Preview the include without writing
         --all                          Select all direct children (for opt-in trees)
         --file <path>                  Select a specific plan/build
         --dry-run                      Preview the include without writing
@@ -183,13 +186,14 @@ Next: mogent help select
   mogent add qmr:intro/author-ownership
   mogent select qmr:intro/author-ownership
   mogent module add qmr:intro/author-ownership
+  mogent module select qmr:intro/author-ownership
   mogent rm qmr:intro/author-ownership --diff
   mogent except qmr:workflow/decision-first
 
 Replace qmr and the path with a connected library and a node shown by:
   mogent source show
 
-All three commands append the same validated include to the authored build or
+All four commands append the same validated include to the authored build or
 plan. Includes are applied in the order you select them. Use --dry-run to inspect
 the exact declaration first; use --file to name a specific plan/build.
 
@@ -209,6 +213,9 @@ Removal and overlap review
   mogent rm qmr:intro/author-ownership --diff
   mogent module rm qmr:intro/author-ownership
   mogent optimize
+
+module add and module select have the same --all, --file, and --dry-run flags
+as top-level selection. module rm has --file, --dry-run, and --diff.
 
 rm removes one exact direct include, never an ancestor selection. --diff is a
 safe preview of resulting managed-output changes and writes nothing. optimize
@@ -446,8 +453,8 @@ func writeHelp(path []string, output io.Writer) error {
 	topic := path[0]
 	if len(path) == 2 {
 		switch path[1] {
-		case "add", "list", "ls", "register", "update":
-		case "show", "pin":
+		case "add", "list", "ls", "register", "show", "update":
+		case "pin":
 			topic = "legacy"
 		default:
 			return fmt.Errorf("unknown source help topic %q; use mogent help source", path[1])
