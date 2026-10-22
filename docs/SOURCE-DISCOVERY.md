@@ -47,7 +47,10 @@ mogent source list --tree
 The default source view is a hierarchy with aligned PATH and TYPE columns.
 Library node types remain `dir`, `file`, `md-file`, and `md-section`; presentation
 does not change their semantics. Tree structure follows catalog parent/child
-relationships and declaration order, not inferred filesystem ownership.
+relationships and declaration order. When every payload in a top-level logical
+branch lives below one declared physical directory, the tree nests that branch
+under the directory; mixed-source branches remain logical roots rather than
+being guessed into a directory.
 Flat output uses complete paths sorted lexically. A node address limits the
 view to that subtree. Presets and recipes are not typed content nodes and are
 not included in this initial tree view.
@@ -184,10 +187,14 @@ Explicit child selections are unioned with tag matches. The normal scoped
 Use `mogent source search [source:path] --tag-all <tag> --tag-any <tag>
 --tag-none <tag>` to inspect matching catalog nodes. `--add-commands` prints
 runnable explicit `mogent module add` commands for matching leaf modules only;
-it never suggests a broad parent that would include unrelated descendants. The same
-repeated `--tag-all`, `--tag-any`, and `--tag-none` flags are accepted by
-`mogent module add` for a new dynamic tag-query include. They cannot combine
-with `--all`, because an all-child selection would make the tag query redundant.
+it never suggests a broad parent that would include unrelated descendants. For a
+`source:path` scope, `--add-config` instead prints the pasteable dynamic
+`include` block that expresses the query. The same repeated `--tag-all`,
+`--tag-any`, and `--tag-none` flags are accepted by `mogent module add` for a
+new dynamic tag-query include. `module add --explicit-commands` previews the
+same stable leaf-by-leaf alternative without writing. Tag predicates cannot
+combine with `--all`, because an all-child selection would make the tag query
+redundant.
 
 `module optimize` belongs to selection editing, not `build`: builds never
 rewrite authored choices. Its current overlap removal is semantics-preserving.
