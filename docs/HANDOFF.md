@@ -74,14 +74,17 @@ review.
 
 ## Near-Term Native Roadmap
 
-1. Choose either the dynamic tag-query include or the explicit leaf commands for
-   the next real selection; do not add automatic explicit-to-tag compaction.
-2. Dogfood tag-aware `module add` with `--dry-run --diff` for that real selection.
-3. Complete localization provenance and upstream-reconciliation UX, then dogfood
+1. Refine all-fields source-search presentation: default tree, `--flat`, and
+   rendered-content snippets/context; dogfood it before changing selection.
+2. Design durable membership/event logging for proposed `auto_inherit` tag-query
+   policy; do not implement automatic inheritance before that design is reviewed.
+3. Choose either the dynamic tag-query include or explicit leaf commands for the
+   next real selection, then dogfood it with `--dry-run --diff`.
+4. Complete localization provenance and upstream-reconciliation UX, then dogfood
    a localized physical module through an upstream change.
-4. Dogfood a real output collision and replacement. Only then decide whether the
+5. Dogfood a real output collision and replacement. Only then decide whether the
    CLI needs a replacement option on `module add` or a separate command.
-5. Return to broader curation/defaults, relationship diagnostics, output adoption
+6. Return to broader curation/defaults, relationship diagnostics, output adoption
    and recovery, source freshness/pinning, and richer interactive inspection.
 
 Vendor adapters, global installation, protocol profiles, hooks, reverse

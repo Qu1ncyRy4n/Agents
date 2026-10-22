@@ -131,3 +131,22 @@ Scope/reservations: `tags_none` is now available alongside `tags_all` and
 command remains open; no conversion has been offered or applied.
 Supersedes: none
 Superseded by: none
+
+## CS-D008 — Tag-query inheritance must be explicit and auditable
+
+Status: accepted
+Statement: A tag-query include may later declare `auto_inherit = false|true`.
+The default is `false`: the initial matching membership is accepted and recorded,
+while newly matching upstream modules are reported as candidates rather than
+silently entering the selection. With `true`, later matching modules enter the
+selection automatically. Either path must leave an inspectable durable record
+of the membership/inheritance event.
+Evidence: The owner accepted this direction during the 2026-10-21 Teacher_Bot
+tag-query dogfood discussion and specifically requested logging.
+Scope/reservations: This is a selection-policy decision, not implemented syntax.
+The persistence location/schema, exact build/drift wording, handling of removed
+or retagged accepted members, and the command to accept pending candidates all
+remain to be designed and dogfooded. It does not authorize automatic selection
+rewrites or an `auto_inherit` implementation yet.
+Supersedes: none
+Superseded by: none
