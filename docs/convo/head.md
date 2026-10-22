@@ -1,13 +1,13 @@
 # NOW
 
 - **Goal:** Dogfood native source browsing and upstream-change visibility without automatic selection rewrites.
-- **Current stage:** CS-W024 — Teacher_Bot upstream source reporting is live; refine the next native workflow from the observed report.
-- **One active item:** CS-W024 — review the source-change report and choose the next native feature to dogfood.
-- **Next concrete action:** In Teacher_Bot, run `mogent build`, change one QMR/CDINT module, then inspect `mogent drift --all --diff` for changed/added/removed paths.
+- **Current stage:** CS-W024 — Teacher_Bot upstream source reporting is live; refine report readability and command names from the observed interaction.
+- **One active item:** CS-W024 — review compact drift output and settle the catalog/result/localization command tree.
+- **Next concrete action:** Review the proposed `source tree`, `show tree`, and `module localize` vocabulary against the Teacher_Bot walkthrough.
 - **Blocked by:** none.
 - **Do not:** Rebuild or alter Teacher_Bot’s committed generated outputs, resolve overlap automatically, touch Seam's active development, discard the inference stash, or treat historical checkpoints as current.
-- **Last verified:** 2026-10-21: focused `go test ./assembly ./state ./internal/cli` passed for upstream source baselines, recursive changed/added/removed reporting, and optimize preview/apply. Installed Teacher_Bot verification remains pending because its state must first be refreshed by a normal build.
-- **Working-tree/commit state:** Native-only cleanup and source-report refinement are committed. QMR/CDINT retain the intentional source-change simulation; Teacher_Bot has the corresponding authorized generated output/state updates. No push requested.
+- **Last verified:** 2026-10-21: Teacher_Bot's installed CLI reported CDINT's removed `org/optional/project-defaults` and QMR's changed `intro/assistant-agent` plus added `intro/drift-check`; `drift --diff` exposed one overly broad output hunk. Focused `go test ./textdiff ./internal/cli` passed after compact three-line-context hunk rendering.
+- **Working-tree/commit state:** Compact diff rendering (`b0ea529`) and focused localization help (`18d3731`) are committed. QMR/CDINT retain the intentional source-change simulation; Teacher_Bot has the corresponding authorized generated output/state updates. No push requested.
 
 ---
 Everything below is history/reference. Resume only from the NOW panel above.
