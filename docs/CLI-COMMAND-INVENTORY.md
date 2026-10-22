@@ -41,7 +41,7 @@ with common flags, and `help commands` renders every dispatch-registry signature
 | `update [alias]` | Preview source-pin/output changes; `--accept` updates pins | HCL v2 |
 | `lib init/scan/check` | Create, inspect, validate library YAML sidecars | Legacy schema, not v2 HCL-sidecar editing |
 | `status` | Output ownership/freshness, source summary, next-action hints | YAML v1 |
-| `drift` | Native read-only output-baseline/current-build inspection with optional AGENTS diff; legacy import/reject behavior | Native plan/build by discovery or `--file`; YAML v1 with `--manifest` |
+| `drift` | Native read-only output/current-build inspection plus recorded upstream module changes, with optional AGENTS diff; legacy import/reject behavior | Native plan/build by discovery or `--file`; YAML v1 with `--manifest` |
 | `coverage` | Source coverage tree convenience entry point | YAML v1 |
 | `source add` | Declare a source with dry-run; does not select content | Plan/authored build; explicit legacy YAML |
 | `source list` / `source ls` | List project declarations; `--tree` browses native content | New format; legacy list browsing remains separately routed |

@@ -29,7 +29,7 @@ Add modules (advanced: mogent help module)
    module add <name:path>             Add a module to the project file
    module rm <name:path>              Remove one direct include
    except <name:path>                 Exclude a descendant from a selected ancestor
-   optimize                            Inspect direct include overlaps; writes nothing
+   optimize                            Preview direct include-overlap cleanup; use --apply to write
    reorder                             Group bindings/sources before ordered includes
 
 Preview the selection (advanced: mogent help show)
@@ -85,7 +85,7 @@ Add modules (advanced: mogent help module)
         --dry-run                      Preview the include without writing
    rm <name:path>                     Remove one exact direct include
        --diff                         Preview managed-output changes without writing
-   optimize                            Explain direct ancestor/descendant overlaps; writes nothing
+   optimize                            Preview direct ancestor/descendant cleanup; use --apply to write
    except <name:path>                 Exclude a descendant from its selected ancestor
        --file <path>                  Select a specific plan/build
        --dry-run                      Preview the exception without writing
@@ -208,17 +208,19 @@ mogent add --manifest agents.yaml remains the legacy YAML placement command.
 Removal and overlap review
   mogent module rm qmr:intro/author-ownership --dry-run --diff
   mogent module rm qmr:intro/author-ownership
-  mogent optimize
+  mogent optimize                       # default dry-run
+  mogent optimize --apply
 
 module add has --all, --file, --dry-run, and --diff. module rm has --file,
 --dry-run, and --diff. Combine --dry-run --diff for a read-only patch; bare
 --diff applies the requested edit and reports it. The short top-level add/rm forms remain compatibility
 shortcuts while we dogfood the explicit module vocabulary.
 
-module rm removes one exact direct include, never an ancestor selection. --diff is a
-safe preview of resulting managed-output changes and writes nothing. optimize
-only identifies ancestor/descendant direct includes; repeated content can be
-intentional, so it never rewrites the file.
+module rm removes one exact direct include, never an ancestor selection. Combine
+--dry-run --diff for a safe project/output preview; bare --diff writes and
+reports that change. optimize previews removal of redundant direct descendants
+by default. Repetition can be intentional, so it changes the file only with
+the explicit --apply.
 
 Exception behavior
   mogent except qmr:workflow/decision-first

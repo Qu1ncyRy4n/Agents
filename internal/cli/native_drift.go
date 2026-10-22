@@ -39,7 +39,7 @@ func runNativeDrift(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	result, _, err := assembly.ResolvePlan(file, entryPath)
+	result, sources, err := assembly.ResolvePlan(file, entryPath)
 	if err != nil {
 		return err
 	}
@@ -53,6 +53,9 @@ func runNativeDrift(args []string, stdout, stderr io.Writer) error {
 	}
 	workspaceRoot := filepath.Dir(entryPath)
 	statePath := filepath.Join(workspaceRoot, ".mogent", "state.json")
+	if err := writeNativeSourceDrift(stdout, statePath, sources); err != nil {
+		return err
+	}
 	if !*all {
 		return writeNativeFileDrift(stdout, filepath.Join(workspaceRoot, "AGENTS.md"), statePath, manifest.Files["AGENTS.md"].Bytes, *diff)
 	}
@@ -60,6 +63,128 @@ func runNativeDrift(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	return writeNativeSkillsDrift(stdout, workspaceRoot, statePath, manifest, *diff)
+}
+
+type sourceChange struct {
+	kind string
+	path string
+}
+
+// writeNativeSourceDrift compares a consumer's last observed library trees to
+// the current connected libraries. It never treats a source hash as identity:
+// the source alias and module path remain the human-facing references.
+func writeNativeSourceDrift(stdout io.Writer, statePath string, sources map[string]assembly.Source) error {
+	current, err := assembly.SourceBaselines(sources)
+	if err != nil {
+		return err
+	}
+	previous, err := state.SourceBaselines(statePath)
+	if err != nil {
+		return err
+	}
+	aliases := map[string]bool{}
+	for alias := range current {
+		aliases[alias] = true
+	}
+	for alias := range previous {
+		aliases[alias] = true
+	}
+	if len(aliases) == 0 {
+		return nil
+	}
+	ordered := make([]string, 0, len(aliases))
+	for alias := range aliases {
+		ordered = append(ordered, alias)
+	}
+	sort.Strings(ordered)
+	for _, alias := range ordered {
+		old, hadBaseline := previous[alias]
+		new, connected := current[alias]
+		if _, err := fmt.Fprintf(stdout, "Source: %s\n", alias); err != nil {
+			return err
+		}
+		if !connected {
+			if _, err := fmt.Fprintln(stdout, "Upstream baseline: source is no longer connected"); err != nil {
+				return err
+			}
+			continue
+		}
+		if !hadBaseline {
+			if _, err := fmt.Fprintln(stdout, "Upstream baseline: not recorded; run mogent build to record current library content"); err != nil {
+				return err
+			}
+			continue
+		}
+		if old.SHA256 == new.SHA256 {
+			if _, err := fmt.Fprintln(stdout, "Upstream baseline: matches"); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, err := fmt.Fprintln(stdout, "Upstream baseline: differs"); err != nil {
+			return err
+		}
+		changes := sourceChanges(old.Nodes, new.Nodes)
+		if len(changes) == 0 {
+			changes = []sourceChange{{kind: "changed", path: "<library metadata>"}}
+		}
+		for _, change := range changes {
+			if _, err := fmt.Fprintf(stdout, "  %s: %s:%s\n", change.kind, alias, change.path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// sourceChanges descends through changed paths until it reaches the paths that
+// differ themselves. A changed ancestor caused solely by an added, removed, or
+// changed descendant is therefore not repeated in the report.
+func sourceChanges(previous, current map[string]string) []sourceChange {
+	paths := map[string]bool{}
+	for path := range previous {
+		paths[path] = true
+	}
+	for path := range current {
+		paths[path] = true
+	}
+	ordered := make([]string, 0, len(paths))
+	for path := range paths {
+		ordered = append(ordered, path)
+	}
+	sort.Strings(ordered)
+	changed := make(map[string]sourceChange, len(ordered))
+	for _, path := range ordered {
+		old, before := previous[path]
+		new, after := current[path]
+		switch {
+		case !before:
+			changed[path] = sourceChange{kind: "added", path: path}
+		case !after:
+			changed[path] = sourceChange{kind: "removed", path: path}
+		case old != new:
+			changed[path] = sourceChange{kind: "changed", path: path}
+		}
+	}
+	var result []sourceChange
+	for _, path := range ordered {
+		change, found := changed[path]
+		if !found || hasChangedDescendant(path, changed) {
+			continue
+		}
+		result = append(result, change)
+	}
+	return result
+}
+
+func hasChangedDescendant(path string, changed map[string]sourceChange) bool {
+	prefix := path + "/"
+	for candidate := range changed {
+		if strings.HasPrefix(candidate, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func nativeStatusRequested(args []string) bool {

@@ -15,10 +15,19 @@ import (
 )
 
 type generated struct {
-	Version    int               `json:"version,omitempty"`
-	OutputPath string            `json:"output_path,omitempty"`
-	SHA256     string            `json:"sha256,omitempty"`
-	Outputs    map[string]record `json:"outputs,omitempty"`
+	Version    int                       `json:"version,omitempty"`
+	OutputPath string                    `json:"output_path,omitempty"`
+	SHA256     string                    `json:"sha256,omitempty"`
+	Outputs    map[string]record         `json:"outputs,omitempty"`
+	Sources    map[string]SourceBaseline `json:"sources,omitempty"`
+}
+
+// SourceBaseline is the last observed, deterministic content tree for one
+// connected library. Paths remain stable module identities; hashes only tell
+// us which paths need further comparison.
+type SourceBaseline struct {
+	SHA256 string            `json:"sha256"`
+	Nodes  map[string]string `json:"nodes"`
 }
 
 type record struct {
@@ -198,6 +207,12 @@ func WriteAll(statePath string, files map[string]string, directories map[string]
 // BuildAll serializes portable generated-output state without writing it. This
 // lets callers include state in a larger filesystem transaction.
 func BuildAll(statePath string, files map[string]string, directories map[string]map[string]string) ([]byte, error) {
+	return BuildAllWithSources(statePath, files, directories, nil)
+}
+
+// BuildAllWithSources serializes output ownership together with the observed
+// upstream library baselines. It does not read or write source libraries.
+func BuildAllWithSources(statePath string, files map[string]string, directories map[string]map[string]string, sources map[string]SourceBaseline) ([]byte, error) {
 	outputs := make(map[string]record, len(files)+len(directories))
 	for path, content := range files {
 		key, err := outputKey(statePath, path)
@@ -217,11 +232,41 @@ func BuildAll(statePath string, files map[string]string, directories map[string]
 		}
 		outputs[key] = record{Kind: "directory", Files: copy}
 	}
-	contents, err := json.MarshalIndent(generated{Version: 3, Outputs: outputs}, "", "  ")
+	copySources := make(map[string]SourceBaseline, len(sources))
+	for alias, baseline := range sources {
+		nodes := make(map[string]string, len(baseline.Nodes))
+		for path, digest := range baseline.Nodes {
+			nodes[path] = digest
+		}
+		copySources[alias] = SourceBaseline{SHA256: baseline.SHA256, Nodes: nodes}
+	}
+	contents, err := json.MarshalIndent(generated{Version: 4, Outputs: outputs, Sources: copySources}, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("encode generated-output state: %w", err)
 	}
 	return append(contents, '\n'), nil
+}
+
+// SourceBaselines returns the saved source fingerprints, if the state was
+// written by a native build that recorded them. A missing state is not an
+// error because output inspection also supports untracked workspaces.
+func SourceBaselines(statePath string) (map[string]SourceBaseline, error) {
+	previous, err := readState(statePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	baselines := make(map[string]SourceBaseline, len(previous.Sources))
+	for alias, baseline := range previous.Sources {
+		nodes := make(map[string]string, len(baseline.Nodes))
+		for path, digest := range baseline.Nodes {
+			nodes[path] = digest
+		}
+		baselines[alias] = SourceBaseline{SHA256: baseline.SHA256, Nodes: nodes}
+	}
+	return baselines, nil
 }
 
 func portableStateKey(statePath, path string) (string, error) {
@@ -413,7 +458,7 @@ func (g generated) output(path, statePath string) (record, bool, error) {
 		return value, true, nil
 	}
 	// Version two keyed outputs by absolute paths. Keep that read path only for
-	// migration; all writes emit version three portable keys.
+	// migration; current BuildAll writes use portable version-four keys.
 	abs := normalizedOutputPath(path)
 	if value, ok := g.Outputs[abs]; ok {
 		return value, true, nil

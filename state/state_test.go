@@ -171,7 +171,7 @@ func TestPortableStateSurvivesWorkspaceMove(t *testing.T) {
 	if err := json.Unmarshal(contents, &written); err != nil {
 		t.Fatal(err)
 	}
-	if written["version"] != float64(3) || written["output_path"] != nil || written["sha256"] != nil || strings.Contains(string(contents), first) {
+	if written["version"] != float64(4) || written["output_path"] != nil || written["sha256"] != nil || strings.Contains(string(contents), first) {
 		t.Fatalf("state is not clean and portable: %s", contents)
 	}
 	if err := os.MkdirAll(filepath.Join(second, ".mogent"), 0o755); err != nil {

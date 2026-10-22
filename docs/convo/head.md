@@ -1,13 +1,13 @@
 # NOW
 
 - **Goal:** Dogfood native source browsing and upstream-change visibility without automatic selection rewrites.
-- **Current stage:** CS-W024 — source-oriented browsing accepted; inspect the changed/added/removed upstream cases before choosing provenance behavior.
-- **One active item:** CS-W024 — observe and decide how native status should explain upstream library changes.
-- **Next concrete action:** Specify the deterministic per-node and library-root content-hash payloads, then implement comparison/descent against the consumer's recorded baseline.
-- **Blocked by:** Exact canonical bytes/metadata and physical-tree coverage for each node type.
+- **Current stage:** CS-W024 — native browsing and upstream module reporting implemented; dogfood a fresh recorded source baseline in Teacher_Bot.
+- **One active item:** CS-W024 — observe source-change reporting against the QMR/CDINT simulation after one intentional baseline build.
+- **Next concrete action:** In Teacher_Bot, run `mogent build`, change one QMR/CDINT module, then inspect `mogent drift --all --diff` for changed/added/removed paths.
+- **Blocked by:** Owner must choose when to write Teacher_Bot's currently dirty generated outputs/state.
 - **Do not:** Rebuild or alter Teacher_Bot’s committed generated outputs, resolve overlap automatically, touch Seam's active development, discard the inference stash, or treat historical checkpoints as current.
-- **Last verified:** 2026-10-21: focused `go test ./internal/cli ./assembly` passed; installed CLI verified `source show`, `show`, `status`, `drift --all --diff`, and `optimize` in Teacher_Bot. `build --check` correctly failed after the upstream QMR simulation. Owner requires module-level upstream-change detail.
-- **Working-tree/commit state:** Agents native command implementation is committed; this documentation checkpoint records its active follow-up. QMR and CDINT demo libraries have pre-existing plus isolated simulation changes; Teacher_Bot main at 878de7c remains clean. No push requested.
+- **Last verified:** 2026-10-21: focused `go test ./assembly ./state ./internal/cli` passed for upstream source baselines, recursive changed/added/removed reporting, and optimize preview/apply. Installed Teacher_Bot verification remains pending because its state must first be refreshed by a normal build.
+- **Working-tree/commit state:** Agents implementation is pending an atomic commit. QMR and CDINT demo libraries have pre-existing plus isolated simulation changes; Teacher_Bot has owner-authored dirty generated outputs/state and remains out of scope for automatic edits. No push requested.
 
 ---
 Everything below is history/reference. Resume only from the NOW panel above.

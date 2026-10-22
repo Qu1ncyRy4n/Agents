@@ -90,7 +90,7 @@ Superseded by: none
 
 ## CS-D006 — Module-level upstream-change detail
 
-Status: accepted
+Status: implemented
 Statement: Native upstream-change reporting must identify changed, added, and
 removed resolved modules within each library, rather than only reporting that a
 managed output differs. Each library has deterministic content fingerprints for
@@ -101,9 +101,12 @@ Evidence: During the 2026-10-21 Teacher_Bot QMR/CDINT simulation, the owner
 asked that module/within-library changes be detailed.
 Scope/reservations: Content hashes are change fingerprints, not node identity:
 stable source paths remain references. The consumer state stores its prior
-comparison baseline; the library's fingerprints are deterministic from its
-current catalog/content, not mutable per-consumer history. Define canonical
-metadata, source bytes, physical-tree mode/empty-directory behavior, and Git
-input treatment before implementation.
+comparison baseline; the library's fingerprints are deterministic from current
+semantic node metadata, selected payload bytes/physical-tree layout, ordered
+children, and library name. Mismatched ancestor hashes are suppressed when a
+more-specific changed, added, or removed descendant is found. Older state has
+no upstream baseline and requires a normal build to create one. The focused
+assembly/state/CLI tests passed on 2026-10-21; Teacher_Bot remains to be
+dogfooded without overriding owner-authored outputs.
 Supersedes: none
 Superseded by: none

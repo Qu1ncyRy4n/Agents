@@ -24,6 +24,7 @@ func newCLIFixture(t *testing.T) string {
 	root := t.TempDir()
 	writeNewCLIFile(t, root, "team/mogent.lib", `library {format=1;name="Team"}
 md-section "guidance" {md-section "workflow" {source="guidance/workflow.md";vars=["repo_name"]}}
+md-section "obsolete" {source="obsolete.md"}
 dir "skills" {source="skills";curate="choose"
   node "review" {role="skill";content="SKILL.md";default=true}
   node "testing" {default=true}
@@ -31,6 +32,7 @@ dir "skills" {source="skills";curate="choose"
 preset "recommended" {include "self:guidance";include "self:skills" {accept_defaults=true}}
 `)
 	writeNewCLIFile(t, root, "team/guidance/workflow.md", "# Workflow\n\nProject: ${repo_name}\n")
+	writeNewCLIFile(t, root, "team/obsolete.md", "# Obsolete\n")
 	writeNewCLIFile(t, root, "team/skills/review/SKILL.md", "---\nname: review\ndescription: Review\n---\n# Review\n")
 	writeNewCLIFile(t, root, "team/skills/testing/SKILL.md", "---\nname: testing\ndescription: Test\n---\n# Testing\n")
 	writeNewCLIFile(t, root, "mogent.plan", `plan {format=1}

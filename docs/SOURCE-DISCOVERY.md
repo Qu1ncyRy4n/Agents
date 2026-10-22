@@ -131,7 +131,11 @@ the managed `.agents/skills` tree, including missing, modified, and unexpected
 files; `status` is the concise all-output form. `--diff` prints text output
 diffs and changed skill paths. `build --check` verifies all managed outputs,
 including skill bytes, modes, and directory layout. Native drift/status are
-read-only; legacy import/reject flags remain explicit YAML behavior.
+read-only; legacy import/reject flags remain explicit YAML behavior. Native
+builds also record deterministic library-root and per-node fingerprints. Drift
+compares those saved baselines with each connected library, descending a changed
+tree until it can name changed, added, or removed module paths. State written
+before this feature has no upstream baseline; run `mogent build` to record one.
 
 Exclude one descendant from a direct selected ancestor:
 
@@ -149,17 +153,19 @@ item." It deliberately does not remove another direct include. Use explicit
 review commands instead:
 
 ```sh
-mogent rm qmr:workflow/decision-first --diff # preview: writes nothing
+mogent rm qmr:workflow/decision-first --dry-run --diff # preview: writes nothing
 mogent rm qmr:workflow/decision-first        # remove one exact direct include
 mogent module rm qmr:workflow/decision-first # equivalent explicit form
-mogent optimize                              # inspect ancestor/descendant overlap
+mogent optimize                              # default preview of overlap cleanup
+mogent optimize --apply                      # remove redundant direct descendants
 ```
 
 `rm` never removes an ancestor selection or guesses among repeated exact
-includes. `--diff` composes the before/after managed outputs without writing
-the project file or outputs. `optimize` (with `optimise` retained as an alias) warns about
-direct ancestor/descendant includes and suggests a removable descendant, but
-never deduplicates, reorders, or otherwise rewrites deliberate repetition.
+includes. Combine `--dry-run --diff` to compose the before/after managed
+outputs without writing; bare `--diff` applies and reports its patch.
+`optimize` (with `optimise` retained as an alias) shows that same combined
+preview by default. Its `--apply` removes redundant direct descendants, but
+never reorders or silently changes selections.
 
 Reorder authored configuration without changing selection semantics:
 

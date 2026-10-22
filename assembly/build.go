@@ -350,7 +350,17 @@ func RefreshLocalInputHashes(file *syntax.File, filename string) ([]byte, []Sour
 // Apply writes the generated root guide and skills subtree. It only owns the two
 // declared output roots and preserves unrelated .agents entries.
 func Apply(workspace string, manifest *content.Manifest) error {
-	return apply(workspace, manifest, nil)
+	return apply(workspace, manifest, nil, nil)
+}
+
+// ApplyWithSources installs outputs and records the connected libraries that
+// supplied this build as the baseline for later upstream-change inspection.
+func ApplyWithSources(workspace string, manifest *content.Manifest, sources map[string]Source) error {
+	baselines, err := SourceBaselines(sources)
+	if err != nil {
+		return err
+	}
+	return apply(workspace, manifest, nil, baselines)
 }
 
 // ApplyGenerated installs managed outputs and a newly sequenced build as one
@@ -359,10 +369,22 @@ func ApplyGenerated(workspace string, manifest *content.Manifest, build []byte) 
 	if len(build) == 0 {
 		return fmt.Errorf("generated build is empty")
 	}
-	return apply(workspace, manifest, build)
+	return apply(workspace, manifest, build, nil)
 }
 
-func apply(workspace string, manifest *content.Manifest, build []byte) error {
+// ApplyGeneratedWithSources is ApplyGenerated with an upstream baseline.
+func ApplyGeneratedWithSources(workspace string, manifest *content.Manifest, build []byte, sources map[string]Source) error {
+	if len(build) == 0 {
+		return fmt.Errorf("generated build is empty")
+	}
+	baselines, err := SourceBaselines(sources)
+	if err != nil {
+		return err
+	}
+	return apply(workspace, manifest, build, baselines)
+}
+
+func apply(workspace string, manifest *content.Manifest, build []byte, sources map[string]state.SourceBaseline) error {
 	if manifest == nil {
 		return fmt.Errorf("nil output manifest")
 	}
@@ -418,7 +440,7 @@ func apply(workspace string, manifest *content.Manifest, build []byte) error {
 	for name, payload := range skills.Files {
 		directories[filepath.Join(workspace, ".agents", "skills")][name] = state.Hash(payload.Bytes)
 	}
-	stateBytes, err := state.BuildAll(statePath, files, directories)
+	stateBytes, err := state.BuildAllWithSources(statePath, files, directories, sources)
 	if err != nil {
 		return err
 	}

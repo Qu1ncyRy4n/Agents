@@ -368,6 +368,48 @@ func TestNativeDriftUsesStateAndCurrentComposition(t *testing.T) {
 	}
 }
 
+func TestNativeDriftReportsUpstreamModuleChanges(t *testing.T) {
+	root := newCLIFixture(t)
+	t.Chdir(root)
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"build"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	if err := Run([]string{"drift"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Source: team\nUpstream baseline: matches") {
+		t.Fatalf("clean upstream status=%s", stdout.String())
+	}
+	writeNewCLIFile(t, root, "team/guidance/workflow.md", "# Workflow\n\nChanged upstream.\n")
+	writeNewCLIFile(t, root, "team/added.md", "# Added\n")
+	writeNewCLIFile(t, root, "team/mogent.lib", `library {format=1;name="Team"}
+md-section "guidance" {md-section "workflow" {source="guidance/workflow.md";vars=["repo_name"]}}
+md-section "added" {source="added.md"}
+dir "skills" {source="skills";curate="choose"
+  node "review" {role="skill";content="SKILL.md";default=true}
+  node "testing" {default=true}
+}
+preset "recommended" {include "self:guidance";include "self:skills" {accept_defaults=true}}
+`)
+	stdout.Reset()
+	if err := Run([]string{"drift"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Source: team", "Upstream baseline: differs",
+		"changed: team:guidance/workflow", "added: team:added", "removed: team:obsolete",
+	} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("upstream drift missing %q:\n%s", want, stdout.String())
+		}
+	}
+	if strings.Contains(stdout.String(), "changed: team:guidance\n") {
+		t.Fatalf("upstream drift should descend to changed leaf:\n%s", stdout.String())
+	}
+}
+
 func TestNativeStatusRemoveAndOptimise(t *testing.T) {
 	root := newCLIFixture(t)
 	t.Chdir(root)
@@ -407,8 +449,12 @@ func TestNativeStatusRemoveAndOptimise(t *testing.T) {
 	if err := Run([]string{"optimize"}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(stdout.String(), "Overlap: team:guidance already includes descendant team:guidance/workflow") || !strings.Contains(stdout.String(), "No files written") {
+	if !strings.Contains(stdout.String(), "Overlap: team:guidance already includes descendant team:guidance/workflow") || !strings.Contains(stdout.String(), "Dry run: no files written") || !strings.Contains(stdout.String(), "Proposed project change:") {
 		t.Fatalf("optimize=%s", stdout.String())
+	}
+	contents, err := os.ReadFile(filepath.Join(root, "mogent.plan"))
+	if err != nil || !strings.Contains(string(contents), `include "team:guidance/workflow"`) {
+		t.Fatalf("optimize preview wrote project: %s err=%v", contents, err)
 	}
 	stdout.Reset()
 	if err := Run([]string{"show", "--build"}, &stdout, &stderr); err != nil {
@@ -416,5 +462,16 @@ func TestNativeStatusRemoveAndOptimise(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "warning: team:guidance also directly includes team:guidance/workflow") {
 		t.Fatalf("show=%s", stdout.String())
+	}
+	stdout.Reset()
+	if err := Run([]string{"optimize", "--apply"}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "Applied optimized selection:") {
+		t.Fatalf("optimize apply=%s", stdout.String())
+	}
+	contents, err = os.ReadFile(filepath.Join(root, "mogent.plan"))
+	if err != nil || strings.Contains(string(contents), `include "team:guidance/workflow"`) {
+		t.Fatalf("optimize apply did not remove descendant: %s err=%v", contents, err)
 	}
 }

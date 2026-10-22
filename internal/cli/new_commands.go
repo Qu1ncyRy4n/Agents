@@ -207,7 +207,7 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 	if err := assembly.VerifyBuildChecksum(contents); err != nil {
 		return err
 	}
-	result, _, err := assembly.ResolvePlan(file, buildPath)
+	result, sources, err := assembly.ResolvePlan(file, buildPath)
 	if err != nil {
 		return err
 	}
@@ -228,10 +228,10 @@ func runNewBuild(args []string, stdout, stderr io.Writer) error {
 	}
 	workspace := filepath.Dir(buildPath)
 	if generatedBuild != nil {
-		if err := assembly.ApplyGenerated(workspace, manifest, generatedBuild); err != nil {
+		if err := assembly.ApplyGeneratedWithSources(workspace, manifest, generatedBuild, sources); err != nil {
 			return err
 		}
-	} else if err := assembly.Apply(workspace, manifest); err != nil {
+	} else if err := assembly.ApplyWithSources(workspace, manifest, sources); err != nil {
 		return err
 	}
 	_, err = fmt.Fprintf(stdout, "Built %s\n", workspace)
