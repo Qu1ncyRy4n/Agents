@@ -41,6 +41,7 @@ mogent source tree
 mogent source tree --chars unicode
 mogent source tree --flat
 mogent source tree qmr:intro
+mogent source tree qmr --included
 mogent source tree qmr --not-included
 mogent source list --tree
 ```
@@ -56,11 +57,11 @@ Flat output uses complete paths sorted lexically. A node address limits the
 view to that subtree. Presets and recipes are not typed content nodes and are
 not included in this initial tree view.
 
-`--not-included` compares the catalog with the resolved project selection and
-hides selected nodes, retaining only the ancestor structure needed to navigate
-available descendants. It is read-only and works with either tree or `--flat`
-output; source-resolution errors still remain visible through `mogent show
-issues`.
+`--included` and `--not-included` compare the catalog with the resolved project
+selection. They show the selected modules or hide them respectively, retaining
+only the ancestor structure needed to navigate the displayed descendants. They
+are read-only, work with either tree or `--flat` output, and cannot combine.
+Source-resolution errors still remain visible through `mogent show issues`.
 
 The connectors and alignment reuse existing conventions from
 [DESIGN.md](DESIGN.md): `display.chars: ascii|unicode`, `display.align`, and CLI
