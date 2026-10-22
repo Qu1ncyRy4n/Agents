@@ -9,7 +9,7 @@ import (
 	"github.com/Qu1ncyRy4n/Agents/assembly"
 )
 
-func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requested string, flat, align bool, charSet string) error {
+func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requested string, flat, align bool, charSet string, included map[string]map[string]bool) error {
 	aliases := make([]string, 0, len(sources))
 	for alias := range sources {
 		aliases = append(aliases, alias)
@@ -44,6 +44,9 @@ func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requeste
 			}
 			sort.Strings(paths)
 			for _, path := range paths {
+				if catalogIncluded(included, alias, path) {
+					continue
+				}
 				rows = append(rows, []string{path, string(library.ByPath[path].Type)})
 			}
 		} else {
@@ -62,6 +65,9 @@ func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requeste
 			if requestedPath != "" {
 				nodes = []*assembly.Node{library.ByPath[requestedPath]}
 			}
+			if included != nil {
+				nodes = catalogUnincluded(nodes, included[alias])
+			}
 			visit(nodes, "")
 		}
 		if len(rows) == 1 {
@@ -75,6 +81,40 @@ func writeCatalog(stdout io.Writer, sources map[string]assembly.Source, requeste
 		}
 	}
 	return nil
+}
+
+func catalogIncluded(included map[string]map[string]bool, alias, path string) bool {
+	return catalogPathIncluded(included[alias], path)
+}
+
+func catalogUnincluded(nodes []*assembly.Node, included map[string]bool) []*assembly.Node {
+	var result []*assembly.Node
+	for _, node := range nodes {
+		if catalogPathIncluded(included, node.Path) {
+			continue
+		}
+		copy := *node
+		copy.Children = catalogUnincluded(node.Children, included)
+		if len(node.Children) != 0 && len(copy.Children) == 0 {
+			continue
+		}
+		result = append(result, &copy)
+	}
+	return result
+}
+
+func catalogPathIncluded(included map[string]bool, path string) bool {
+	for current := path; current != ""; {
+		if included[current] {
+			return true
+		}
+		index := strings.LastIndex(current, "/")
+		if index < 0 {
+			break
+		}
+		current = current[:index]
+	}
+	return false
 }
 
 // catalogRoots makes a physical directory the visible owner of a top-level

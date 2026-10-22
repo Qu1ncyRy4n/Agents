@@ -29,6 +29,7 @@ md-section "obsolete" {source="obsolete.md"}
 dir "skills" {source="skills";curate="choose"
   node "review" {role="skill";content="SKILL.md";default=true;tags=["quality/review"]}
   node "testing" {default=true;tags=["language/go"]}
+  node "deployment" {default=false;tags=["deployment"]}
 }
 preset "recommended" {include "self:guidance";include "self:skills" {accept_defaults=true}}
 `)
@@ -36,6 +37,7 @@ preset "recommended" {include "self:guidance";include "self:skills" {accept_defa
 	writeNewCLIFile(t, root, "team/obsolete.md", "# Obsolete\n")
 	writeNewCLIFile(t, root, "team/skills/review/SKILL.md", "---\nname: review\ndescription: Review\n---\n# Review\n")
 	writeNewCLIFile(t, root, "team/skills/testing/SKILL.md", "---\nname: testing\ndescription: Test\n---\n# Testing\n")
+	writeNewCLIFile(t, root, "team/skills/deployment/SKILL.md", "---\nname: deployment\ndescription: Deploy\n---\n# Deployment\n")
 	writeNewCLIFile(t, root, "mogent.plan", `plan {format=1}
 let repo_name="Demo"
 source "team" {local="team"}
@@ -160,6 +162,23 @@ func TestSourceTreeNestsLogicalBranchUnderPhysicalDirectory(t *testing.T) {
 	for _, line := range strings.Split(output, "\n") {
 		if strings.Contains(line, "guidance") && !strings.Contains(line, "|   ") {
 			t.Fatalf("logical branch should be indented below physical directory:\n%s", output)
+		}
+	}
+}
+
+func TestSourceTreeCanShowOnlyUnincludedNodes(t *testing.T) {
+	root := newCLIFixture(t)
+	var stdout, stderr bytes.Buffer
+	if err := Run([]string{"source", "tree", "team", "--not-included", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil {
+		t.Fatal(err)
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "obsolete") || !strings.Contains(output, "deployment") {
+		t.Fatalf("missing unselected nodes:\n%s", output)
+	}
+	for _, included := range []string{"guidance", "review", "testing"} {
+		if strings.Contains(output, included) {
+			t.Fatalf("included node %q should be filtered:\n%s", included, output)
 		}
 	}
 }
