@@ -80,7 +80,6 @@ All previews are read-only.
 
 ```sh
 mogent add qmr:intro/author-ownership
-mogent select qmr:intro/author-ownership
 mogent module add qmr:intro/author-ownership
 mogent add qmr:intro/author-ownership --dry-run
 ```

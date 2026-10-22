@@ -17,10 +17,10 @@ working-tree distinctions, deferred decisions, and safe re-entry. Read it after
 the NOW panel when resuming the native plan/build dogfood work.
 
 The current follow-up uses `mogent source show` for the native catalog and
-`mogent show` for selected contributions. An isolated QMR/CDINT change/add/remove
-simulation confirms that output state detects changed effective outputs but does
-not yet identify authored upstream inputs; [NOW](convo/head.md) owns that active
-design decision.
+`mogent show --tree` for selected contributions. An isolated QMR/CDINT
+change/add/remove simulation confirms that `drift` identifies changed, added,
+and removed upstream module paths as well as output state. [NOW](convo/head.md)
+owns the remaining command-vocabulary review.
 
 ## Sources of Authority
 
@@ -42,87 +42,24 @@ design decision.
 If a chat recap or this navigation file conflicts with Git or an authority
 above, inspect the authority and current working tree.
 
-## Product Workstream Reference
+## Native Product Baseline
 
-The owner approved initial implementation, chose `mogent.lib`, clarified
-separators, and requested API implementation -> API tests -> CLI -> CLI behavior
-tests. The first bounded syntax API slice is now implemented in `syntax/`:
-Parse, source-located ordered AST/comments, explicit string substitution, and
-deterministic formatting/alias expansion. External-package API tests pass.
-`nix develop -c tools/check` passes, including full tests/vet/deadcode/errcheck.
+Mogent's supported project interface is the native `mogent.build`/`mogent.plan`
+language and `mogent.lib` libraries. The current commands and their supported
+semantics are recorded in [CLI-COMMAND-INVENTORY.md](CLI-COMMAND-INVENTORY.md);
+the active dogfooding state is in [NOW](convo/head.md).
 
-The catalog/resolver, generated builds, local/Git source pinning, assembly, basic
-CLI (`sequence`, `show`, `build --file`, `edit include --localize`) and focused
-behavior tests are now delivered. `build --check` compares managed local outputs.
+The implemented core composes typed Markdown sections and complete physical
+bundles from explicit source declarations and includes. Builds protect managed
+`AGENTS.md` and selected `.agents/skills` outputs; `status` and `drift` inspect
+output state and saved upstream source fingerprints. Localizing a selected
+physical input makes one editable project-local copy without later automatic
+recopying.
 
-**Next: finish S2/S4/S5 gaps**: optional/opt-in broad curation and retained omission
-provenance, complete output/state rollback, source-update acceptance/provenance baseline
-records, and richer result inspection/help. Scoped tag selection, include-local
-exclusions, reason enforcement, final requires/conflicts/exclusive-group validation,
-and mode/empty-directory output drift checks are delivered. Do not describe the current CLI as a replacement
-for legacy default commands until the cutover slice verifies those workflows.
-
-Delivered no-argument behavior: when invoked without `--manifest`/`--file`,
-`mogent build` chooses a local `mogent.plan` first, then `mogent.build`; otherwise
-it preserves legacy manifest behavior. `sequence` refuses to replace an authored
-or manually edited generated build. `build --file` remains the unambiguous route
-for scripted workflows. These behaviors have focused CLI tests.
-
-1. [First-slice spec](proposals/MOGENT-FIRST-SLICE-SPEC.md): accepted direction plus
-   a clearly marked proposed-engineering-detail table.
-2. [Acceptance cases](proposals/MOGENT-FIRST-SLICE-ACCEPTANCE.md): pilot fixture,
-   concrete success/failure/rollback cases; syntax portions are tested, others pending.
-3. [Implementation sequence](../TODO/TODO-config-first-slice.md): R1-R3 review gates
-   and S1-S6 slices mapping onto reusable code.
-
-Owner selected **B: include the new library format in the initial redesign**.
-Typed-node refinements are now in spec section 4 and acceptance L01-L13:
-`md-section` for guidance and `md-file` for intact Markdown, with `dir`/`file`,
-optional role/content, curation/presets, and explicit guidance vars/values.
-The owner accepted the final review and starting the first slice. Keep existing config files for interpretation during
-migration/reference, but do not carry YAML as a maintained runtime format. This
-supersedes the earlier proposed HCL-library bridge. Library filename is `mogent.lib`;
-no special `skill` keyword is needed. No commits have been made during this work.
-
-Key accepted direction: custom small language; one `include` family; `replace`
-alias normalizes to `include` with a flag; no copy alias or ordinary copy/render/
-append switches. Plans compile through the same build representation/executor as
-direct authored builds. Default build sequences if needed, protects authored and
-edited generated files, and materializes root AGENTS.md plus selected `.agents/`
-artifacts. Localize once into an editable local sublibrary; later builds preserve
-edits. Git commits/local complete-node hashes identify inputs. Tags/curation,
-reasons, defaults, library order, and unresolved result callouts remain core.
-
-The [conversation stack](../TODO/2026-10-14-212422-conversation-stack.md) preserves
-the historical refinements and parked questions; its old resume pointers are
-reference only. Use [NOW](convo/head.md) for current work.
-Keep responses short, handle one issue at a
-time, and do not restart vocabulary/format research. The
-[walkthrough](proposals/MOGENT-LANGUAGE-WALKTHROUGH.md) preserves example evolution;
-the [CLI inventory](CLI-COMMAND-INVENTORY.md) distinguishes delivered behavior.
-Legacy commands/formats may be retired after equivalent core workflows are verified.
-Protocol headers, standards/harness comparison, CI/skill wrappers, symlinks/global
-targets, reverse inference, and the richer interactive UI remain follow-ups.
-
-### Existing Implementation Baseline
-
-The delivered HCL v2 rollout is tracked in
-[`TODO/TODO-pupab-hcl-v2-rollout.md`](../TODO/TODO-pupab-hcl-v2-rollout.md)
-against [`proposals/MOGENT-HCL-V2-SPEC.md`](proposals/MOGENT-HCL-V2-SPEC.md).
-`plan`, `apply`, `update`, commit pinning, curation, tree outputs, and v2
-`source list`/`show` are implemented; `tools/v2-stories` exercises the
-acceptance scenarios against the sibling QMR library. Open owner decisions:
-whether `curate` becomes required
-on every branch.
-
-Typed composition is now delivered under DR-juvih / DI-juvih-first-slice:
-named physical roots, optional parsed heading views, mixed `dir-tree` copy/render
-outputs, explicit replacement/append, complete bundle copying, directory-update
-previews, and byte/mode/directory drift protection. Core APIs/unit tests precede
-CLI usage tests in the atomic commit sequence. See [TYPED-CONTENT.md](TYPED-CONTENT.md)
-and the runnable `testing-ground/typed-content-demo/` fixture. Generalized selectors,
-annotations, scoped earlier-layer deletion, global/vendor adapters, and editable
-heading derivatives remain follow-up work.
+Tag selection, richer curation/relationship rules, provenance reconciliation,
+interactive UI work, global targets, and reverse inference remain future work.
+The first-slice specification and walkthrough are design/history references,
+not alternate live command references.
 
 CDINT source review remains paused pending Steve curation. For a request such
 as "I'm Steve, I'm here to do the content curation that Quincy requested.
