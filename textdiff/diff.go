@@ -12,6 +12,11 @@ type line struct {
 	newline bool
 }
 
+type operation struct {
+	prefix byte
+	line   line
+}
+
 // Unified returns a unified diff from before to after, or an empty string when
 // the two are identical. beforeLabel and afterLabel appear in the header.
 func Unified(before, after, beforeLabel, afterLabel string) string {
@@ -34,22 +39,86 @@ func Unified(before, after, beforeLabel, afterLabel string) string {
 			}
 		}
 	}
-	var output strings.Builder
-	fmt.Fprintf(&output, "--- %s\n+++ %s\n@@ -%s +%s @@\n", beforeLabel, afterLabel, hunkRange(1, len(left)), hunkRange(1, len(right)))
+	operations := make([]operation, 0, len(left)+len(right))
 	for i, j := 0, 0; i < len(left) || j < len(right); {
 		switch {
 		case i < len(left) && j < len(right) && left[i] == right[j]:
-			writeLine(&output, ' ', left[i])
+			operations = append(operations, operation{prefix: ' ', line: left[i]})
 			i, j = i+1, j+1
 		case j < len(right) && (i == len(left) || lengths[i][j+1] > lengths[i+1][j]):
-			writeLine(&output, '+', right[j])
+			operations = append(operations, operation{prefix: '+', line: right[j]})
 			j++
 		default:
-			writeLine(&output, '-', left[i])
+			operations = append(operations, operation{prefix: '-', line: left[i]})
 			i++
 		}
 	}
+	var output strings.Builder
+	fmt.Fprintf(&output, "--- %s\n+++ %s\n", beforeLabel, afterLabel)
+	writeHunks(&output, operations, 3)
 	return output.String()
+}
+
+// writeHunks writes conventional unified-diff hunks: changed lines plus a
+// small amount of surrounding context. Keeping distant edits separate makes
+// generated-output drift readable without concealing either change.
+func writeHunks(output *strings.Builder, operations []operation, context int) {
+	include := make([]bool, len(operations))
+	for index, operation := range operations {
+		if operation.prefix == ' ' {
+			continue
+		}
+		start, end := index-context, index+context
+		if start < 0 {
+			start = 0
+		}
+		if end >= len(operations) {
+			end = len(operations) - 1
+		}
+		for candidate := start; candidate <= end; candidate++ {
+			include[candidate] = true
+		}
+	}
+	oldBefore, newBefore := 0, 0
+	for index := 0; index < len(operations); {
+		if !include[index] {
+			advancePosition(operations[index], &oldBefore, &newBefore)
+			index++
+			continue
+		}
+		start, oldStart, newStart := index, oldBefore+1, newBefore+1
+		oldCount, newCount := 0, 0
+		for index < len(operations) && include[index] {
+			operation := operations[index]
+			if operation.prefix != '+' {
+				oldCount++
+			}
+			if operation.prefix != '-' {
+				newCount++
+			}
+			advancePosition(operation, &oldBefore, &newBefore)
+			index++
+		}
+		if oldCount == 0 {
+			oldStart--
+		}
+		if newCount == 0 {
+			newStart--
+		}
+		fmt.Fprintf(output, "@@ -%s +%s @@\n", hunkRange(oldStart, oldCount), hunkRange(newStart, newCount))
+		for _, operation := range operations[start:index] {
+			writeLine(output, operation.prefix, operation.line)
+		}
+	}
+}
+
+func advancePosition(operation operation, oldPosition, newPosition *int) {
+	if operation.prefix != '+' {
+		*oldPosition++
+	}
+	if operation.prefix != '-' {
+		*newPosition++
+	}
 }
 
 func splitLines(value string) []line {

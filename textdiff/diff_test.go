@@ -23,3 +23,12 @@ func TestUnifiedRendersNewFileAsAdditions(t *testing.T) {
 		t.Fatalf("diff = %q, want %q", got, want)
 	}
 }
+
+func TestUnifiedSeparatesDistantChangesIntoCompactHunks(t *testing.T) {
+	before := "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n"
+	after := "ONE\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nTEN\n"
+	want := "--- expected\n+++ actual\n@@ -1,4 +1,4 @@\n-one\n+ONE\n two\n three\n four\n@@ -7,4 +7,4 @@\n seven\n eight\n nine\n-ten\n+TEN\n"
+	if got := Unified(before, after, "expected", "actual"); got != want {
+		t.Fatalf("diff = %q, want %q", got, want)
+	}
+}
