@@ -26,7 +26,7 @@ func writeColumns(stdout io.Writer, rows [][]string, align bool) error {
 				if column >= len(widths) {
 					widths = append(widths, 0)
 				}
-				if width := utf8.RuneCountInString(value); width > widths[column] {
+				if width := displayWidth(value); width > widths[column] {
 					widths[column] = width
 				}
 			}
@@ -48,7 +48,7 @@ func writeColumns(stdout io.Writer, rows [][]string, align bool) error {
 				return fmt.Errorf("write aligned columns: %w", err)
 			}
 			if align && column < last {
-				if _, err := fmt.Fprint(stdout, strings.Repeat(" ", widths[column]-utf8.RuneCountInString(value))); err != nil {
+				if _, err := fmt.Fprint(stdout, strings.Repeat(" ", widths[column]-displayWidth(value))); err != nil {
 					return fmt.Errorf("write aligned columns: %w", err)
 				}
 			}
@@ -58,4 +58,29 @@ func writeColumns(stdout io.Writer, rows [][]string, align bool) error {
 		}
 	}
 	return nil
+}
+
+// displayWidth ignores ANSI control sequences so styled terminal cells retain
+// their column alignment while redirected output can remain plain text.
+func displayWidth(value string) int {
+	width := 0
+	for len(value) > 0 {
+		if strings.HasPrefix(value, "\x1b[") {
+			consumed := false
+			for index := 2; index < len(value); index++ {
+				if value[index] >= '@' && value[index] <= '~' {
+					value = value[index+1:]
+					consumed = true
+					break
+				}
+			}
+			if consumed {
+				continue
+			}
+		}
+		_, size := utf8.DecodeRuneInString(value)
+		width++
+		value = value[size:]
+	}
+	return width
 }

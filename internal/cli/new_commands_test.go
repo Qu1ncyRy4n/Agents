@@ -65,6 +65,21 @@ func TestSourceSearchListsTagMatchesAndAddCommands(t *testing.T) {
 	if strings.Contains(stdout.String(), "mogent module add team:skills\n") {
 		t.Fatalf("parent command would broaden the tag search:\n%s", stdout.String())
 	}
+	stdout.Reset()
+	if err := Run([]string{"source", "search", "team:skills", "--tag-any", "go", "--file", filepath.Join(root, "mogent.plan")}, &stdout, &stderr); err != nil || !strings.Contains(stdout.String(), "team:skills/testing") {
+		t.Fatalf("unqualified tag search stdout=%q err=%v", stdout.String(), err)
+	}
+}
+
+func TestSearchTagHighlightingAndColumnWidth(t *testing.T) {
+	styled := formatSearchTags([]string{"scope/core", "topic/workflow"}, nil, []string{"workflow"}, true)
+	if !strings.Contains(styled, "topic/\x1b[1mworkflow\x1b[22m") || displayWidth(styled) != len("scope/core, topic/workflow") {
+		t.Fatalf("styled tags=%q width=%d", styled, displayWidth(styled))
+	}
+	qualified := formatSearchTags([]string{"topic/workflow"}, nil, []string{"topic/workflow"}, true)
+	if qualified != "\x1b[1mtopic/workflow\x1b[22m" {
+		t.Fatalf("qualified highlight=%q", qualified)
+	}
 }
 
 func TestSourceSearchPrintsDynamicTagQueryConfig(t *testing.T) {

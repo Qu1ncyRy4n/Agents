@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/Qu1ncyRy4n/Agents/assembly"
+	"github.com/charmbracelet/x/term"
 )
 
 type stringList []string
@@ -75,8 +77,9 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	rows := [][]string{{"REF", "TYPE", "TAGS"}}
+	styled := supportsTerminalStyle(stdout)
 	for _, found := range matches {
-		rows = append(rows, []string{found.reference, string(found.node.Type), strings.Join(found.node.Tags, ", ")})
+		rows = append(rows, []string{found.reference, string(found.node.Type), formatSearchTags(found.node.Tags, all, any, styled)})
 	}
 	if err := writeColumns(stdout, rows, true); err != nil {
 		return err
@@ -93,6 +96,46 @@ func runSourceSearch(args []string, stdout, stderr io.Writer) error {
 		return writeExplicitAddCommands(stdout, matches)
 	}
 	return nil
+}
+
+func supportsTerminalStyle(output io.Writer) bool {
+	file, terminal := output.(*os.File)
+	_, noColor := os.LookupEnv("NO_COLOR")
+	return terminal && term.IsTerminal(file.Fd()) && !noColor && os.Getenv("TERM") != "dumb"
+}
+
+func formatSearchTags(tags, all, any []string, styled bool) string {
+	result := append([]string(nil), tags...)
+	if !styled {
+		return strings.Join(result, ", ")
+	}
+	queries := append(append([]string{}, all...), any...)
+	for index, tag := range result {
+		for _, query := range queries {
+			if highlighted, found := highlightTagQuery(tag, query); found {
+				result[index] = highlighted
+				break
+			}
+		}
+	}
+	return strings.Join(result, ", ")
+}
+
+func highlightTagQuery(tag, query string) (string, bool) {
+	if tag == query || strings.HasPrefix(tag, query+"/") {
+		return "\x1b[1m" + query + "\x1b[22m" + strings.TrimPrefix(tag, query), true
+	}
+	if strings.Contains(query, "/") {
+		return tag, false
+	}
+	parts := strings.Split(tag, "/")
+	for index, part := range parts {
+		if part == query {
+			parts[index] = "\x1b[1m" + part + "\x1b[22m"
+			return strings.Join(parts, "/"), true
+		}
+	}
+	return tag, false
 }
 
 type sourceMatch struct {

@@ -206,6 +206,16 @@ include "team:skills" {tags_all=["lang"];exclude=["review"]}
 	}
 }
 
+func TestMatchesTagsMatchesUnqualifiedTagComponents(t *testing.T) {
+	node := &assembly.Node{Tags: []string{"scope/core", "topic/workflow"}}
+	if !assembly.MatchesTags(node, nil, []string{"workflow"}, nil) {
+		t.Fatal("unqualified component should match topic/workflow")
+	}
+	if assembly.MatchesTags(node, nil, []string{"work"}, nil) {
+		t.Fatal("partial component must not become a fuzzy match")
+	}
+}
+
 func TestResolvePlanFiltersNegativeTags(t *testing.T) {
 	root := t.TempDir()
 	fixtureLibrary(t, root)

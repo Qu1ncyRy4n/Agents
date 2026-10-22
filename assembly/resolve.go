@@ -496,13 +496,22 @@ func selectNodes(result *Result, alias string, root *Node, entry *syntax.Entry) 
 }
 
 // MatchesTags reports whether a node matches an AND-of-all positive query, an
-// OR-of-any positive query, and none of the negative tags. Tag prefixes match
-// descendants: "language" also matches "language/go".
+// OR-of-any positive query, and none of the negative tags. A qualified query
+// matches itself or descendants ("language/go" matches "language/go/tests").
+// An unqualified query also matches one complete tag component, so "workflow"
+// matches "topic/workflow" without becoming a fuzzy substring search.
 func MatchesTags(node *Node, all, any, none []string) bool {
 	matches := func(query string) bool {
 		for _, tag := range node.Tags {
 			if tag == query || strings.HasPrefix(tag, query+"/") {
 				return true
+			}
+			if !strings.Contains(query, "/") {
+				for _, component := range strings.Split(tag, "/") {
+					if component == query {
+						return true
+					}
+				}
 			}
 		}
 		return false
