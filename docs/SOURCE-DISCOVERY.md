@@ -178,8 +178,10 @@ include "qmr:skills" {
 }
 ```
 
-`tags_all` requires every named tag and `tags_any` requires one or more. A tag
-prefix matches its descendants, so `language` also matches `language/go`.
+`tags_all` requires every named tag and `tags_any` requires one or more. A
+qualified tag prefix matches its descendants, so `language/go` also matches
+`language/go/tests`; an unqualified term matches a complete tag component, so
+`workflow` matches `topic/workflow`. Neither form is fuzzy text matching.
 Explicit child selections are unioned with tag matches. The normal scoped
 `exclude` filter runs afterward; it excludes a source-relative path, not a tag.
 `tags_none` retains nodes carrying none of its tags.
@@ -195,6 +197,11 @@ new dynamic tag-query include. `module add --explicit-commands` previews the
 same stable leaf-by-leaf alternative without writing. Tag predicates cannot
 combine with `--all`, because an all-child selection would make the tag query
 redundant.
+
+`source search` currently searches catalog tags only. Title/path and rendered
+content search are separate future modes; they must not silently change the
+selection-oriented tag-query meaning. Interactive fuzzy matching is also
+deferred until those mode boundaries are specified.
 
 `module optimize` belongs to selection editing, not `build`: builds never
 rewrite authored choices. Its current overlap removal is semantics-preserving.
