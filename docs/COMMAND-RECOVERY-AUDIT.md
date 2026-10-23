@@ -7,18 +7,18 @@ the native plan/build workflow; it does not silently revive competing formats.
 
 | Native behavior | Prior evidence | Current command |
 |---|---|---|
-| Source content preview | YAML `source show --content=none|snippet|full --lines`; HCL v2 source inspector body preview | `show source:path --content [--lines N]` |
-| Physical Markdown heading addresses | HCL v2 `source show alias:path --headings` | `show source:path --content --headings` |
-| Source hierarchy and display controls | YAML coverage/list tree and `display.chars`/alignment presentation | `source show [--tree|--flat] [--chars ascii|unicode]` |
-| Add a selected item | YAML `add`, native include semantics | `module add source:path` (`add` is a compatibility shortcut) |
-| Complete opt-in tree selection | Native child-selection syntax / physical bundles | `add source:path --all` |
+| Source content preview | YAML `source show --content=none|snippet|full --lines`; HCL v2 source inspector body preview | `source content source:path [--lines N]` |
+| Physical Markdown heading addresses | HCL v2 `source show alias:path --headings` | `source content source:path --headings` |
+| Source hierarchy and display controls | YAML coverage/list tree and `display.chars`/alignment presentation | `source tree [source:path] [--flat] [--chars ascii|unicode]` |
+| Add a selected item | YAML `add`, native include semantics | `module include source:path` (`module add` and `add` are compatibility shortcuts) |
+| Complete opt-in tree selection | Native child-selection syntax / physical bundles | `module include source:path --all` |
 | Authored output baseline | Generated-plan state writer / typed output manifest | `.mogent/state.json` after every native build |
 | Output drift inspection | YAML drift expected-vs-disk comparison and state classification | `drift [--diff]` |
-| Exclude from an ancestor selection | Native include `exclude` filter and older selection constraints | `except` or `exclude source:path` |
+| Exclude from an ancestor selection | Native include `exclude` filter and older selection constraints | `module exclude source:path` (`except` and top-level `exclude` are aliases) |
 | Authoring declaration order | Native ordered syntax / formatter | `reorder [--dry-run]` |
 | Source declaration/discovery | YAML `source add/list`; HCL v2 source list | `source add`, `source list|ls`, `source register`, `source list --known` |
 | All managed-output status | Typed state plus `build --check` | `status` or `drift --all [--diff]` |
-| Remove a direct include | Native declaration editing (previously absent from CLI) | `module rm source:path [--dry-run --diff]` previews; bare `--diff` writes then reports (`rm` is a compatibility shortcut) |
+| Remove a direct include | Native declaration editing (previously absent from CLI) | `module remove source:path [--dry-run --diff]` previews; bare `--diff` writes then reports (`module rm` and `rm` are compatibility shortcuts) |
 | Overlap inspection | Explicit selection review (previously absent) | `optimize` (`optimise` alias); `show --build` warning |
 
 Native content preview is read-only. It renders logical Markdown sections as a
@@ -38,7 +38,7 @@ preview selects content, writes an output, or creates state.
 
 ## Gaps To Decide At Dogfood Wrap-up
 
-1. **Command vocabulary:** `module add` / `module rm` are the native canonical
+1. **Command vocabulary:** `module include` / `module remove` are the native canonical
    forms. Top-level `add` / `rm` remain compatibility shortcuts while dogfooding
    establishes whether they reduce real user ambiguity.
 2. **Native metadata/search/TLDR/coverage:** older YAML/HCL browsing has richer

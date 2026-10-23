@@ -14,7 +14,7 @@ import (
 )
 
 func runRemove(args []string, stdout, stderr io.Writer) error {
-	flags := flag.NewFlagSet("module rm", flag.ContinueOnError)
+	flags := flag.NewFlagSet("module remove", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("file", "", "project plan or authored build")
 	dryRun := flags.Bool("dry-run", false, "preview the declaration removal without writing")
@@ -24,7 +24,7 @@ func runRemove(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	if flags.NArg() != 1 {
-		return fmt.Errorf("module rm requires one direct module reference, for example qmr:intro/author-ownership")
+		return fmt.Errorf("module remove requires one direct module reference, for example qmr:intro/author-ownership")
 	}
 	entryPath, err := projectEntryFile(*path)
 	if err != nil {

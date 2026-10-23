@@ -153,7 +153,7 @@ Superseded by: none
 
 ## CS-D009 — CLI vocabulary mirrors authored declarations where it edits them
 
-Status: accepted
+Status: implemented
 Statement: Keep `source add` as the command for connecting a library: a source
 declaration makes content available but does not select it. Make `module
 include`, `module remove`, and `module exclude` the documented canonical
@@ -163,10 +163,13 @@ and `exclude` matching its authored field. Retain current `add`, `rm`, and
 Evidence: The owner raised the `add`/`include` divergence during 2026-10-22
 CLI review, noting that `mogent add qmr <path>` is easily confused with adding
 a source, and accepted this distinction after confirming that `source add`
-should not become `source include`.
-Scope/reservations: This authorizes terminology alignment, not a general CLI
-redesign. `localize`, `optimize`, `reorder`, and build/inspection verbs remain
-operation names. A general `module replace` remains deferred until replacement
-semantics and collision dogfooding are ready.
+should not become `source include`. The 2026-10-23 implementation adds
+`module include` and `module remove` aliases, makes them the top-level/help and
+explicit-command vocabulary, retains compatibility forms, and adds focused help
+coverage; `go test ./internal/cli` and `go test ./...` passed on 2026-10-23.
+Scope/reservations: This is terminology alignment, not a general CLI redesign.
+`localize`, `optimize`, `reorder`, and build/inspection verbs remain operation
+names. A general `module replace` remains deferred until replacement semantics
+and collision dogfooding are ready.
 Supersedes: none
 Superseded by: none

@@ -3,7 +3,7 @@
 **Current conversation: [NOW](convo/head.md).** This handoff is product
 navigation/reference; older resume language below is not a competing live checkpoint.
 
-Updated: 2026-10-21; source-oriented native browsing and upstream-change simulation recorded.
+Updated: 2026-10-23; native selection vocabulary and plan-file guide recorded.
 
 This file is the stable navigation entry point for an agent handoff. It does
 not duplicate task state, design decisions, or a workstream's detailed resume
@@ -46,8 +46,9 @@ above, inspect the authority and current working tree.
 
 Mogent's supported project interface is the native `mogent.build`/`mogent.plan`
 language and `mogent.lib` libraries. The current commands and their supported
-semantics are recorded in [CLI-COMMAND-INVENTORY.md](CLI-COMMAND-INVENTORY.md);
-the active dogfooding state is in [NOW](convo/head.md).
+semantics are recorded in [CLI-COMMAND-INVENTORY.md](CLI-COMMAND-INVENTORY.md),
+and the plan lifecycle has a compact example in [PLAN-FILES.md](PLAN-FILES.md).
+The active dogfooding state is in [NOW](convo/head.md).
 
 The implemented core composes typed Markdown sections and complete physical
 bundles from explicit source declarations and includes. Builds protect managed
@@ -64,7 +65,7 @@ not alternate live command references.
 The language resolves `tags_all`/`tags_any`/`tags_none` and applies scoped path
 exclusions after tag filtering. `source search` provides read-only inspection,
 explicit leaf additions with `--add-commands`, and pasteable dynamic query
-configuration with `--add-config`; `module add --explicit-commands` provides
+configuration with `--add-config`; `module include --explicit-commands` provides
 the same stable leaf alternative beside a prospective dynamic include. Do not treat
 rewriting explicit selections into a tag query as ordinary optimization: it
 changes how future upstream additions are selected. `optimize` remains a
@@ -83,7 +84,7 @@ review.
 4. Complete localization provenance and upstream-reconciliation UX, then dogfood
    a localized physical module through an upstream change.
 5. Dogfood a real output collision and replacement. Only then decide whether the
-   CLI needs a replacement option on `module add` or a separate command.
+   CLI needs a replacement option on `module include` or a separate command.
 6. Return to broader curation/defaults, relationship diagnostics, output adoption
    and recovery, source freshness/pinning, and richer interactive inspection.
 

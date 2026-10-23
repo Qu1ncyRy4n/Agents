@@ -275,14 +275,14 @@ func sourceTagMatches(sources map[string]assembly.Source, aliases []string, pref
 }
 
 func writeExplicitAddCommands(stdout io.Writer, matches []sourceMatch) error {
-	if _, err := fmt.Fprintln(stdout, "---\nExplicit leaf add commands:"); err != nil {
+	if _, err := fmt.Fprintln(stdout, "---\nExplicit leaf include commands:"); err != nil {
 		return err
 	}
 	for _, found := range matches {
 		if len(found.node.Children) != 0 {
 			continue
 		}
-		if _, err := fmt.Fprintf(stdout, "  mogent module add %s\n", found.reference); err != nil {
+		if _, err := fmt.Fprintf(stdout, "  mogent module include %s\n", found.reference); err != nil {
 			return err
 		}
 	}

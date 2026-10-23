@@ -24,7 +24,7 @@ func commands() []commandDefinition {
 		{name: "drift", usage: "drift [--file path] [--all] [--diff]", run: runDrift},
 		{name: "source", usage: "source add|list|tree|search|content|register|update local ...", run: runSource},
 		{name: "add", usage: "add <source:path> [--file path] [--all|--tag-all tag|--tag-any tag|--tag-none tag] [--explicit-commands] [--dry-run|--diff]", run: runAdd},
-		{name: "module", usage: "module add|rm|exclude|localize|optimize ...", run: runModule},
+		{name: "module", usage: "module include|remove|exclude|localize|optimize ...", run: runModule},
 		{name: "rm", usage: "rm <source:path> [--file path] [--dry-run|--diff]", run: runRemove},
 		{name: "optimize", usage: "optimize [--file path] [--apply|--dry-run]", run: runOptimise},
 		{name: "optimise", usage: "optimise [--file path] [--apply|--dry-run] (alias for optimize)", run: runOptimise},

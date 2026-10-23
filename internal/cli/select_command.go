@@ -16,7 +16,7 @@ func runAdd(args []string, stdout, stderr io.Writer) error {
 }
 
 func runNativeSelect(args []string, stdout, stderr io.Writer) error {
-	flags := flag.NewFlagSet("add", flag.ContinueOnError)
+	flags := flag.NewFlagSet("module include", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("file", "", "project plan or authored build")
 	dryRun := flags.Bool("dry-run", false, "preview the include without writing")
@@ -32,7 +32,7 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	if flags.NArg() != 1 {
-		return fmt.Errorf("add requires one module reference, for example qmr:intro/author-ownership")
+		return fmt.Errorf("module include requires one module reference, for example qmr:intro/author-ownership")
 	}
 	if *explicitCommands && (len(tagsAll) == 0 && len(tagsAny) == 0 && len(tagsNone) == 0) {
 		return fmt.Errorf("--explicit-commands requires --tag-all, --tag-any, or --tag-none")
@@ -113,12 +113,12 @@ func runNativeSelect(args []string, stdout, stderr io.Writer) error {
 
 func runModule(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("module requires add, rm, exclude, localize, or optimize")
+		return fmt.Errorf("module requires include, remove, exclude, localize, or optimize")
 	}
 	switch args[0] {
-	case "add":
+	case "include", "add":
 		return runNativeSelect(args[1:], stdout, stderr)
-	case "rm":
+	case "remove", "rm":
 		return runRemove(args[1:], stdout, stderr)
 	case "exclude":
 		return runExcept(args[1:], stdout, stderr)
@@ -127,6 +127,6 @@ func runModule(args []string, stdout, stderr io.Writer) error {
 	case "optimize":
 		return runOptimise(args[1:], stdout, stderr)
 	default:
-		return fmt.Errorf("unknown module command %q; use module add, rm, exclude, localize, or optimize", args[0])
+		return fmt.Errorf("unknown module command %q; use module include, remove, exclude, localize, or optimize", args[0])
 	}
 }

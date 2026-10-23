@@ -8,8 +8,8 @@ declared in that file; they do not select modules.
 |---|---|
 | `init` | Create an authored build or a plan |
 | `source add`, `list`, `tree`, `search`, `content`, `register`, `update local` | Connect, browse, search, remember, and refresh libraries |
-| `module add`, `module rm`, `module exclude`, `module localize`, `module optimize` | Change or refine direct selected modules |
-| `add`, `rm` | Short compatibility forms for native module changes |
+| `module include`, `module remove`, `module exclude`, `module localize`, `module optimize` | Change or refine direct selected modules |
+| `module add`, `module rm`, `add`, `rm` | Compatibility aliases for native module changes |
 | `except`, `exclude`, `reorder`, `optimize` | Compatibility aliases or project-wide selection utilities |
 | `show tree`, `show build`, `show issues` | Inspect selected output and contributions |
 | `sequence`, `build` | Create a generated build and install managed outputs |
@@ -23,6 +23,6 @@ module paths.
 
 The language supports `tags_all`, `tags_any`, and `tags_none` on an include,
 plus scoped path `exclude` after tag matching. `source search` exposes these
-predicates read-only; `--add-commands` prints explicit leaf-module add commands.
-`module add` accepts the same tag predicates for a new include. See
+predicates read-only; `--add-commands` prints explicit leaf-module include commands.
+`module include` accepts the same tag predicates for a new include. See
 [SOURCE-DISCOVERY.md](SOURCE-DISCOVERY.md).

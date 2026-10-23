@@ -21,14 +21,14 @@ func TestWorkflowHelpLeadsToSelectionWithoutLegacyFlagDump(t *testing.T) {
 			t.Fatalf("help entry points disagree: %v", args)
 		}
 		previous := -1
-		for _, section := range []string{"Project initialization", "Browse content", "Add modules", "Preview the selection", "Build outputs", "Further help"} {
+		for _, section := range []string{"Project initialization", "Browse content", "Select modules", "Preview the selection", "Build outputs", "Further help"} {
 			index := strings.Index(text, section)
 			if index <= previous {
 				t.Fatalf("missing or out-of-order section %q:\n%s", section, text)
 			}
 			previous = index
 		}
-		for _, want := range []string{"module add <name:path>", "module rm <name:path>", "mogent help module", "mogent help commands", "mogent help --all"} {
+		for _, want := range []string{"module include <name:path>", "module remove <name:path>", "mogent help module", "mogent help commands", "mogent help --all"} {
 			if !strings.Contains(text, want) {
 				t.Fatalf("workflow missing %q:\n%s", want, text)
 			}
@@ -74,7 +74,9 @@ func TestFocusedHelpDoesNotInitializeOrRequireProject(t *testing.T) {
 		{[]string{"init", "--help"}, "Advanced"},
 		{[]string{"help", "source", "add"}, "source add"},
 		{[]string{"source", "add", "--help"}, "remembered libraries"},
-		{[]string{"help", "module"}, "mogent module add qmr:intro/author-ownership"},
+		{[]string{"help", "module"}, "mogent module include qmr:intro/author-ownership"},
+		{[]string{"module", "include", "--help"}, "mogent module include qmr:intro/author-ownership"},
+		{[]string{"module", "remove", "--help"}, "mogent module remove qmr:intro/author-ownership"},
 		{[]string{"module", "localize", "--help"}, "Localization requires one already selected physical input"},
 		{[]string{"build", "--help"}, "existing outputs"},
 		{[]string{"show", "-h"}, "contribution preview"},

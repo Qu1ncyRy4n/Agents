@@ -90,12 +90,12 @@ All previews are read-only.
 ## Module Selection
 
 ```sh
-mogent add qmr:intro/author-ownership
-mogent module add qmr:intro/author-ownership
-mogent add qmr:intro/author-ownership --dry-run
+mogent module include qmr:intro/author-ownership
+mogent module include qmr:intro/author-ownership --dry-run
+# Compatibility aliases: mogent module add, or mogent add
 ```
 
-These native aliases validate the source and catalog node, then append one
+`module include` validates the source and catalog node, then appends one
 `include` declaration to an authored build or plan. They preserve existing text
 and do not build/install outputs. Selecting the same direct include twice is
 rejected. Generated builds remain read-only: select content in their owning plan.
@@ -103,7 +103,7 @@ rejected. Generated builds remain read-only: select content in their owning plan
 Opt-in directories, such as QMR's skills tree, need an explicit child selection:
 
 ```sh
-mogent add qmr:skills --all
+mogent module include qmr:skills --all
 ```
 
 `--all` creates or upgrades a bare direct include to a list of its current direct
@@ -147,12 +147,12 @@ before this feature has no upstream baseline; run `mogent build` to record one.
 Exclude one descendant from a direct selected ancestor:
 
 ```sh
-mogent add qmr:workflow
-mogent except qmr:workflow/decision-first
-# `mogent exclude ...` is an alias.
+mogent module include qmr:workflow
+mogent module exclude qmr:workflow/decision-first
+# Compatibility aliases: `except` and top-level `exclude`.
 ```
 
-`except` finds the narrowest direct selected ancestor, then adds the descendant's
+`module exclude` finds the narrowest direct selected ancestor, then adds the descendant's
 relative path to that include's `exclude` list. It previews with `--dry-run` and
 does not build outputs. For a curated choose branch, it also records
 `accept_defaults = true`: the resulting meaning is "the defaults except this
@@ -160,14 +160,14 @@ item." It deliberately does not remove another direct include. Use explicit
 review commands instead:
 
 ```sh
-mogent rm qmr:workflow/decision-first --dry-run --diff # preview: writes nothing
-mogent rm qmr:workflow/decision-first        # remove one exact direct include
-mogent module rm qmr:workflow/decision-first # equivalent explicit form
+mogent module remove qmr:workflow/decision-first --dry-run --diff # preview: writes nothing
+mogent module remove qmr:workflow/decision-first        # remove one exact direct include
+# Compatibility aliases: mogent module rm, or mogent rm
 mogent optimize                              # default preview of overlap cleanup
 mogent optimize --apply                      # remove redundant direct descendants
 ```
 
-`rm` never removes an ancestor selection or guesses among repeated exact
+`module remove` never removes an ancestor selection or guesses among repeated exact
 includes. Combine `--dry-run --diff` to compose the before/after managed
 outputs without writing; bare `--diff` applies and reports its patch.
 `optimize` (with `optimise` retained as an alias) shows that same combined
@@ -196,12 +196,12 @@ Explicit child selections are unioned with tag matches. The normal scoped
 
 Use `mogent source search [source:path] --tag-all <tag> --tag-any <tag>
 --tag-none <tag>` to inspect matching catalog nodes. `--add-commands` prints
-runnable explicit `mogent module add` commands for matching leaf modules only;
+runnable explicit `mogent module include` commands for matching leaf modules only;
 it never suggests a broad parent that would include unrelated descendants. For a
 `source:path` scope, `--add-config` instead prints the pasteable dynamic
 `include` block that expresses the query. The same repeated `--tag-all`,
-`--tag-any`, and `--tag-none` flags are accepted by `mogent module add` for a
-new dynamic tag-query include. `module add --explicit-commands` previews the
+`--tag-any`, and `--tag-none` flags are accepted by `mogent module include` for a
+new dynamic tag-query include. `module include --explicit-commands` previews the
 same stable leaf-by-leaf alternative without writing. Tag predicates cannot
 combine with `--all`, because an all-child selection would make the tag query
 redundant.

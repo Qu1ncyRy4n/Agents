@@ -25,9 +25,9 @@ Browse content (advanced: mogent help source)
    source list                         List connected libraries
    source tree                         Browse their content as a tree
 
-Add modules (advanced: mogent help module)
-   module add <name:path>             Add a module to the project file
-   module rm <name:path>              Remove one direct include
+Select modules (advanced: mogent help module)
+   module include <name:path>          Include a module in the project file
+   module remove <name:path>           Remove one direct include
    module exclude <name:path>          Exclude a descendant from a selected ancestor
    module localize <name:path>         Fork one selected physical input locally
    module optimize                     Preview direct include-overlap cleanup; use --apply to write
@@ -81,14 +81,14 @@ Browse content (advanced: mogent help source)
    source content <name:path>          Preview source content
    source register <name> <path-or-url> Remember a library for future projects
 
-Add modules (advanced: mogent help module)
-    module add <name:path>             Add a module to the project file
+Select modules (advanced: mogent help module)
+    module include <name:path>         Include a module in the project file
         --tag-all|--tag-any|--tag-none Add a tag query to the new include
         --explicit-commands            Preview the leaf-by-leaf alternative to a tag query
         --all                          Select all direct children (for opt-in trees)
         --file <path>                  Select a specific plan/build
         --dry-run                      Preview the include without writing
-   rm <name:path>                     Remove one exact direct include
+   module remove <name:path>           Remove one exact direct include
        --diff                         Preview managed-output changes without writing
    optimize                            Preview direct ancestor/descendant cleanup; use --apply to write
    except <name:path>                 Exclude a descendant from its selected ancestor
@@ -187,26 +187,26 @@ use only project declarations. Use --file path to choose another project file.
 
 Next: mogent help module
 `,
-	"module": `Add and remove modules
+	"module": `Include and remove modules
 
-  mogent module add qmr:intro/author-ownership
-  mogent module rm qmr:intro/author-ownership --dry-run --diff
+  mogent module include qmr:intro/author-ownership
+  mogent module remove qmr:intro/author-ownership --dry-run --diff
   mogent module exclude qmr:workflow/decision-first
 
 Replace qmr and the path with a connected library and a node shown by:
   mogent source tree
 
-module add appends one validated include to the authored build or plan. Includes
+module include appends one validated include to the authored build or plan. Includes
 are applied in the order you add them. Use --dry-run to inspect the exact
 declaration; combine it with --diff to preview project and managed-output
 patches. Without --dry-run, --diff writes the requested change and reports its
 patches. Use --file to name a specific plan/build.
 
 For an opt-in tree, select its direct children explicitly:
-  mogent module add qmr:skills --all
+  mogent module include qmr:skills --all
 
 For a tag query, preview the stable explicit alternative without writing:
-  mogent module add qmr:skills --tag-all language/go --explicit-commands
+  mogent module include qmr:skills --tag-all language/go --explicit-commands
 
 This turns an existing bare include "qmr:skills" into an explicit child list,
 or creates that list for a new include. It is intentionally not the default:
@@ -216,19 +216,19 @@ You can also edit includes directly, for example:
   include "qmr:intro/author-ownership"
 
 Removal and overlap review
-  mogent module rm qmr:intro/author-ownership --dry-run --diff
-  mogent module rm qmr:intro/author-ownership
+  mogent module remove qmr:intro/author-ownership --dry-run --diff
+  mogent module remove qmr:intro/author-ownership
   mogent module optimize                # default dry-run
   mogent module optimize --apply
 
-module add has --all, --file, --dry-run, and --diff. With tag predicates,
---explicit-commands prints matching leaf-level add commands instead of writing
-a dynamic include. module rm has --file,
+module include has --all, --file, --dry-run, and --diff. With tag predicates,
+--explicit-commands prints matching leaf-level include commands instead of writing
+a dynamic include. module remove has --file,
 --dry-run, and --diff. Combine --dry-run --diff for a read-only patch; bare
---diff applies the requested edit and reports it. The short top-level add/rm forms remain compatibility
-shortcuts while we dogfood the explicit module vocabulary.
+--diff applies the requested edit and reports it. module add and module rm
+remain compatibility aliases; top-level add and rm are their short forms.
 
-module rm removes one exact direct include, never an ancestor selection. Combine
+module remove removes one exact direct include, never an ancestor selection. Combine
 --dry-run --diff for a safe project/output preview; bare --diff writes and
 reports that change. optimize previews removal of redundant direct descendants
 by default. Repetition can be intentional, so it changes the file only with
@@ -434,9 +434,9 @@ func writeHelp(path []string, output io.Writer) error {
 			reference.WriteString("  mogent " + command.usage + "\n")
 		}
 		return writeHelpText(output, reference.String())
-	case "sequence", "module", "rm", "except", "exclude", "reorder", "optimise", "optimize":
+	case "sequence", "module", "add", "rm", "include", "remove", "except", "exclude", "reorder", "optimise", "optimize":
 		topic = "module"
-	case "status", "drift", "add", "completion", "mint":
+	case "status", "drift", "completion", "mint":
 		topic = "tools"
 	}
 	text, found := workflowTopics[topic]

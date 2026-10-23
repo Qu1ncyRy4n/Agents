@@ -80,7 +80,7 @@ command that previews either form before rewriting the manifest.
   required guided steps; other metadata remains optional.
 - Preview the file path, resulting source reference, frontmatter, and Markdown
   before writing.
-- Do not automatically select the new module; print the exact `mogent add`
+- Do not automatically select the new module; print the exact `mogent module include`
   command as the next hint.
 
 ## Implementation Sequence
