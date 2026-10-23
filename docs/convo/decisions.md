@@ -150,3 +150,23 @@ remain to be designed and dogfooded. It does not authorize automatic selection
 rewrites or an `auto_inherit` implementation yet.
 Supersedes: none
 Superseded by: none
+
+## CS-D009 — CLI vocabulary mirrors authored declarations where it edits them
+
+Status: accepted
+Statement: Keep `source add` as the command for connecting a library: a source
+declaration makes content available but does not select it. Make `module
+include`, `module remove`, and `module exclude` the documented canonical
+selection-editing vocabulary, with `include` matching the authored declaration
+and `exclude` matching its authored field. Retain current `add`, `rm`, and
+`except` forms only as compatibility aliases while dogfooding the new names.
+Evidence: The owner raised the `add`/`include` divergence during 2026-10-22
+CLI review, noting that `mogent add qmr <path>` is easily confused with adding
+a source, and accepted this distinction after confirming that `source add`
+should not become `source include`.
+Scope/reservations: This authorizes terminology alignment, not a general CLI
+redesign. `localize`, `optimize`, `reorder`, and build/inspection verbs remain
+operation names. A general `module replace` remains deferred until replacement
+semantics and collision dogfooding are ready.
+Supersedes: none
+Superseded by: none
